@@ -12,12 +12,11 @@ repo (yet).
 ## Rules
 
 1. You are never to edit the rules and instructions sections on your own. 
-   The rest are safe to touch, but ti you want to edit these sections
+   The rest are safe to touch, but if you want to edit these sections
    file, the answer is always NO. Instead, draft up what needs to be added 
    or changed and send it to the user directly.
 2. You are never to make any git commits and pushes. Read-only commands are
-   okay. (No git repo exists yet, but this rule is already in force for
-   whenever one does.)
+   okay. 
 3. If you require access to files outside this `microlensing/` folder, you
    MUST ask for permission from the user first.
 4. Before you write or edit any code, check if the ponytail skill is
@@ -127,6 +126,54 @@ sanity check, not a claim that the model is correct -- the caustic
 anomaly is visible in the auto-zoomed panel as points sitting above the
 smooth fitted curve (most obviously in the MOA data, which has the cadence
 to resolve it; OGLE's sparser sampling mostly misses it).
+
+## Annual parallax + robust (Student-t) likelihood for PSPL fits (in progress)
+
+The plain PSPL model doesn't fit real data well (checked on O-05-BLG086:
+chi2/dof=2.14, standardized-residual std=1.46 against the pre-parallax
+model -- errors running too tight, moderate excess kurtosis, and the
+largest residuals cluster in specific time windows rather than scattering
+randomly, consistent with unmodeled physics rather than bad photometry).
+Two changes are planned across *every* PSPL-based fit (`mcmc_fit.py`,
+both functions in `mcmc_fit_binary.py`, and `preprocess_binary_data.py`'s
+`fit_joint_pspl()` calibration fit) -- not the `scratch/` 2L1S code, which
+is a separate, already-in-progress track:
+
+1. **Annual parallax** (Gould 2004 geocentric formalism): two new free
+   parameters `piE_N`/`piE_E`, perturbing the trajectory via the target's
+   sky position and Earth's orbital motion. `astropy` is a new pipeline
+   dependency for this (`get_body_barycentric_posvel`, analytic
+   position+velocity, no finite-differencing). `t0_par` (the reference
+   epoch the geocentric frame is anchored to) is fixed at each dataset's
+   preliminary non-parallax best-fit `t0`, per convention -- not a fitted
+   parameter itself.
+2. **Robust likelihood**: the Gaussian log-likelihood is replaced with a
+   Student-t likelihood, with both `scale` and `dof` fit as free MCMC
+   parameters (motivated by the residual diagnostic above -- a globally
+   heavier-than-Gaussian error distribution, not a small population of
+   discrete outliers, so a smooth down-weight beats Huber/sigma-clipping).
+
+Both changes **replace the existing model outright** -- no flag/toggle;
+the old Gaussian-PSPL behavior stays recoverable via git history only.
+O-05-BLG086 is the proving ground before propagating to O-03-BLG235's
+fits. Parallax is being built first, then the likelihood change.
+
+**Status**: `lc_models.sun_earth_projection(time, ra_str, dec_str, t0_par)`
+is done -- Earth's sky-projected position relative to the Sun (AU),
+projected onto the target's North/East tangent-plane basis, with the
+constant-velocity part at `t0_par` subtracted out (that part is already
+degenerate with (t0, u0, tE); only the curvature signal is new
+information). Not yet wired into `trajectory()`/`flux()`/`magnitude()`,
+and not yet cross-checked against MulensModel's own parallax model to
+lock down the sign/unit convention (planned next, mirroring the existing
+`scratch/cross_check_mulensmodel.py` pattern used to validate 2L1S).
+
+Target coordinates gathered so far: O-05-BLG086 RA 18h04m45.70s / Dec
+-26d59m15.5s (OGLE-III EWS alert page, field BLG234.6 -- a Wikipedia-
+sourced pair used briefly during development was off by ~3 degrees in
+both RA and Dec and was caught before it reached any fit); O-03-BLG235 RA
+18h05m16.35s / Dec -28d53m42.0s (Bond et al. 2004 / NASA Exoplanet
+Archive).
 
 ## O-03-BLG235's calibrate-once-then-fit pipeline
 

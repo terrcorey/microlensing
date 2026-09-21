@@ -582,3 +582,92 @@ actual point of this repo), and **Next session**'s planned goal.
     MPI-pool vs. bare scaffold) not yet decided.
   - MOA-2019-BLG-008's KMT error-bar rescaling remains open and
     deprioritized, untouched since session 5.
+
+## 2026-09-21 — session 7
+
+### Built
+- Via `/grill-me`: scoped a new project direction after the user found the
+  existing PSPL fits weren't fitting the data well. Two changes planned
+  across *every* PSPL-based fit (`mcmc_fit.py`, both functions in
+  `mcmc_fit_binary.py`, `preprocess_binary_data.py`'s `fit_joint_pspl()`
+  calibration fit -- not the `scratch/` 2L1S track): add annual parallax
+  (Gould 2004 geocentric `piE_N`/`piE_E`, via `astropy`), then replace the
+  Gaussian likelihood with a Student-t likelihood (`scale` and `dof` both
+  fit freely). Both replace the existing model outright, no flag/toggle.
+  O-05-BLG086 is the proving ground; parallax first, then the likelihood
+  change. See CLAUDE.md's new "Annual parallax + robust (Student-t)
+  likelihood for PSPL fits" section for the full plan.
+- A residual diagnostic on the current (pre-parallax) O-05-BLG086 PSPL fit
+  motivated the Student-t choice over Huber/sigma-clipping: chi2/dof=2.14,
+  standardized-residual std=1.46 (errors running ~46% too tight), only
+  moderate excess kurtosis (1.23), Student-t MLE dof~6 -- a globally
+  heavier-than-Gaussian error distribution, not a small distinct outlier
+  population. Several of the largest residuals cluster in specific time
+  windows rather than scattering randomly, consistent with unmodeled
+  physics (parallax) rather than bad photometry.
+- Gathered target coordinates for the parallax calculation (O-05-BLG086:
+  RA 18h04m45.70s / Dec -26d59m15.5s, OGLE-III EWS alert page, field
+  BLG234.6; O-03-BLG235: RA 18h05m16.35s / Dec -28d53m42.0s, Bond et al.
+  2004 / NASA Exoplanet Archive) and the Gould (2004) `t0_par` convention
+  (fixed at each dataset's preliminary non-parallax best-fit `t0`, not
+  jointly fit).
+- Built Step 1 of the parallax implementation:
+  `lc_models.sun_earth_projection(time, ra_str, dec_str, t0_par)` --
+  Earth's sky-projected position relative to the Sun (AU), via astropy's
+  `get_body_barycentric_posvel` (analytic position *and* velocity, no
+  finite-differencing), projected onto the target's North/East
+  tangent-plane basis, with the constant-velocity part at `t0_par`
+  subtracted out (already degenerate with (t0, u0, tE); only the
+  curvature signal is new information). `astropy` added as a new pipeline
+  dependency.
+- Got `scratch/scratchpad.ipynb` running against the project's own
+  `.venv` in VSCode (`ipykernel` installed, kernel selected via
+  Cmd+Shift+G to work around the native file-picker hiding dotfiles), for
+  interactive development of the parallax code. `%load_ext autoreload` +
+  `%autoreload 2` set up so edits to `lc_models.py` take effect without a
+  kernel restart.
+- Pruned `requirements.txt` back to pipeline-only dependencies -- a
+  `pip freeze`-style regeneration during the session had pulled in the
+  full notebook/dev toolchain (`ipykernel`, `jupyter_client`, `ipython`,
+  `debugpy`, etc.) alongside `astropy`, inconsistent with this project's
+  existing convention of keeping dev-only deps out of the main
+  requirements file (mirrors how `MulensModel`/`sympy` stay scoped to
+  `scratch/`). `astropy`'s own real runtime deps (`astropy-iers-data`,
+  `pyerfa`) were kept; `ipykernel` etc. stay installed locally but
+  untracked, same treatment as the scratch-only libraries.
+
+### Learned & open questions
+- Real, previously-hit-pattern bugs caught and fixed while building
+  `sun_earth_projection()`: a `SkyCoord` can't be unpacked as
+  `ra, dec = SkyCoord(...)`; `np.dot()` doesn't correctly project an
+  astropy `CartesianRepresentation` time series onto a fixed direction
+  (needs explicit x/y/z component combination -- pulled into a shared
+  `_project()` helper rather than repeating it six times); a `TimeDelta`
+  stripped to `.value` before multiplying against a velocity `Quantity`
+  silently drops its unit tag, producing a `UnitConversionError` several
+  lines later rather than failing at the actual mistake.
+- A more serious near-miss: RA/Dec for O-05-BLG086 initially copied from
+  Wikipedia (17h54m19.2s / -30d22m38s) differed from the OGLE-III EWS
+  alert-page value by ~3 degrees in both RA and Dec -- caught by
+  comparing against the coordinates gathered earlier in the session,
+  before it propagated into any fit. Another wrong-but-plausible-looking
+  input that wouldn't have thrown an error on its own.
+- Local dev machine hit an SSL certificate verification failure running
+  `download_data.py` under Homebrew's Python (missing local CA bundle) --
+  unrelated to the script's own correctness; worked around with `curl`
+  for this session, not a repo-level issue.
+
+### Next session
+- Confirmed via `/grill-me`: continue the parallax roadmap in order.
+  - Step 2: wire `piE_N`/`piE_E` into `lc_models.trajectory()`/`flux()`/
+    `magnitude()`.
+  - Step 3 (non-optional per this session's plan): cross-check the new
+    parallax trajectory against MulensModel's own parallax-enabled PSPL
+    model to lock down the sign/unit convention, mirroring the existing
+    `scratch/cross_check_mulensmodel.py` pattern used to validate 2L1S.
+  - Step 4-5: wire into `mcmc_fit.py`'s MCMC (new params, priors, `p0`)
+    and validate against real O-05-BLG086 data (does chi2/dof actually
+    improve? is `piE` well-constrained or prior-dominated noise?).
+  - Step 6: propagate the same trajectory change into
+    `mcmc_fit_binary.py`/`preprocess_binary_data.py` for O-03-BLG235.
+  - Robust (Student-t) weighting is planned after all of the above.

@@ -8,6 +8,9 @@ need them.
 
 import numpy as np
 import torch
+from astropy.coordinates import get_body_barycentric_posvel, SkyCoord
+from astropy.time import Time
+import astropy.units as u
 
 ZERO_POINT_MAG = 18.0  # arbitrary; cancels out of every fitted flux ratio
 
@@ -212,3 +215,43 @@ def binary_magnification(zeta, s, q):
     jacobian = 1 - np.abs(m1 / (roots - z1) ** 2 + m2 / (roots - z2) ** 2) ** 2
     A = np.where(valid, 1 / np.abs(jacobian), 0.0).sum(axis=1)
     return A if np.ndim(zeta) else A[0]
+
+def _project(vec, n_hat, e_hat):
+    """Project a Cartesian position/velocity vector onto the sky's
+    (N, E) tangent-plane basis at the target."""
+    return (vec.x * n_hat[0] + vec.y * n_hat[1] + vec.z * n_hat[2],
+            vec.x * e_hat[0] + vec.y * e_hat[1] + vec.z * e_hat[2])
+
+def sun_earth_projection(time, ra_str, dec_str, t0_par):
+    """Returns (delta_s_n, delta_s_e): Earth's sky-projected position
+    relative to the Sun, in AU, with the constant-velocity part at
+    t0_par subtracted out -- i.e. only the non-uniform (curvature)
+    signal that's NOT already degenerate with (t0, u0, tE) remains.
+    """
+    time_hjd = Time(time + 2450000, format="jd")
+    t0 = Time(t0_par + 2450000, format="jd")
+        
+    earth_pos, _ = get_body_barycentric_posvel("earth", time_hjd)
+    sun_pos, _ = get_body_barycentric_posvel("sun", time_hjd)
+    earth_t0pos, earth_t0vel = get_body_barycentric_posvel("earth", t0)
+    sun_t0pos, sun_t0vel = get_body_barycentric_posvel("sun", t0)
+
+    s = earth_pos - sun_pos
+    s0 = earth_t0pos - sun_t0pos
+    v0 = earth_t0vel - sun_t0vel
+
+    coords = SkyCoord(ra_str + " " + dec_str)
+    ra = coords.ra.radian
+    dec = coords.dec.radian
+    n_hat = (-np.sin(dec) * np.cos(ra), -np.sin(dec) * np.sin(ra), np.cos(dec))
+    e_hat = (-np.sin(ra), np.cos(ra), 0)
+
+    s_N, s_E = _project(s, n_hat, e_hat)
+    s0_N, s0_E = _project(s0, n_hat, e_hat)
+    v0_N, v0_E = _project(v0, n_hat, e_hat)
+
+    dt_days = (time_hjd - t0).to(u.day)
+    delta_sN = s_N - s0_N - dt_days * v0_N
+    delta_sE = s_E - s0_E - dt_days * v0_E
+
+    return delta_sN, delta_sE
