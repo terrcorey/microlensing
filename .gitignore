@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.venv-mulens/
+
+# raw + derived photometry; download_data.py / preprocess_binary_data.py regenerate these
+data/
+
+# canonical pipeline plot outputs (see CLAUDE.md "Output layout")
+raw_lc/
+fit_lc/
+hist_plots/
+corner_plots/
+# scratch/ mixes one-time scripts with their own plot output -- only ignore the plots
+*.png

@@ -1,0 +1,19 @@
+Dataset short-name convention
+==============================
+
+Format: <survey letter>-<YY>-<FIELDnumber>
+
+  - survey letter: first letter of the survey acronym (OGLE -> O)
+  - YY: last two digits of the event year
+  - FIELDnumber: the field/event code with internal hyphens dropped
+
+This is for filenames only (plots, processed data). The full name is the
+one to cite/search for; always look it up here rather than guessing back
+from the short form.
+
+Mappings
+--------
+
+OGLE-2005-BLG-086  ->  O-05-BLG086
+OGLE-2003-BLG-235 / MOA-2003-BLG-53 (same event, two surveys)  ->  O-03-BLG235
+MOA-2019-BLG-008 (KMT I-band subset only, so far)  ->  M-19-BLG008

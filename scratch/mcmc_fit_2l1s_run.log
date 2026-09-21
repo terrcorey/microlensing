@@ -1,0 +1,11 @@
+You must install the tqdm library to use progress indicators with emcee
+[mcmc-2l1s] 3600 posterior samples
+[mcmc-2l1s] best sample: chi2=2142.58
+[mcmc-2l1s] t0 = 2847.62300
+[mcmc-2l1s] u0 = 0.10882
+[mcmc-2l1s] tE = 67.47909
+[mcmc-2l1s] alpha = 3.86234
+[mcmc-2l1s] s = 1.62406
+[mcmc-2l1s] q = 0.01083
+saved scratch/O-03-BLG235_2l1s.png
+saved scratch/O-03-BLG235_2l1s_mcmc.png
