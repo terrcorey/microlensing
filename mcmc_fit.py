@@ -5,11 +5,13 @@ import emcee
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
+from astropy.coordinates import SkyCoord
 
-from lc_models import ZERO_POINT_MAG, flux, magnification, magnitude
+from lc_models import ZERO_POINT_MAG, flux, plain_flux, magnification, magnitude, plain_magnitude, sun_earth_projection
 from zoom_utils import find_zoom_window
 
-LABELS = ["t0", "u0", "tE", "f_source", "f_blend"]
+PLAIN_LABELS = ["t0", "u0", "tE", "f_source", "f_blend"]
+LABELS = PLAIN_LABELS + ["piE_N", "piE_E"]
 
 
 def fit_pspl_mcmc(time, mag, mag_err, u0_guess=0.5, tE_guess=50.0, run_mcmc=True):
@@ -24,7 +26,7 @@ def fit_pspl_mcmc(time, mag, mag_err, u0_guess=0.5, tE_guess=50.0, run_mcmc=True
     t0_guess = time[np.argmin(mag)]
     f_source_guess = 10 ** (-0.4 * (np.median(mag) - ZERO_POINT_MAG))
     p0_guess = [t0_guess, u0_guess, tE_guess, f_source_guess, 0.0]
-    best_fit, _ = curve_fit(magnitude, time, mag, sigma=mag_err, p0=p0_guess)
+    best_fit, _ = curve_fit(plain_magnitude, time, mag, sigma=mag_err, p0=p0_guess)
     if not run_mcmc:
         return best_fit, None
 
@@ -41,7 +43,7 @@ def fit_pspl_mcmc(time, mag, mag_err, u0_guess=0.5, tE_guess=50.0, run_mcmc=True
         return 0.0
 
     def log_likelihood(theta):
-        model_flux = flux(time, *theta)
+        model_flux = plain_flux(time, *theta)
         if np.any(model_flux <= 0):
             return -np.inf
         model_mag = ZERO_POINT_MAG - 2.5 * np.log10(model_flux)
@@ -61,6 +63,64 @@ def fit_pspl_mcmc(time, mag, mag_err, u0_guess=0.5, tE_guess=50.0, run_mcmc=True
     sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability)
     sampler.run_mcmc(p0, 4000, progress=False)
     return best_fit, sampler.get_chain(discard=1000, thin=15, flat=True)
+
+
+def fit_parallax_pspl_mcmc(time, mag, mag_err, delta_sN, delta_sE, u0_guess=0.5, tE_guess=50.0, piE_N_guess=0.0, piE_E_guess=0.0, run_mcmc=True):
+    """Fit the 7-param parallax PSPL model: curve_fit for a starting point, then
+    emcee. Returns (best_fit, samples) -- samples is the flat, burned-in,
+    thinned chain, or None if run_mcmc=False (quicklook: point estimate only).
+
+    u0_guess/tE_guess matter: curve_fit can converge to the mirror-image
+    (u0 -> -u0) solution from a bad starting point, since the model only
+    depends on u0 squared. Tune these per dataset if the fit looks off.
+    """
+    t0_guess = time[np.argmin(mag)]
+    f_source_guess = 10 ** (-0.4 * (np.median(mag) - ZERO_POINT_MAG))
+    def _model_magnitude(t, t0, u0, tE, f_source, f_blend, piE_N, piE_E):
+        return magnitude(t, t0, u0, tE, f_source, f_blend, piE_N, piE_E, delta_sN, delta_sE)
+    best_fit, _ = curve_fit(_model_magnitude, time, mag, sigma=mag_err,
+                            p0=[t0_guess, u0_guess, tE_guess, f_source_guess, 0.0, piE_N_guess, piE_E_guess])
+    if not run_mcmc:
+        return best_fit, None
+
+    def log_prior(theta):
+        t0, u0, tE, f_source, f_blend, piE_N, piE_E = theta
+        if not (time.min() < t0 < time.max()):
+            return -np.inf
+        if not (0 < u0 < 5):
+            return -np.inf
+        if not (0.1 < tE < 1000):
+            return -np.inf
+        if not (f_source > 0):
+            return -np.inf
+        if not (np.abs(piE_N) < 2):
+            return -np.inf
+        if not (np.abs(piE_E) < 2):
+            return -np.inf
+        return 0.0
+
+    def log_likelihood(theta):
+        model_flux = flux(time, *theta, delta_sN, delta_sE)
+        if np.any(model_flux <= 0):
+            return -np.inf
+        model_mag = ZERO_POINT_MAG - 2.5 * np.log10(model_flux)
+        return -0.5 * np.sum(((mag - model_mag) / mag_err) ** 2)
+
+    def log_probability(theta):
+        lp = log_prior(theta)
+        if not np.isfinite(lp):
+            return -np.inf
+        return lp + log_likelihood(theta)
+
+    ndim, nwalkers = 7, 32
+    rng = np.random.default_rng(42)
+    spread = np.array([0.1, 0.02, 1.0, 0.01 * best_fit[3], 0.01 * max(abs(best_fit[3]), 1e-3), 0.5, 0.5])
+    p0 = best_fit + spread * rng.standard_normal((nwalkers, ndim))
+
+    sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability)
+    sampler.run_mcmc(p0, 4000, progress=False)
+    return best_fit, sampler.get_chain(discard=1000, thin=15, flat=True)
+
 
 
 KAPPA = 8.144  # mas / Msun; theta_E[mas]^2 = KAPPA * M[Msun] * pi_rel[mas]
@@ -131,18 +191,37 @@ def plot_raw(time, mag, mag_err, title, out_path):
     print(f"saved {out_path}")
 
 
-def plot_fit_lc(time, mag, mag_err, best_fit, dataset_label, out_path):
-    """Two-panel (full baseline + auto-zoomed peak) magnitude-space fit overlay
+def _plot_residual_panel(ax, x, residuals):
+    """Standardized-residual scatter with a +-1 sigma translucent band and a
+    symmetric y-axis around 0 -- shared by both panels in plot_fit_lc()."""
+    ylim = max(np.abs(residuals).max() * 1.1, 1.5)
+    ax.axhspan(-1, 1, color="gray", alpha=0.15, linewidth=0)
+    ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
+    ax.plot(x, residuals, "+", ms=3)
+    ax.set_ylim(-ylim, ylim)
+    ax.set_ylabel("residual (σ)")
+
+
+def plot_fit_lc(time, mag, mag_err, best_fit, coords, t0_par, dataset_label, out_path):
+    """Two-panel (full baseline + auto-zoomed peak) magnitude-space fit overlay,
+    each with a standardized-residual ((data-model)/mag_err) panel underneath
     -- the --stage=quicklook/mcmc output."""
+
     t_model = np.linspace(time.min(), time.max(), 2000)
-    mag_model = magnitude(t_model, *best_fit)
+    delta_sN_model, delta_sE_model = sun_earth_projection(t_model, coords, t0_par)
+    mag_model = magnitude(t_model, *best_fit, delta_sN_model, delta_sE_model)
 
     zoom_start, zoom_end = find_zoom_window(time, -mag, mag_err)
     in_zoom = (time >= zoom_start) & (time <= zoom_end)
     t_model_zoom = np.linspace(zoom_start, zoom_end, 2000)
-    mag_model_zoom = magnitude(t_model_zoom, *best_fit)
+    delta_sN_zoom, delta_sE_zoom = sun_earth_projection(t_model_zoom, coords, t0_par)
+    mag_model_zoom = magnitude(t_model_zoom, *best_fit, delta_sN_zoom, delta_sE_zoom)
 
-    fig, (ax_full, ax_zoom) = plt.subplots(2, 1, figsize=(8, 8))
+    delta_sN_data, delta_sE_data = sun_earth_projection(time, coords, t0_par)
+    residuals = (mag - magnitude(time, *best_fit, delta_sN_data, delta_sE_data)) / mag_err
+
+    fig, (ax_full, ax_full_resid, ax_zoom, ax_zoom_resid) = plt.subplots(
+        4, 1, figsize=(8, 10), gridspec_kw={"height_ratios": [3, 1, 3, 1]}, sharex=False)
 
     ax_full.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, label="data")
     ax_full.plot(t_model, mag_model, color="crimson", label="PSPL fit")
@@ -150,14 +229,23 @@ def plot_fit_lc(time, mag, mag_err, best_fit, dataset_label, out_path):
     ax_full.set_ylabel("I magnitude")
     ax_full.set_title(f"{dataset_label} (PSPL fit, full baseline)")
     ax_full.legend()
+    ax_full.sharex(ax_full_resid)
+
+    _plot_residual_panel(ax_full_resid, time, residuals)
+    ax_full_resid.set_xlabel("HJD - 2450000")
 
     ax_zoom.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, label="data")
     ax_zoom.plot(t_model_zoom, mag_model_zoom, color="crimson", label="PSPL fit")
     ax_zoom.set_xlim(zoom_start, zoom_end)
     ax_zoom.set_ylim(mag[in_zoom].max() + 0.05, mag[in_zoom].min() - 0.05)
-    ax_zoom.set_xlabel("HJD - 2450000")
     ax_zoom.set_ylabel("I magnitude")
     ax_zoom.set_title("zoomed on peak (auto-detected)")
+    ax_zoom.sharex(ax_zoom_resid)
+
+    _plot_residual_panel(ax_zoom_resid, time[in_zoom], residuals[in_zoom])
+    ax_zoom_resid.set_xlim(zoom_start, zoom_end)
+    ax_zoom_resid.set_xlabel("HJD - 2450000")
+
     fig.tight_layout()
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
@@ -203,22 +291,47 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     SHORT_NAME = "O-05-BLG086"  # see dataset_names.txt
+    coords_str = "18h04m45.70s -26d59m15.5s"
+    coords = SkyCoord(coords_str)
     time, mag, mag_err = np.loadtxt("data/OGLE-2005-BLG-086.dat", unpack=True)
+    
 
     if args.stage == "raw":
         plot_raw(time, mag, mag_err, "OGLE-2005-BLG-086 (raw)", f"raw_lc/{SHORT_NAME}.png")
     else:
-        best_fit, samples = fit_pspl_mcmc(time, mag, mag_err, run_mcmc=(args.stage == "mcmc"))
+        try:
+            path = f"data/processed/{SHORT_NAME}_plain_fit_summary.dat"
+            data = np.genfromtxt(path, dtype=None, names=True, encoding=None)
+            t0_par = data["p50"][data["param"] == "t0"][0]
 
-        chi2 = np.sum(((mag - magnitude(time, *best_fit)) / mag_err) ** 2)
+        except FileNotFoundError:
+            best_fit, samples = fit_pspl_mcmc(time, mag, mag_err, run_mcmc=True)
+            chi2 = np.sum(((mag - plain_magnitude(time, *best_fit)) / mag_err) ** 2)
+            _, u0_s, tE_s, fs_s, fb_s = samples.T
+            derived = {
+                "A_max": magnification(u0_s),
+                "t_eff": u0_s * tE_s,
+                "blend_fraction": fb_s / (fs_s + fb_s),
+                "m_source": ZERO_POINT_MAG - 2.5 * np.log10(fs_s),
+                "M_lens": estimate_mass(tE_s),
+            }
+            results = {label: samples[:, i] for i, label in enumerate(PLAIN_LABELS)} | derived
+            save_summary(results, f"data/processed/{SHORT_NAME}_plain_fit_summary.dat")
+            t0_par = best_fit[0]
+        delta_sN, delta_sE = sun_earth_projection(time, coords, t0_par)
+
+        best_fit, samples = fit_parallax_pspl_mcmc(time, mag, mag_err, delta_sN, delta_sE, run_mcmc=(args.stage == "mcmc"))
+
+        chi2 = np.sum(((mag - magnitude(time, *best_fit, delta_sN, delta_sE)) / mag_err) ** 2)
         print(f"chi2/dof = {chi2 / (len(time) - len(best_fit)):.3f}")
         for label, value in zip(LABELS, best_fit):
             print(f"{label} = {value:.5f}")
-        plot_fit_lc(time, mag, mag_err, best_fit, "OGLE-2005-BLG-086", f"fit_lc/{SHORT_NAME}.png")
+        plot_fit_lc(time, mag, mag_err, best_fit, coords, t0_par, "OGLE-2005-BLG-086", f"fit_lc/{SHORT_NAME}.png")
 
         if args.stage == "mcmc":
+
             print(f"{samples.shape[0]} posterior samples after burn-in/thinning")
-            _, u0_s, tE_s, fs_s, fb_s = samples.T
+            _, u0_s, tE_s, fs_s, fb_s, piE_N, piE_E = samples.T
             derived = {
                 "A_max": magnification(u0_s),
                 "t_eff": u0_s * tE_s,

@@ -22,10 +22,13 @@ def mag_to_flux(mag, mag_err):
     return flux, flux_err
 
 
-def trajectory(t, t0, u0, tE):
+def trajectory(t, t0, u0, tE, piE_N, piE_E, delta_sN, delta_sE):
     """Source-lens separation u(t), in units of the Einstein radius."""
-    tau = (t - t0) / tE
-    return np.sqrt(u0**2 + tau**2)
+    delta_tau = piE_N * delta_sN + piE_E * delta_sE
+    delta_beta = piE_N * delta_sE - piE_E * delta_sN
+    tau = (t - t0) / tE + delta_tau
+    beta = u0 + delta_beta
+    return np.sqrt(beta**2 + tau**2)
 
 
 def magnification(u):
@@ -34,15 +37,28 @@ def magnification(u):
     return (u2 + 2) / (u * np.sqrt(u2 + 4))
 
 
-def flux(t, t0, u0, tE, f_source, f_blend):
+def flux(t, t0, u0, tE, f_source, f_blend, piE_N, piE_E, delta_sN, delta_sE):
     """Observed flux: magnified source plus a constant blend flux."""
-    A = magnification(trajectory(t, t0, u0, tE))
+    A = magnification(trajectory(t, t0, u0, tE, piE_N, piE_E, delta_sN, delta_sE))
     return f_source * A + f_blend
 
 
-def magnitude(t, t0, u0, tE, f_source, f_blend):
+def magnitude(t, t0, u0, tE, f_source, f_blend, piE_N, piE_E, delta_sN, delta_sE):
     """Observed magnitude, for overplotting against real photometry."""
-    return ZERO_POINT_MAG - 2.5 * np.log10(flux(t, t0, u0, tE, f_source, f_blend))
+    return ZERO_POINT_MAG - 2.5 * np.log10(flux(t, t0, u0, tE, f_source, f_blend, piE_N, piE_E, delta_sN, delta_sE))
+
+
+def plain_flux(t, t0, u0, tE, f_source, f_blend):
+    """flux() with piE_N=piE_E=0 -- the exact pre-parallax model, used only
+    to bootstrap t0_par (the preliminary non-parallax best-fit t0 that the
+    real parallax fit's sun_earth_projection() needs as a fixed input)."""
+    zeros = np.zeros_like(t)
+    return flux(t, t0, u0, tE, f_source, f_blend, 0.0, 0.0, zeros, zeros)
+
+
+def plain_magnitude(t, t0, u0, tE, f_source, f_blend):
+    """magnitude() with piE_N=piE_E=0 -- see plain_flux()."""
+    return ZERO_POINT_MAG - 2.5 * np.log10(plain_flux(t, t0, u0, tE, f_source, f_blend))
 
 
 def binary_trajectory(t, t0, u0, tE, alpha):
@@ -216,13 +232,19 @@ def binary_magnification(zeta, s, q):
     A = np.where(valid, 1 / np.abs(jacobian), 0.0).sum(axis=1)
     return A if np.ndim(zeta) else A[0]
 
-def _project(vec, n_hat, e_hat):
+
+def _project(vec, coords):
     """Project a Cartesian position/velocity vector onto the sky's
     (N, E) tangent-plane basis at the target."""
+    ra = coords.ra.radian
+    dec = coords.dec.radian
+    n_hat = (-np.sin(dec) * np.cos(ra), -np.sin(dec) * np.sin(ra), np.cos(dec))
+    e_hat = (-np.sin(ra), np.cos(ra), 0)
     return (vec.x * n_hat[0] + vec.y * n_hat[1] + vec.z * n_hat[2],
             vec.x * e_hat[0] + vec.y * e_hat[1] + vec.z * e_hat[2])
 
-def sun_earth_projection(time, ra_str, dec_str, t0_par):
+
+def sun_earth_projection(time, coords, t0_par):
     """Returns (delta_s_n, delta_s_e): Earth's sky-projected position
     relative to the Sun, in AU, with the constant-velocity part at
     t0_par subtracted out -- i.e. only the non-uniform (curvature)
@@ -230,7 +252,7 @@ def sun_earth_projection(time, ra_str, dec_str, t0_par):
     """
     time_hjd = Time(time + 2450000, format="jd")
     t0 = Time(t0_par + 2450000, format="jd")
-        
+
     earth_pos, _ = get_body_barycentric_posvel("earth", time_hjd)
     sun_pos, _ = get_body_barycentric_posvel("sun", time_hjd)
     earth_t0pos, earth_t0vel = get_body_barycentric_posvel("earth", t0)
@@ -240,18 +262,24 @@ def sun_earth_projection(time, ra_str, dec_str, t0_par):
     s0 = earth_t0pos - sun_t0pos
     v0 = earth_t0vel - sun_t0vel
 
-    coords = SkyCoord(ra_str + " " + dec_str)
-    ra = coords.ra.radian
-    dec = coords.dec.radian
-    n_hat = (-np.sin(dec) * np.cos(ra), -np.sin(dec) * np.sin(ra), np.cos(dec))
-    e_hat = (-np.sin(ra), np.cos(ra), 0)
+    s_N, s_E = _project(s, coords)
+    s0_N, s0_E = _project(s0, coords)
+    v0_N, v0_E = _project(v0, coords)
 
-    s_N, s_E = _project(s, n_hat, e_hat)
-    s0_N, s0_E = _project(s0, n_hat, e_hat)
-    v0_N, v0_E = _project(v0, n_hat, e_hat)
+    # Strip to plain floats (AU, AU/day) here rather than leaving Quantities --
+    # piE_N/piE_E are conventionally plain numbers in AU^-1 (matching
+    # MulensModel's own _get_delta_annual(), which does the same .to(u.au).value
+    # conversion), so piE_N * delta_sN must be a bare dimensionless float too.
+    s_N, s_E = s_N.to_value(u.au), s_E.to_value(u.au)
+    s0_N, s0_E = s0_N.to_value(u.au), s0_E.to_value(u.au)
+    v0_N, v0_E = v0_N.to_value(u.au / u.day), v0_E.to_value(u.au / u.day)
 
-    dt_days = (time_hjd - t0).to(u.day)
-    delta_sN = s_N - s0_N - dt_days * v0_N
-    delta_sE = s_E - s0_E - dt_days * v0_E
+    dt_days = (time_hjd - t0).to_value(u.day)
+    # s0 - s (not s - s0): matches MulensModel's own _get_delta_annual() sign
+    # convention (position_ref - position + dt*velocity) -- empirically
+    # confirmed via scratch/cross_check_mulensmodel_parallax.py (2.7e-7 rel.
+    # diff at this sign vs. 3.7e-2 at the mirror sign).
+    delta_sN = s0_N - s_N + dt_days * v0_N
+    delta_sE = s0_E - s_E + dt_days * v0_E
 
     return delta_sN, delta_sE

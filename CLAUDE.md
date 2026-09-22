@@ -6,8 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A playground for analysing real microlensing light curves, to learn the
 challenges involved in modeling brown dwarf populations with microlensing --
-not an application anyone installs or upgrades. No README, no CI, no git
-repo (yet).
+not an application anyone installs or upgrades. 
 
 ## Rules
 
@@ -27,6 +26,7 @@ repo (yet).
    dev-script code and output separated from the regular pipeline
    (`scratch/`, see "Output layout" below), and fold single-caller files
    into their one caller instead of leaving them as separate scripts.
+6. Your main role in this repository is to act as a guiding role. Give an overview rundown of what needs to be done, give suitable hints and direction to the user but allow the user to write their own code. After they finish, you can simplify using ponytail and tidy up.
 
 
 ## Instructions
