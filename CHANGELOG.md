@@ -794,3 +794,127 @@ actual point of this repo), and **Next session**'s planned goal.
   `fit_joint_pspl()`), completing the roadmap CLAUDE.md's "Annual parallax
   + robust likelihood" section describes. The 2L1S search problem and
   MOA-2019-BLG-008's `mag_err` rescaling stay backlog, not scheduled.
+
+## 2026-09-22 — session 9
+
+### Built
+- Completed session 8's confirmed goal (Step 6): propagated annual
+  parallax + Student-t robust likelihood to O-03-BLG235, finishing
+  CLAUDE.md's "Annual parallax + robust likelihood" roadmap for both
+  datasets. Claude implemented this session (user requested it directly,
+  a deliberate one-off exception to this repo's usual "user writes, Claude
+  reviews" mode), with ponytail active per CLAUDE.md's rule 4.
+  - `preprocess_binary_data.py`'s `fit_joint_pspl()`: added `piE_N`/`piE_E`
+    to the 6-param calibration fit. `t0_par` bootstrapped by reusing the
+    same function with `delta_sN`/`delta_sE` fixed at zero rather than
+    writing a separate plain-fit function -- those arrays multiply
+    `piE_N`/`piE_E` in `trajectory()`, so zeroing them collapses the
+    parallax terms regardless of `piE_N`/`piE_E`'s value, an exact
+    pre-parallax special case (the same trick `lc_models.plain_flux()`
+    already used).
+  - `mcmc_fit_binary.py`'s `run_ogle_only_diagnostic()`: replaced its own
+    plain-PSPL fit + hand-rolled plot with a direct call to
+    `mcmc_fit.fit_parallax_pspl_mcmc()`/`get_t0_par()`/`plot_fit_lc()` --
+    turned out to be the exact same single-instrument magnitude-space shape
+    O-05-BLG086 already solves, so this was a pure reuse, not new code.
+  - `mcmc_fit_binary.py`'s `run_joint_fit()`: genuinely new code (no
+    existing analog works in magnification space) -- added `piE_N`/`piE_E`
+    and Student-t `scale`/`dof` on top of the existing `(t0, u0, tE)`
+    Nelder-Mead-then-emcee fit.
+  - Real result: joint fit chi2/dof 1.51; `dof`~5.7-6.3 in both new O-03-BLG235
+    fits, consistent with O-05-BLG086's own heavier-than-Gaussian finding.
+- User then asked where the residual plots/histograms were for O-03-BLG235
+  -- `zoom_utils.plot_fit_panels()` had never gotten session 8's
+  residual-panel treatment (only `mcmc_fit.plot_fit_lc()` had). First pass:
+  promoted the two per-panel helpers (`_plot_residual_panel`/
+  `_plot_residual_hist`) out of `mcmc_fit.py` and into `zoom_utils.py` as
+  public, multi-series-capable functions, used by both `plot_fit_lc()` and
+  the newly-upgraded `plot_fit_panels()` -- also needed `plot_fit_panels()`'s
+  own GridSpec rework to match `plot_fit_lc()`'s 4-row layout. This first
+  pass had a real bug, caught by the user (not by inspection): those helpers
+  show *standardized* residuals (`(obs-model)/err`), where every point's
+  error bar is hardcoded to 1 by construction -- correct for a single
+  instrument, but on a panel mixing OGLE and MOA it made OGLE's real ~4x
+  better photometric precision (verified: median `A_err` 0.080 vs. 0.324)
+  invisible, since both instruments' points got the same-size error bar
+  regardless. Fixed by giving `plot_fit_panels()` its own raw
+  (non-standardized) residual panel instead -- `obs-model` in physical
+  magnification units, each point keeping its own instrument's real error
+  bar -- rather than forcing it through the shared standardized-residual
+  helpers, which stayed as-is for `plot_fit_lc()`'s single-instrument case
+  (see CLAUDE.md's updated "Shared plotting/MCMC helpers" note). The joint
+  fit's zoomed residual panel still visibly shows the real caustic-crossing
+  bump as an outlying spike, exactly the "known-incomplete PSPL model"
+  signature CLAUDE.md already described from the raw overlay alone.
+- Hit and fixed a real robustness bug while re-running: `fit_parallax_pspl_mcmc()`'s
+  `curve_fit` call was hitting scipy's default `maxfev=1600` cap (200*(N+1)
+  for its 7 params) on the OGLE-only diagnostic's deliberately marginal fit
+  -- reproducible standalone, not a one-off flake. Fixed with an explicit
+  `maxfev=10000`; no effect on O-05-BLG086's already-converging fit.
+
+### Learned & open questions
+- The "reuse a function with a degenerate/zeroed input to recover a simpler
+  special case" trick (first used for `plain_flux()`) generalizes cleanly
+  one level up: the same move worked for an entire *calibration fit*
+  (`fit_joint_pspl()` with `delta_s=0`), not just a single model-evaluation
+  function. Avoided writing and maintaining a second near-duplicate chi2.
+- A repo-shape lesson, corrected mid-session: `plot_fit_lc()` and
+  `plot_fit_panels()`'s residual panels *looked* like the same shape
+  (scatter + errorbar + histogram beside a fit overlay) but weren't --
+  single- vs. two-instrument wasn't the relevant axis; standardized vs. raw
+  residuals was, and that distinction only became visible once two
+  differently-precise instruments shared one panel. A pattern match on
+  visual shape alone (session 8's helpers "looked reusable") isn't the same
+  check as "does the abstraction hide something instrument-specific" --
+  CLAUDE.md's existing "don't force an abstraction over a real difference"
+  note existed for exactly this, but the difference wasn't obvious until a
+  human looked at the actual output, not just the code.
+- O-03-BLG235's joint fit shows a real discrepancy between its Nelder-Mead
+  point estimate and MCMC posterior median for `piE_N`/`piE_E` (point
+  ~0.05/-0.11 vs. posterior median ~0.68/-0.39) -- plausible given PSPL is
+  a known-incomplete model for this real 2L1S event (unlike O-05-BLG086,
+  where point estimate and posterior agreed closely), but not yet
+  root-caused. Not treated as a bug this session since the model is already
+  known-incomplete here, but flagged rather than silently accepted.
+- The `curve_fit` `maxfev` failure was deterministic and reproducible given
+  fixed inputs (not a flaky/random failure) -- worth remembering before
+  assuming a re-run will "just work" the second time.
+- Doc/dependency cleanup, done this session rather than deferred (user
+  asked to knock it out immediately once raised): `requirements.txt`
+  dropped `sympy`/`mpmath`/`networkx` -- `sympy` is only needed by the
+  standalone `scratch/derive_binary_quintic.py` (already documented as
+  needing its own throwaway venv, not this project's), `mpmath` was only
+  there as `sympy`'s own dependency, and `networkx` isn't imported by any
+  script in this repo at all (likely an artifact of `graphify`'s own setup
+  in this venv, not a pipeline dependency). `README.md`'s stale "no
+  requirements.txt yet" setup line replaced with `pip install -r
+  requirements.txt`, matching CLAUDE.md's own documented command. The
+  superseded Desktop-level `graphify-out/` flagged last session turned out
+  to already be gone -- nothing left to do there.
+
+### Next session
+- Confirmed via `/grill-me`: extend annual parallax (`piE_N`/`piE_E`) *and*
+  the Student-t robust likelihood into the 2L1S track
+  (`scratch/fit_2l1s.py` + `scratch/mcmc_fit_2l1s.py`), explicitly crossing
+  the boundary CLAUDE.md previously drew ("not the `scratch/` 2L1S code, a
+  separate track") -- both changes now apply everywhere.
+  - Both `fit_2l1s.py`'s multi-start Nelder-Mead point estimate *and*
+    `mcmc_fit_2l1s.py`'s MCMC get `piE_N`/`piE_E` (not just the MCMC seeded
+    from a non-parallax point estimate) -- decided this way specifically
+    because the existing multi-start step exists to avoid false minima, and
+    seeding an MCMC that includes 2 new free parameters from a point
+    estimate that never saw them risked starting in the wrong basin.
+  - Applies to both the joint (OGLE+MOA) fit and the MOA-only control fit
+    (`run_fit_moa_only()`/`run_mcmc_moa_only()`) -- MOA-only exists
+    specifically as an independent check on the joint fit, so it needs to
+    stay comparable once the joint fit's model changes.
+  - Explicit decision: add parallax (+ Student-t) on top of the *current*
+    2L1S search as-is, accepting the existing "near-miss cusp solution"
+    risk for now (still only catchable via the image-count check, not chi2
+    alone) rather than also trying to fix the search's robustness in the
+    same session -- keeps the two problems (new physics vs. search
+    reliability) from getting conflated if something looks wrong
+    afterward. Search-robustness stays a separate, still-open problem.
+  - The "MOA-2019-BLG-008 mag_err rescaling" and "resume the 2L1S search
+    problem" backlog items were both considered and explicitly deferred in
+    favor of this -- still backlog, not scheduled.

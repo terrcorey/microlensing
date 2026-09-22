@@ -16,7 +16,7 @@ a single confident number.
 
 ```
 python3 -m venv .venv && source .venv/bin/activate
-pip install numpy scipy matplotlib emcee corner   # no requirements.txt yet -- these are all of them
+pip install -r requirements.txt
 ```
 
 ## Running it

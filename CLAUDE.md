@@ -140,9 +140,7 @@ randomly, consistent with unmodeled physics rather than bad photometry).
 Two changes, planned across *every* PSPL-based fit (`mcmc_fit.py`, both
 functions in `mcmc_fit_binary.py`, and `preprocess_binary_data.py`'s
 `fit_joint_pspl()` calibration fit -- not the `scratch/` 2L1S code, a
-separate track) -- **done for O-05-BLG086 (`mcmc_fit.py`), not yet
-propagated to O-03-BLG235 (`mcmc_fit_binary.py`/`preprocess_binary_data.py`
--- deliberately deferred)**:
+separate track) -- **done for both O-05-BLG086 and O-03-BLG235**:
 
 1. **Annual parallax** (Gould 2004 geocentric formalism): two new free
    parameters `piE_N`/`piE_E`, perturbing the trajectory via the target's
@@ -183,12 +181,45 @@ detection, and `scale`/`dof` closer to Gaussian than the pre-parallax
 diagnostic's own MLE (dof~6), consistent with parallax explaining away
 real signal rather than the two changes competing for the same residuals.
 
+**Status (O-03-BLG235)**: both done too, propagated to both
+`mcmc_fit_binary.py` functions and `preprocess_binary_data.py`'s
+`fit_joint_pspl()`. `t0_par` bootstrapping reuses the same
+parallax-capable fit function with `delta_sN`/`delta_sE` fixed at zero
+(rather than a separate plain-fit function) -- those arrays multiply
+`piE_N`/`piE_E` in `trajectory()`'s `delta_tau`/`delta_beta`, so zeroing
+them collapses the parallax terms to nothing regardless of `piE_N`/`piE_E`,
+recovering the exact pre-parallax model as a special case. Used this way in
+three places: `preprocess_binary_data.py`'s `__main__` (bootstrap call to
+`fit_joint_pspl()` before the real one), `run_joint_fit()`'s preliminary
+Nelder-Mead point estimate, and `plain_flux()`/`plain_magnitude()` in
+`lc_models.py`. `run_ogle_only_diagnostic()` now just calls
+`mcmc_fit.fit_parallax_pspl_mcmc()`/`get_t0_par()` directly rather than a
+separate implementation -- it's the same single-instrument, magnitude-space
+problem O-05-BLG086 already solves. `run_joint_fit()` needed genuinely new
+code (magnitude-space `flux()`/`magnitude()` don't apply to
+already-calibration-normalized magnification data), gaining `piE_N`/`piE_E`
+and the Student-t `scale`/`dof` on top of its existing `(t0, u0, tE)`.
+Real O-03-BLG235 result: joint fit chi2/dof 1.51, `dof`~5.7-6.3 in both new
+fits (consistent with O-05-BLG086's own heavier-than-Gaussian finding) --
+but the joint fit's Nelder-Mead point estimate and MCMC posterior median
+disagree substantially on `piE_N`/`piE_E` (point ~0.05/-0.11 vs. posterior
+median ~0.68/-0.39), plausible given PSPL is a known-incomplete model for
+this real 2L1S event, but not a clean parallax detection the way
+O-05-BLG086's is -- treat these parallax numbers with more caution.
+
+Hit one robustness issue along the way, general to the fit not specific to
+O-03-BLG235: `fit_parallax_pspl_mcmc()`'s `curve_fit` call can be marginal
+enough (e.g. the deliberately-underdetermined OGLE-only diagnostic) to hit
+scipy's default `maxfev=1600` cap (200*(N+1) for its 7 params) -- fixed by
+passing `maxfev=10000` explicitly.
+
 Target coordinates gathered so far: O-05-BLG086 RA 18h04m45.70s / Dec
 -26d59m15.5s (OGLE-III EWS alert page, field BLG234.6 -- a Wikipedia-
 sourced pair used briefly during development was off by ~3 degrees in
 both RA and Dec and was caught before it reached any fit); O-03-BLG235 RA
 18h05m16.35s / Dec -28d53m42.0s (Bond et al. 2004 / NASA Exoplanet
-Archive).
+Archive, `preprocess_binary_data.COORDS` -- `mcmc_fit_binary.py` imports
+it from there rather than redefining it).
 
 ## O-03-BLG235's calibrate-once-then-fit pipeline
 
@@ -196,11 +227,12 @@ Because OGLE and MOA can't be compared directly, there's a dedicated
 reduction step:
 
 1. **`preprocess_binary_data.py`'s `fit_joint_pspl()`** fits a single shared
-   trajectory (t0, u0, tE) to both instruments at once, each with its own
-   flux model: `OGLE flux = fs_ogle * A(t) + fb_ogle`,
+   trajectory (t0, u0, tE, piE_N, piE_E) to both instruments at once, each
+   with its own flux model: `OGLE flux = fs_ogle * A(t) + fb_ogle`,
    `MOA flux = fs_moa * (A(t) - 1)` (no `fb_moa`: MOA's differencing
    already cancels out any constant blend). This is the only place those
-   per-instrument flux parameters exist.
+   per-instrument flux parameters exist. See "Annual parallax + robust
+   likelihood" above for how `piE_N`/`piE_E` and `t0_par` fit in here.
 2. The rest of `preprocess_binary_data.py` runs that fit once and uses the
    resulting (fs_ogle, fb_ogle, fs_moa) to invert both instruments onto a
    common, physically meaningful, dimensionless scale: magnification A(t)
@@ -227,9 +259,10 @@ suffixed `_ogle_only` specifically so they don't collide with
 `run_joint_fit()`'s canonical outputs. `python3 mcmc_fit_binary.py` runs
 both functions in sequence.
 
-`run_ogle_only_diagnostic()` gets its actual 5-parameter PSPL+MCMC fit from
-`mcmc_fit.fit_pspl_mcmc()` (shared with the O-05-BLG086 pipeline) rather
-than duplicating it. **`u0_guess`/`tE_guess` are required, dataset-specific
+`run_ogle_only_diagnostic()` gets its actual parallax+Student-t PSPL+MCMC
+fit from `mcmc_fit.fit_parallax_pspl_mcmc()`/`get_t0_par()` (shared with the
+O-05-BLG086 pipeline) rather than duplicating it. **`u0_guess`/`tE_guess` are
+required, dataset-specific
 arguments to that function, not incidental defaults** -- `curve_fit` can
 converge to the mirror-image (`u0 -> -u0`) solution from a bad starting
 point, since the model only depends on `u0` squared. Silently reusing one
@@ -306,18 +339,38 @@ Bond's reference) on one figure for comparison.
 ## Shared plotting/MCMC helpers -- do not re-copy these
 
 - `zoom_utils.plot_fit_panels(ogle, moa, model_fn, fit_label, out_path)`:
-  the two-panel (full baseline + auto-zoomed peak) OGLE+MOA data+fit overlay.
-  Every magnification-space fit script should call this rather than
-  hand-rolling the panel loop again -- it's already been duplicated and
-  de-duplicated once.
+  the two-panel (full baseline + auto-zoomed peak) OGLE+MOA data+fit overlay,
+  each paired with a RAW (non-standardized) residual scatter panel --
+  `obs - model` in physical magnification units, one series per instrument,
+  each point keeping its own instrument's real error bar -- and a rotated
+  residual histogram sharing that panel's y-axis. Every magnification-space
+  fit script should call this rather than hand-rolling the panel loop again
+  -- it's already been duplicated and de-duplicated once. Deliberately NOT
+  built on `plot_residual_panel()`/`plot_residual_hist()` below: an earlier
+  version of this session's work tried reusing those (standardized
+  residuals, every point's error bar hardcoded to 1 by construction), which
+  silently hid OGLE's real ~4x-better photometric precision behind MOA's
+  when both instruments shared one panel -- caught by the user, not by
+  inspection. Raw residuals with real per-point error bars make that
+  precision difference visible directly, at the cost of the panel no longer
+  being on a directly-comparable (dimensionless sigma) scale across
+  instruments. See CHANGELOG.
+- `zoom_utils.plot_residual_panel(ax, series, invert=True)` /
+  `plot_residual_hist(ax, series)`: standardized-residual (`(obs-model)/err`)
+  scatter + histogram helpers, used only by `mcmc_fit.plot_fit_lc()`
+  (single-instrument, so there's no cross-instrument error-bar comparison to
+  mislead) -- NOT used by `plot_fit_panels()` above, see its note for why.
+  `series` is a list of `(x, residuals[, color])` tuples. `invert=True` (the
+  default) matches a magnitude panel above it (brighter/lower-mag plots
+  upward). Call these, don't copy them -- they used to be private to
+  `mcmc_fit.py` (`_plot_residual_panel`/`_plot_residual_hist`) before being
+  promoted here as public functions.
 - `mcmc_fit.save_corner(samples, labels, truths, out_path)`: the
   corner-plot save. Same rule -- call it, don't copy its 4 lines.
-- `mcmc_fit.plot_fit_lc(...)`: O-05-BLG086's fit-overlay plot -- full
-  baseline + auto-zoomed peak, each paired with a standardized-residual
-  scatter panel (+-1 sigma band, symmetric+inverted y-axis matching the
-  magnitude panel above it) and a rotated residual histogram sharing that
-  panel's y-axis. `_plot_residual_panel()`/`_plot_residual_hist()` are its
-  internal per-panel helpers -- call `plot_fit_lc()` itself, don't copy them.
+- `mcmc_fit.plot_fit_lc(...)`: full baseline + auto-zoomed peak with
+  residual panels (see above) -- O-05-BLG086's fit-overlay plot, and reused
+  as-is (not copied) by O-03-BLG235's OGLE-only diagnostic, since it's the
+  same single-instrument magnitude-space shape.
 - `mcmc_fit.FitResult`: a `NamedTuple` (`best_fit`, `samples`, `labels`)
   with a `.column(name)` method, returned by `fit_pspl_mcmc()` and
   `fit_parallax_pspl_mcmc()` instead of a bare `(best_fit, samples)` tuple.

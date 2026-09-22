@@ -10,7 +10,7 @@ from scipy.stats import t as student_t
 from astropy.coordinates import SkyCoord
 
 from lc_models import ZERO_POINT_MAG, flux, plain_flux, magnification, magnitude, plain_magnitude, sun_earth_projection
-from zoom_utils import find_zoom_window
+from zoom_utils import find_zoom_window, plot_residual_hist, plot_residual_panel
 
 
 class FitResult(NamedTuple):
@@ -99,8 +99,12 @@ def fit_parallax_pspl_mcmc(time, mag, mag_err, delta_sN, delta_sE, u0_guess=0.5,
     f_source_guess = 10 ** (-0.4 * (np.median(mag) - ZERO_POINT_MAG))
     def _model_magnitude(t, t0, u0, tE, f_source, f_blend, piE_N, piE_E):
         return magnitude(t, t0, u0, tE, f_source, f_blend, piE_N, piE_E, delta_sN, delta_sE)
+    # maxfev bumped from scipy's default (200*(N+1)=1600 for 7 params) -- this fit
+    # can be marginal on sparse/single-instrument data (e.g. O-03-BLG235's OGLE-only
+    # diagnostic, deliberately underdetermined) and was seen hitting the default cap.
     best_fit, _ = curve_fit(_model_magnitude, time, mag, sigma=mag_err,
-                            p0=[t0_guess, u0_guess, tE_guess, f_source_guess, 0.0, piE_N_guess, piE_E_guess])
+                            p0=[t0_guess, u0_guess, tE_guess, f_source_guess, 0.0, piE_N_guess, piE_E_guess],
+                            maxfev=10000)
     if not run_mcmc:
         return FitResult(best_fit, None, labels)
 
@@ -253,33 +257,6 @@ def plot_raw(time, mag, mag_err, title, out_path):
     print(f"saved {out_path}")
 
 
-def _plot_residual_panel(ax, x, residuals):
-    """Standardized-residual scatter (yerr=1, since residuals are already
-    divided by mag_err) with a +-1 sigma translucent band and a symmetric
-    y-axis around 0 -- shared by both panels in plot_fit_lc(). Y-axis
-    inverted to match the magnitude panel above it (brighter/lower-mag
-    residuals plot upward here too, instead of the opposite direction)."""
-    ylim = max(np.abs(residuals).max() * 1.1, 1.5)
-    ax.axhspan(-1, 1, color="gray", alpha=0.15, linewidth=0)
-    ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
-    ax.errorbar(x, residuals, yerr=1, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5)
-    ax.set_ylim(-ylim, ylim)
-    ax.invert_yaxis()
-    ax.set_ylabel("residual (σ)")
-
-
-def _plot_residual_hist(ax, residuals):
-    """Residual histogram rotated 90deg (count on x, residual (sigma) on y) so
-    it sits directly beside its matching _plot_residual_panel scatter,
-    sharing that panel's y-axis (sharey in plot_fit_lc() propagates its
-    limits/inversion, so this needs no ylim/invert of its own)."""
-    ax.axhspan(-1, 1, color="gray", alpha=0.15, linewidth=0)
-    ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
-    ax.hist(residuals, bins=30, orientation="horizontal", color="steelblue", edgecolor="white")
-    ax.tick_params(labelleft=False)
-    ax.set_xlabel("count")
-
-
 def plot_fit_lc(time, mag, mag_err, best_fit, coords, t0_par, dataset_label, out_path):
     """Two-panel (full baseline + auto-zoomed peak) magnitude-space fit overlay,
     each with a standardized-residual ((data-model)/mag_err) panel underneath
@@ -316,9 +293,9 @@ def plot_fit_lc(time, mag, mag_err, best_fit, coords, t0_par, dataset_label, out
     ax_full.legend()
     ax_full.sharex(ax_full_resid)
 
-    _plot_residual_panel(ax_full_resid, time, residuals)
+    plot_residual_panel(ax_full_resid, [(time, residuals)])
     ax_full_resid.set_xlabel("HJD - 2450000")
-    _plot_residual_hist(ax_full_hist, residuals)
+    plot_residual_hist(ax_full_hist, [residuals])
 
     ax_zoom.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5, label="data")
     ax_zoom.plot(t_model_zoom, mag_model_zoom, color="crimson", label="PSPL fit")
@@ -328,10 +305,10 @@ def plot_fit_lc(time, mag, mag_err, best_fit, coords, t0_par, dataset_label, out
     ax_zoom.set_title("zoomed on peak (auto-detected)")
     ax_zoom.sharex(ax_zoom_resid)
 
-    _plot_residual_panel(ax_zoom_resid, time[in_zoom], residuals[in_zoom])
+    plot_residual_panel(ax_zoom_resid, [(time[in_zoom], residuals[in_zoom])])
     ax_zoom_resid.set_xlim(zoom_start, zoom_end)
     ax_zoom_resid.set_xlabel("HJD - 2450000")
-    _plot_residual_hist(ax_zoom_hist, residuals[in_zoom])
+    plot_residual_hist(ax_zoom_hist, [residuals[in_zoom]])
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=300)

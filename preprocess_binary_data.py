@@ -19,12 +19,14 @@ Fine for exploration; re-run this if the raw data changes.
 from pathlib import Path
 
 import numpy as np
+from astropy.coordinates import SkyCoord
 from scipy.optimize import minimize
 
-from lc_models import ZERO_POINT_MAG, mag_to_flux, magnification, trajectory
+from lc_models import ZERO_POINT_MAG, mag_to_flux, magnification, sun_earth_projection, trajectory
 
 SHORT_NAME = "O-03-BLG235"  # see dataset_names.txt
-LABELS = ["t0", "u0", "tE", "fs_ogle", "fb_ogle", "fs_moa"]
+COORDS = SkyCoord("18h05m16.35s -28d53m42.0s")  # Bond et al. 2004 / NASA Exoplanet Archive
+LABELS = ["t0", "u0", "tE", "fs_ogle", "fb_ogle", "fs_moa", "piE_N", "piE_E"]
 
 
 def load_raw():
@@ -40,21 +42,29 @@ def load_raw():
     return ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err
 
 
-def fit_joint_pspl(ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err):
-    """Quick point-estimate joint fit. Returns best_fit array in LABELS order."""
+def fit_joint_pspl(ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err,
+                    delta_sN_ogle, delta_sE_ogle, delta_sN_moa, delta_sE_moa):
+    """Quick point-estimate joint fit, now including annual parallax
+    (piE_N, piE_E) -- see CLAUDE.md's "Annual parallax + robust likelihood"
+    roadmap, step 6. delta_s*=0 collapses trajectory()'s parallax terms to
+    zero regardless of piE, so this same function also serves as the plain
+    (pre-parallax) fit used to bootstrap t0_par -- see __main__. Returns
+    best_fit array in LABELS order."""
 
     def total_chi2(theta):
-        t0, u0, tE, fs_ogle, fb_ogle, fs_moa = theta
+        t0, u0, tE, fs_ogle, fb_ogle, fs_moa, piE_N, piE_E = theta
         if tE <= 0 or fs_moa <= 0:
             return np.inf
 
-        ogle_model_flux = fs_ogle * magnification(trajectory(ogle_time, t0, u0, tE)) + fb_ogle
+        ogle_A = magnification(trajectory(ogle_time, t0, u0, tE, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle))
+        ogle_model_flux = fs_ogle * ogle_A + fb_ogle
         if np.any(ogle_model_flux <= 0):
             return np.inf
         ogle_model_mag = ZERO_POINT_MAG - 2.5 * np.log10(ogle_model_flux)
         ogle_chi2 = np.sum(((ogle_mag - ogle_model_mag) / ogle_err) ** 2)
 
-        moa_model_relflux = fs_moa * (magnification(trajectory(moa_time, t0, u0, tE)) - 1.0)
+        moa_A = magnification(trajectory(moa_time, t0, u0, tE, piE_N, piE_E, delta_sN_moa, delta_sE_moa))
+        moa_model_relflux = fs_moa * (moa_A - 1.0)
         moa_chi2 = np.sum(((moa_flux - moa_model_relflux) / moa_err) ** 2)
 
         return ogle_chi2 + moa_chi2
@@ -62,7 +72,7 @@ def fit_joint_pspl(ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err):
     t0_guess = ogle_time[np.argmin(ogle_mag)]
     fs_ogle_guess = 10 ** (-0.4 * (np.median(ogle_mag) - ZERO_POINT_MAG))
     fs_moa_guess = moa_flux.max() / 4.0
-    p0_guess = [t0_guess, 0.2, 30.0, fs_ogle_guess, 0.0, fs_moa_guess]
+    p0_guess = [t0_guess, 0.2, 30.0, fs_ogle_guess, 0.0, fs_moa_guess, 0.0, 0.0]
 
     result = minimize(total_chi2, x0=p0_guess, method="Nelder-Mead",
                        options={"xatol": 1e-6, "fatol": 1e-6, "maxiter": 20000})
@@ -85,11 +95,21 @@ def moa_to_magnification(flux, flux_err, fs_moa):
 if __name__ == "__main__":
     ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err = load_raw()
 
-    best_fit, _ = fit_joint_pspl(ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err)
+    zeros_ogle, zeros_moa = np.zeros_like(ogle_time), np.zeros_like(moa_time)
+    plain_fit, _ = fit_joint_pspl(ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err,
+                                   zeros_ogle, zeros_ogle, zeros_moa, zeros_moa)
+    t0_par = plain_fit[0]
+    print(f"t0_par (parallax reference epoch, from plain pre-parallax fit) = {t0_par:.5f}")
+
+    delta_sN_ogle, delta_sE_ogle = sun_earth_projection(ogle_time, COORDS, t0_par)
+    delta_sN_moa, delta_sE_moa = sun_earth_projection(moa_time, COORDS, t0_par)
+
+    best_fit, _ = fit_joint_pspl(ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err,
+                                  delta_sN_ogle, delta_sE_ogle, delta_sN_moa, delta_sE_moa)
     print("calibration fit (used only to derive fs_ogle/fb_ogle/fs_moa below):")
     for label, value in zip(LABELS, best_fit):
         print(f"  {label} = {value:.5f}")
-    _, _, _, fs_ogle, fb_ogle, fs_moa = best_fit
+    _, _, _, fs_ogle, fb_ogle, fs_moa, piE_N, piE_E = best_fit
 
     ogle_A, ogle_A_err = ogle_to_magnification(ogle_mag, ogle_err, fs_ogle, fb_ogle)
     moa_A, moa_A_err = moa_to_magnification(moa_flux, moa_err, fs_moa)
