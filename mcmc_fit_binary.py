@@ -46,9 +46,9 @@ def plot_raw():
     moa_time, moa_A, moa_A_err = np.loadtxt(f"data/processed/{SHORT_NAME}_MOA_magnification.dat", unpack=True)
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5,
+    ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
                 color="black", label="OGLE")
-    ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=3, elinewidth=0.5,
+    ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
                 color="tab:orange", label="MOA")
     ax.set_xlabel("HJD - 2450000")
     ax.set_ylabel("Magnification A(t)")
@@ -58,7 +58,7 @@ def plot_raw():
 
     Path("raw_lc").mkdir(exist_ok=True)
     out_path = f"raw_lc/{SHORT_NAME}.png"
-    fig.savefig(out_path, dpi=300)
+    fig.savefig(out_path, dpi=600)
     plt.close(fig)
     print(f"saved {out_path}")
 
@@ -78,7 +78,7 @@ def run_ogle_only_diagnostic(stage="mcmc"):
 
     t_model = np.linspace(time.min(), time.max(), 3000)
     fig_fit, ax = plt.subplots(figsize=(8, 5))
-    ax.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, color="black", label="OGLE data")
+    ax.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5, color="black", label="OGLE data")
     ax.plot(t_model, magnitude(t_model, *best_fit), color="crimson", lw=1.5, label="PSPL fit")
     ax.invert_yaxis()
     ax.set_xlabel("HJD - 2450000")
@@ -88,7 +88,7 @@ def run_ogle_only_diagnostic(stage="mcmc"):
     fig_fit.tight_layout()
 
     Path("fit_lc").mkdir(exist_ok=True)
-    fig_fit.savefig(f"fit_lc/{SHORT_NAME}_ogle_only.png", dpi=300)
+    fig_fit.savefig(f"fit_lc/{SHORT_NAME}_ogle_only.png", dpi=600)
     plt.close(fig_fit)
     print(f"saved fit_lc/{SHORT_NAME}_ogle_only.png")
 

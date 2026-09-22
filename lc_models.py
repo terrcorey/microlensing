@@ -244,13 +244,13 @@ def _project(vec, coords):
             vec.x * e_hat[0] + vec.y * e_hat[1] + vec.z * e_hat[2])
 
 
-def sun_earth_projection(time, coords, t0_par):
+def sun_earth_projection(t, coords, t0_par):
     """Returns (delta_s_n, delta_s_e): Earth's sky-projected position
     relative to the Sun, in AU, with the constant-velocity part at
     t0_par subtracted out -- i.e. only the non-uniform (curvature)
     signal that's NOT already degenerate with (t0, u0, tE) remains.
     """
-    time_hjd = Time(time + 2450000, format="jd")
+    time_hjd = Time(t + 2450000, format="jd")
     t0 = Time(t0_par + 2450000, format="jd")
 
     earth_pos, _ = get_body_barycentric_posvel("earth", time_hjd)

@@ -119,7 +119,7 @@ def plot_fit(theta):
         A_grid = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha), s, q)
         mag_grid = ZERO_POINT_MAG - 2.5 * np.log10(fs * A_grid + fb)
 
-        ax.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, color="black", label="KMT I")
+        ax.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5, color="black", label="KMT I")
         ax.plot(t_grid, mag_grid, color="crimson", lw=1.5, label="2L1S fit")
         ax.set_ylabel("I magnitude")
 
@@ -157,7 +157,7 @@ def plot_fit(theta):
 
     Path("scratch").mkdir(exist_ok=True)
     out_path = f"scratch/{SHORT_NAME}_2l1s.png"
-    fig.savefig(out_path, dpi=300)
+    fig.savefig(out_path, dpi=600)
     print(f"saved {out_path}")
 
 

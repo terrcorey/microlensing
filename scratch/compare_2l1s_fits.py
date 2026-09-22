@@ -51,9 +51,9 @@ zoom_start, zoom_end = find_zoom_window(moa_time, moa_A, moa_A_err, padding_frac
 
 def plot_panel(ax, xlim=None, cap_mult=2.0):
     t_grid = np.linspace(*(xlim if xlim else (ogle_time.min(), moa_time.max())), 4000)
-    ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=6, mew=1.5, elinewidth=1.2,
+    ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=6, mew=1.2, elinewidth=1.2, capsize=3, capthick=1.2,
                 color="black", alpha=0.5, zorder=1, label="OGLE")
-    ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=6, mew=1.5, elinewidth=1.2,
+    ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=6, mew=1.2, elinewidth=1.2, capsize=3, capthick=1.2,
                 color="tab:orange", alpha=0.5, zorder=1, label="MOA")
 
     model_y_vals = []
@@ -119,5 +119,5 @@ fig.tight_layout()
 
 Path("scratch").mkdir(exist_ok=True)
 out_path = "scratch/O-03-BLG235_2l1s_comparison.png"
-fig.savefig(out_path, dpi=200)
+fig.savefig(out_path, dpi=400)
 print(f"saved {out_path}")

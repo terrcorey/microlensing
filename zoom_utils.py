@@ -31,9 +31,9 @@ def plot_fit_panels(ogle, moa, model_fn, fit_label, out_path):
     def plot_panel(ax, xlim=None):
         t_grid = np.linspace(*(xlim if xlim else (time.min(), time.max())), 3000)
         A_model = model_fn(t_grid)
-        ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5,
+        ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
                     color="black", label="OGLE")
-        ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=3, elinewidth=0.5,
+        ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
                     color="tab:orange", label="MOA")
         ax.plot(t_grid, A_model, color="crimson", lw=1.5, label=fit_label)
         ax.set_ylabel("Magnification A(t)")
@@ -57,6 +57,6 @@ def plot_fit_panels(ogle, moa, model_fn, fit_label, out_path):
     fig.tight_layout()
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=300)
+    fig.savefig(out_path, dpi=600)
     plt.close(fig)
     print(f"saved {out_path}")

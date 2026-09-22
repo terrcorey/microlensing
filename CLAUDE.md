@@ -38,9 +38,11 @@ not an application anyone installs or upgrades.
 2. If the user says "save state": review the session's changes. If they
    changed the architecture/commands described in this file, you should 
    apply the changes below (but never rules and instructions). Log a summary to
-   CHANGELOG.md as a new dated entry (see its own header for the format).
-   Then suggest possible goals for next session and use `/grill-me` to
-   confirm them with the user before adding them to that entry.
+   CHANGELOG.md as a new dated entry (see its own header for the format), then 
+   run /graphify --update if major architectural changes have occured to ensure 
+   the graph is consistent with current structure. Then suggest possible goals
+   for next session and use `/grill-me` to confirm them with the user before 
+   adding them to that entry.
 3. Whenever the user describes wanting to do or build something that isn't
    already covered in CHANGELOG.md, use `/grill-me` to reach a consensus
    before taking any action.
@@ -82,8 +84,9 @@ give a fast/no-MCMC path without a second script to keep in sync.
 `scratch/` holds every one-time/dev script, not just their output:
 `fit_2l1s.py`, `mcmc_fit_2l1s.py`, `compare_2l1s_fits.py`,
 `cross_check_mulensmodel.py`, `cross_check_mulensmodel_fit.py`,
-`derive_binary_quintic.py`, `fit_2l1s_moa19008.py`. None are covered by the pip line above --
-`derive_binary_quintic.py` needs `sympy`, the two `cross_check_mulensmodel*.py`
+`cross_check_mulensmodel_parallax.py`, `derive_binary_quintic.py`,
+`fit_2l1s_moa19008.py`. None are covered by the pip line above --
+`derive_binary_quintic.py` needs `sympy`, the three `cross_check_mulensmodel*.py`
 need `MulensModel`. All are self-documented in their own docstrings and run
 manually as `python3 scratch/<name>.py` from the project root (each has its
 own `sys.path` line so that works despite living one directory down). If one
@@ -127,26 +130,28 @@ anomaly is visible in the auto-zoomed panel as points sitting above the
 smooth fitted curve (most obviously in the MOA data, which has the cadence
 to resolve it; OGLE's sparser sampling mostly misses it).
 
-## Annual parallax + robust (Student-t) likelihood for PSPL fits (in progress)
+## Annual parallax + robust (Student-t) likelihood for PSPL fits
 
 The plain PSPL model doesn't fit real data well (checked on O-05-BLG086:
 chi2/dof=2.14, standardized-residual std=1.46 against the pre-parallax
 model -- errors running too tight, moderate excess kurtosis, and the
 largest residuals cluster in specific time windows rather than scattering
 randomly, consistent with unmodeled physics rather than bad photometry).
-Two changes are planned across *every* PSPL-based fit (`mcmc_fit.py`,
-both functions in `mcmc_fit_binary.py`, and `preprocess_binary_data.py`'s
-`fit_joint_pspl()` calibration fit) -- not the `scratch/` 2L1S code, which
-is a separate, already-in-progress track:
+Two changes, planned across *every* PSPL-based fit (`mcmc_fit.py`, both
+functions in `mcmc_fit_binary.py`, and `preprocess_binary_data.py`'s
+`fit_joint_pspl()` calibration fit -- not the `scratch/` 2L1S code, a
+separate track) -- **done for O-05-BLG086 (`mcmc_fit.py`), not yet
+propagated to O-03-BLG235 (`mcmc_fit_binary.py`/`preprocess_binary_data.py`
+-- deliberately deferred)**:
 
 1. **Annual parallax** (Gould 2004 geocentric formalism): two new free
    parameters `piE_N`/`piE_E`, perturbing the trajectory via the target's
-   sky position and Earth's orbital motion. `astropy` is a new pipeline
+   sky position and Earth's orbital motion. `astropy` is a pipeline
    dependency for this (`get_body_barycentric_posvel`, analytic
    position+velocity, no finite-differencing). `t0_par` (the reference
    epoch the geocentric frame is anchored to) is fixed at each dataset's
-   preliminary non-parallax best-fit `t0`, per convention -- not a fitted
-   parameter itself.
+   preliminary non-parallax best-fit `t0` (posterior median), per
+   convention -- not a fitted parameter itself.
 2. **Robust likelihood**: the Gaussian log-likelihood is replaced with a
    Student-t likelihood, with both `scale` and `dof` fit as free MCMC
    parameters (motivated by the residual diagnostic above -- a globally
@@ -155,18 +160,28 @@ is a separate, already-in-progress track:
 
 Both changes **replace the existing model outright** -- no flag/toggle;
 the old Gaussian-PSPL behavior stays recoverable via git history only.
-O-05-BLG086 is the proving ground before propagating to O-03-BLG235's
-fits. Parallax is being built first, then the likelihood change.
 
-**Status**: `lc_models.sun_earth_projection(time, ra_str, dec_str, t0_par)`
-is done -- Earth's sky-projected position relative to the Sun (AU),
-projected onto the target's North/East tangent-plane basis, with the
-constant-velocity part at `t0_par` subtracted out (that part is already
-degenerate with (t0, u0, tE); only the curvature signal is new
-information). Not yet wired into `trajectory()`/`flux()`/`magnitude()`,
-and not yet cross-checked against MulensModel's own parallax model to
-lock down the sign/unit convention (planned next, mirroring the existing
-`scratch/cross_check_mulensmodel.py` pattern used to validate 2L1S).
+**Status (O-05-BLG086)**: both done and validated end to end.
+`lc_models.trajectory()`/`flux()`/`magnitude()` take `piE_N`, `piE_E`,
+`delta_sN`, `delta_sE` as plain arguments (the latter two precomputed once
+by `sun_earth_projection(t, coords, t0_par)` -- never recomputed inside a
+per-MCMC-step call, since it's a real astropy ephemeris query).
+`plain_flux()`/`plain_magnitude()` (piE_N=piE_E=0) exist for the
+`t0_par` bootstrap fit only. Sign/unit convention cross-checked against
+MulensModel's own parallax model (`scratch/cross_check_mulensmodel_parallax.py`,
+mirroring `cross_check_mulensmodel.py`'s pattern) to 6.8e-7 relative
+agreement -- needed two sign fixes to get there (`sun_earth_projection()`'s
+overall sign, and `trajectory()`'s `delta_beta` combination sign), found by
+testing all 8 combinations of (heliocentric vs. bare-barycentric Earth
+position) x (delta_s's own sign) x (delta_beta's combination sign) rather
+than guessing. `mcmc_fit.fit_parallax_pspl_mcmc()` runs the real 9-param
+(7 light-curve + `scale` + `dof`) MCMC; `mcmc_fit.get_t0_par()` bootstraps
+`t0_par` (see "Shared plotting/MCMC helpers" below). Real O-05-BLG086
+result: chi2/dof 2.14 -> 1.499, `piE_N`=0.27(+0.04/-0.04), `piE_E`=0.10(1),
+`scale`=1.08(5), `dof`=9(+5/-3) -- a real, well-constrained parallax
+detection, and `scale`/`dof` closer to Gaussian than the pre-parallax
+diagnostic's own MLE (dof~6), consistent with parallax explaining away
+real signal rather than the two changes competing for the same residuals.
 
 Target coordinates gathered so far: O-05-BLG086 RA 18h04m45.70s / Dec
 -26d59m15.5s (OGLE-III EWS alert page, field BLG234.6 -- a Wikipedia-
@@ -281,8 +296,8 @@ Bond's reference) on one figure for comparison.
 - `scratch/` holds both the code and the output of every one-time/
   diagnostic/not-yet-graduated script (currently: fit_2l1s.py,
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,
-  cross_check_mulensmodel_fit.py, derive_binary_quintic.py,
-  fit_2l1s_moa19008.py). If a script
+  cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
+  derive_binary_quintic.py, fit_2l1s_moa19008.py). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in the four dirs above -- when a script graduates into
   the pipeline, move both its code and its output path out at the same
@@ -297,8 +312,27 @@ Bond's reference) on one figure for comparison.
   de-duplicated once.
 - `mcmc_fit.save_corner(samples, labels, truths, out_path)`: the
   corner-plot save. Same rule -- call it, don't copy its 4 lines.
+- `mcmc_fit.plot_fit_lc(...)`: O-05-BLG086's fit-overlay plot -- full
+  baseline + auto-zoomed peak, each paired with a standardized-residual
+  scatter panel (+-1 sigma band, symmetric+inverted y-axis matching the
+  magnitude panel above it) and a rotated residual histogram sharing that
+  panel's y-axis. `_plot_residual_panel()`/`_plot_residual_hist()` are its
+  internal per-panel helpers -- call `plot_fit_lc()` itself, don't copy them.
+- `mcmc_fit.FitResult`: a `NamedTuple` (`best_fit`, `samples`, `labels`)
+  with a `.column(name)` method, returned by `fit_pspl_mcmc()` and
+  `fit_parallax_pspl_mcmc()` instead of a bare `(best_fit, samples)` tuple.
+  Bundles samples with their own column labels so a caller can't pair a
+  samples array with the wrong labels constant (a real bug this session --
+  see CHANGELOG). Always pull a column via `.column(name)`, never
+  `samples[:, i]` by hand.
+- `mcmc_fit.get_t0_par(time, mag, mag_err, cache_path, u0_guess, tE_guess)`:
+  the parallax fits' `t0_par` bootstrap (see above) -- reads `cache_path`
+  if present, else runs the plain PSPL fit and writes it, always returning
+  the posterior median. Self-contained; a caller never touches the cache
+  file format. `u0_guess`/`tE_guess` have no default (see `u0_guess`/
+  `tE_guess` note below) -- always pass the dataset's own values.
 - Before adding a new fit/plot script, check whether its plot shape already
-  matches one of these two helpers. If it's a genuine structural difference
+  matches one of these helpers. If it's a genuine structural difference
   (like scratch/fit_2l1s.py's extra caustic-geometry panel), it's fine to stay
   custom -- don't force an abstraction over a real difference.
 

@@ -671,3 +671,126 @@ actual point of this repo), and **Next session**'s planned goal.
   - Step 6: propagate the same trajectory change into
     `mcmc_fit_binary.py`/`preprocess_binary_data.py` for O-03-BLG235.
   - Robust (Student-t) weighting is planned after all of the above.
+
+## 2026-09-22 — session 8
+
+### Built
+- Continued the parallax roadmap in order. Step 2 (wire `piE_N`/`piE_E`
+  into `lc_models.py`'s `trajectory`/`flux`/`magnitude`, plus
+  `plain_flux`/`plain_magnitude` for the `t0_par` bootstrap) was written by
+  the user directly, per this project's "user writes, Claude reviews" mode
+  (Claude's own first attempt was reverted at the user's request early in
+  the session, once the convention was reasserted). Claude found and fixed
+  two incidental bugs while reviewing: `_project()`'s `.radians` -> `.radian`
+  typo, and `sun_earth_projection()` returning astropy `Quantity` objects
+  instead of plain floats (needed since `piE_N`/`piE_E` are conventionally
+  bare AU^-1 numbers, matching MulensModel's own convention).
+- Step 3 (non-optional cross-check): built
+  `scratch/cross_check_mulensmodel_parallax.py`, testing all 8 combinations
+  of (heliocentric vs. bare-barycentric Earth position) x (`delta_s`'s own
+  sign) x (`delta_beta`'s combination sign) against MulensModel's own
+  parallax model, rather than guessing. Needed two real, simultaneous sign
+  fixes (`sun_earth_projection()`'s overall sign; `trajectory()`'s
+  `delta_beta` combination sign) to reach 6.8e-7 relative agreement --
+  testing only the `delta_beta` sign alone first gave an ambiguous ~3%
+  residual that didn't cleanly discriminate, because both bugs were
+  present and partially masking each other.
+- Steps 4-5: wired parallax into `mcmc_fit.py`'s real MCMC
+  (`fit_parallax_pspl_mcmc()`, 9-param: 7 light-curve + `scale` + `dof`).
+  A long iterative debugging pass surfaced and fixed a chain of distinct
+  real bugs while wiring this up: missing `plain_flux`/`plain_magnitude`
+  calls, an `args.state` typo, missing `delta_sN`/`delta_sE` passthrough,
+  `curve_fit`'s `p0` including whole precomputed arrays as if they were
+  scalar parameters, a hardcoded `ndim=5` left over from copy-paste, a
+  `LABELS`-constant length mismatch between the plain and parallax fits, an
+  `np.loadtxt` cache read that could never succeed on a mixed string/float
+  file, and a `plot_fit_lc()` grid mismatch (`delta_sN`/`delta_sE` computed
+  at the data's own time array, then reused against a different, denser
+  plotting grid). Verified end to end on both the cache-hit and
+  cache-miss code paths.
+- Student-t robust likelihood swap done for O-05-BLG086 (session 7's other
+  planned change): `fit_parallax_pspl_mcmc()`'s Gaussian log-likelihood
+  replaced outright with a Student-t (`scipy.stats.t.logpdf`), 2 new free
+  params `scale`/`dof`, no toggle.
+- Real O-05-BLG086 result (both changes together): chi2/dof 2.14 -> 1.499;
+  `piE_N`=0.27(+0.04/-0.04), `piE_E`=0.10(1) -- a real, well-constrained
+  parallax detection; `scale`=1.08(5), `dof`=9(+5/-3) -- closer to Gaussian
+  than the pre-parallax diagnostic's own dof~6 MLE, consistent with
+  parallax explaining away real signal rather than the two changes fighting
+  over the same residuals.
+- Ran the `/improve-codebase-architecture` skill on the session's hot spot
+  (`lc_models.py`/`mcmc_fit.py`), producing an HTML report of 5 deepening
+  candidates. Grilled and implemented two: (1) `FitResult`, a
+  `NamedTuple(best_fit, samples, labels)` with a `.column(name)` method,
+  replacing the module-level `PLAIN_LABELS`/`PARALLAX_LABELS`/`LABELS`
+  constants and every hand-indexed `samples[:, i]` -- the review's own audit
+  found this pattern had already caused a live, reproducible `IndexError`
+  in `mcmc_fit_binary.py` (`LABELS` grew from 7 to 9 items but that file's
+  own samples array is still 5 columns); (2) `get_t0_par()`, replacing the
+  inline `try/except` cache block -- fixes a real, previously-silent
+  correctness bug where `t0_par` was computed one of two different ways
+  (posterior median on a cache hit, `curve_fit` point estimate on a cache
+  miss) depending on whether a file happened to exist. `mcmc_fit_binary.py`
+  itself deliberately left untouched (already broken for the separate,
+  deferred Step 6 reason).
+- Repo-wide plotting convention pass (explicit user request, not part of
+  the roadmap): every `errorbar()` call (14 across 7 files) now has
+  `capsize` plus `markeredgewidth`/`capthick` matching `elinewidth`; every
+  plot's `dpi` doubled (150->300, 300->600, 200->400 across 9 `savefig`
+  calls).
+- `plot_fit_lc()` gained a standardized-residual panel under each of its
+  two light-curve panels (+-1 sigma translucent band, symmetric+inverted
+  y-axis matching the panel above), plus a rotated marginal histogram
+  sharing each residual panel's y-axis -- iterated through layout bugs
+  (`tight_layout()` incompatible with the `sharey`-linked grid, causing
+  title/label overlap; the light-curve panel spanning the full figure width
+  while its residual panel below only spanned the left column, breaking
+  date-axis alignment) before landing on a working `GridSpec` layout.
+- `/graphify`: built once scoped to the whole Desktop (no path given),
+  updated once after the parallax/Student-t work, then rebuilt from scratch
+  scoped to just `microlensing/` per explicit request, since the graph had
+  been living in `../graphify-out/` -- one level outside the project,
+  which CLAUDE.md's own rule on outside-folder access flagged as needing
+  the user's sign-off as a standing instruction. `graphify-out/` now lives
+  inside `microlensing/`. The old Desktop-level `graphify-out/` was left in
+  place, not deleted.
+
+### Learned & open questions
+- The 2L1S cross-check pattern (test the oracle comparison exhaustively
+  rather than one hypothesis at a time) generalizes cleanly to parallax: a
+  single-hypothesis test gave an ambiguous, inconclusive residual because
+  two independent sign bugs were both present and partially canceling in
+  some regimes. Only testing the full cross-product of candidates isolated
+  both.
+- Real design-pattern lesson from the architecture review: pairing a
+  samples array with a separate "column labels" constant by convention
+  (not enforced by any interface) is exactly the shape of bug that doesn't
+  show up until a second consumer (`mcmc_fit_binary.py`) needs the same
+  building block under slightly different conditions -- confirmed by this
+  session's own live `IndexError`. Bundling data with its own labels in one
+  object (`FitResult`) removes the failure mode structurally rather than
+  adding a check on top of it.
+- A second, quieter version of the same lesson: `t0_par` silently had two
+  different estimators depending on which branch of a file-existence check
+  ran -- no error, no test, just a slightly different downstream answer
+  depending on incidental machine state. Silent-but-wrong is a worse
+  failure mode than loud-and-wrong, harder to catch by inspection alone.
+- `scale`~1.08/`dof`~9 (vs. the pre-parallax diagnostic's own
+  scale~1.46-equivalent/dof~6) is a genuine cross-check that parallax and
+  the Student-t correction aren't just two knobs fighting over the same
+  residual pattern -- if they were, adding parallax wouldn't have changed
+  what Student-t needed to compensate for.
+- Known small issues, not yet scheduled: the old Desktop-level
+  `graphify-out/` is superseded and undeleted; `requirements.txt` lists
+  `sympy`/`networkx`, which CLAUDE.md says shouldn't be pipeline
+  dependencies (and `networkx` isn't mentioned in any doc at all);
+  `README.md`'s setup section claims "no requirements.txt yet" even though
+  one exists with 27 pinned packages.
+
+### Next session
+- Confirmed via `/grill-me`-style consensus: Step 6 -- propagate both
+  changes (annual parallax + Student-t) to O-03-BLG235
+  (`mcmc_fit_binary.py`'s two functions and `preprocess_binary_data.py`'s
+  `fit_joint_pspl()`), completing the roadmap CLAUDE.md's "Annual parallax
+  + robust likelihood" section describes. The 2L1S search problem and
+  MOA-2019-BLG-008's `mag_err` rescaling stay backlog, not scheduled.

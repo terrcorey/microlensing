@@ -148,9 +148,9 @@ def plot_fit(theta, use_ogle=True):
         A_model = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha), s, q)
 
         if use_ogle:
-            ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5,
+            ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
                         color="black", label="OGLE")
-        ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=3, elinewidth=0.5,
+        ax.errorbar(moa_time, moa_A, yerr=moa_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
                     color="tab:orange", label="MOA")
         ax.plot(t_grid, A_model, color="crimson", lw=1.5, label="2L1S fit")
         ax.set_ylabel("Magnification A(t)")
@@ -194,7 +194,7 @@ def plot_fit(theta, use_ogle=True):
     Path("scratch").mkdir(exist_ok=True)
     suffix = "" if use_ogle else "_moa_only"
     out_path = f"scratch/{SHORT_NAME}_2l1s{suffix}.png"
-    fig.savefig(out_path, dpi=300)
+    fig.savefig(out_path, dpi=600)
     print(f"saved {out_path}")
 
 
