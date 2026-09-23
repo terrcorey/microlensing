@@ -10,6 +10,7 @@ Not yet graduated into the regular pipeline (see CLAUDE.md) -- lives in
 scratch/ with the project's other one-time/dev scripts, run manually as
 `python3 scratch/mcmc_fit_2l1s.py` from the project root.
 """
+import os
 import sys
 from multiprocessing import get_context
 from pathlib import Path
@@ -97,8 +98,13 @@ def run_mcmc(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
     rng = np.random.default_rng(seed)
     p0 = sample_prior(rng, nwalkers)
 
-    # spawn (not fork) -- avoids CUDA-in-forked-subprocess issues once binary_magnification runs on GPU
-    with get_context("spawn").Pool() as pool:
+    # explicit process count -- os.cpu_count()/mp's own default reads the physical node's
+    # core count, not what SLURM's cgroup actually allocated to this job, which oversubscribes
+    # on a shared cluster node; SLURM_CPUS_PER_TASK is unset when run outside SLURM (falls back
+    # to the default). spawn (not fork) avoids CUDA-in-forked-subprocess issues once
+    # binary_magnification runs on GPU.
+    nprocs = int(os.environ["SLURM_CPUS_PER_TASK"]) if "SLURM_CPUS_PER_TASK" in os.environ else None
+    with get_context("spawn").Pool(processes=nprocs) as pool:
         sampler = emcee.EnsembleSampler(nwalkers, len(LABELS), log_probability, pool=pool, args=(use_ogle,))
         sampler.run_mcmc(p0, nsteps, progress=True)
 
