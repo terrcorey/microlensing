@@ -69,6 +69,8 @@ def log_probability(theta, use_ogle=True):
     if not np.isfinite(lp):
         return -np.inf
     resids = residuals(binary_theta, use_ogle)
+    if np.isscalar(resids) or not np.all(np.isfinite(resids)):
+        return -np.inf
     t = student_t.logpdf(resids/scale, df=dof).sum() - resids.size * np.log(scale)
     return -np.inf if not np.isfinite(t) else lp + t
 
