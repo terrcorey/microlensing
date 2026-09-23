@@ -25,17 +25,52 @@ from scipy.optimize import minimize
 from lc_models import ZERO_POINT_MAG, mag_to_flux, magnification, sun_earth_projection, trajectory
 
 SHORT_NAME = "O-03-BLG235"  # see dataset_names.txt
-COORDS = SkyCoord("18h05m16.35s -28d53m42.0s")  # Bond et al. 2004 / NASA Exoplanet Archive
+OGLE_PATH = "data/OGLE-2003-BLG-235_OGLE.tbl.txt"
+MOA_PATH = "data/OGLE-2003-BLG-235_MOA.tbl.txt"
 LABELS = ["t0", "u0", "tE", "fs_ogle", "fb_ogle", "fs_moa", "piE_N", "piE_E"]
+
+
+def _parse_header_coord(path):
+    """Extract (RA, Dec) sexagesimal strings from a raw table's own \\RA/\\DEC
+    header lines (NASA Exoplanet Archive format -- the same \\-prefixed
+    metadata load_raw() already skips via comments=("\\", "|")). Stops at the
+    first non-header line rather than scanning the whole file."""
+    ra = dec = None
+    with open(path) as f:
+        for line in f:
+            if not line.startswith("\\"):
+                break
+            if line.startswith("\\RA "):
+                ra = line.split("=", 1)[1].strip().strip('"')
+            elif line.startswith("\\DEC "):
+                dec = line.split("=", 1)[1].strip().strip('"')
+    return ra, dec
+
+
+def load_coords():
+    """Target coordinates, parsed from OGLE_PATH/MOA_PATH's own headers rather
+    than hardcoded -- catches a transcription error against either file, or a
+    disagreement between the two (this is how a real bug was caught: a
+    previously hardcoded RA of 18h05m16.35s was 4 arcmin of RA off from what
+    both raw files actually say, 18h01m16.35s)."""
+    ogle_coord = _parse_header_coord(OGLE_PATH)
+    moa_coord = _parse_header_coord(MOA_PATH)
+    if ogle_coord != moa_coord:
+        raise ValueError(f"OGLE and MOA header coordinates disagree: OGLE={ogle_coord} vs MOA={moa_coord}")
+    ra, dec = ogle_coord
+    return SkyCoord(f"{ra} {dec}")
+
+
+COORDS = load_coords()
 
 
 def load_raw():
     """Raw OGLE (mag) + MOA (differential flux) tables, time-shifted to HJD-2450000."""
     ogle_time, ogle_mag, ogle_err = np.loadtxt(
-        "data/OGLE-2003-BLG-235_OGLE.tbl.txt", comments=("\\", "|"), unpack=True
+        OGLE_PATH, comments=("\\", "|"), unpack=True
     )
     moa_time, moa_flux, moa_err = np.loadtxt(
-        "data/OGLE-2003-BLG-235_MOA.tbl.txt", comments=("\\", "|"), unpack=True
+        MOA_PATH, comments=("\\", "|"), unpack=True
     )
     ogle_time -= 2450000.0
     moa_time -= 2450000.0

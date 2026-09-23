@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes as make_square_inset_axes
 from scipy.optimize import minimize
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
@@ -125,7 +126,7 @@ def run_fit(use_ogle=True):
     result = minimize(chi2, x0=best.x, args=(use_ogle,), method="Nelder-Mead",
                        options={"xatol": 1e-6, "fatol": 1e-6, "maxiter": 20000})
     print(f"[{tag}] final chi2={result.fun:.2f}")
-    for label, value in zip(["t0", "u0", "tE", "alpha", "s", "q"], result.x):
+    for label, value in zip(["t0", "u0", "tE", "alpha", "piE_N", "piE_E", "s", "q"], result.x):
         print(f"[{tag}] {label} = {value:.5f}")
 
     plot_fit(result.x, use_ogle=use_ogle)
@@ -136,31 +137,41 @@ def run_fit_moa_only():
     return run_fit(use_ogle=False)
 
 
-def plot_fit(theta, use_ogle=True):
-    """Overlay the 2L1S model on the data, full baseline + zoomed on the peak.
+def plot_fit(theta, use_ogle=True, tag=""):
+    """Overlay the 2L1S model on the data: event season (HJD 2700-3000), then a
+    zoomed peak panel carrying a caustic-geometry inset and a raw-residual panel
+    beneath it.
 
     Magnification-space view only, for plotting -- inverts the raw flux using this
     theta's own profiled fs/fb (chi2's calibration), not the frozen PSPL one.
+
+    tag: extra suffix appended to the output filename (e.g. "_chi2" for a
+    likelihood-comparison run), so two fits to the same use_ogle mode don't
+    overwrite each other's plot.
     """
     t0, u0, tE, alpha, piE_N, piE_E, s, q = theta
-    A_moa_best = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_moa, delta_sE_moa), s, q)
+
+    def model_fn(t):
+        delta_sN, delta_sE = sun_earth_projection(t, COORDS, t0_par)
+        return binary_magnification(binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE), s, q)
+
+    A_moa_best = model_fn(moa_time)
     if use_ogle:
-        A_ogle_best = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle), s, q)
+        A_ogle_best = model_fn(ogle_time)
         fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle_best, A_moa_best)
         ogle_A, ogle_A_err = ogle_to_magnification(ogle_mag, ogle_mag_err, fs_ogle, fb_ogle)
+        ogle_resid = ogle_A - A_ogle_best
     else:
         fs_moa = _profile_fs_moa(A_moa_best)
     moa_A, moa_A_err = moa_to_magnification(moa_flux, moa_flux_err, fs_moa)
+    moa_resid = moa_A - A_moa_best
     time = np.concatenate([ogle_time, moa_time]) if use_ogle else moa_time
     A_obs = np.concatenate([ogle_A, moa_A]) if use_ogle else moa_A
-    delta_sN = np.concatenate([delta_sN_ogle, delta_sN_moa])
-    delta_sE = np.concatenate([delta_sE_ogle, delta_sE_moa])
     zoom_start, zoom_end = find_zoom_window(moa_time, moa_A, moa_A_err, padding_fraction=0.3)
 
     def plot_panel(ax, xlim=None):
         t_grid = np.linspace(*(xlim if xlim else (time.min(), time.max())), 3000)
-        delta_sN, delta_sE = sun_earth_projection(t_grid, COORDS, t0_par)
-        A_model = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE), s, q)
+        A_model = model_fn(t_grid)
 
         if use_ogle:
             ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
@@ -180,35 +191,59 @@ def plot_fit(theta, use_ogle=True):
                 pad = 0.1 * (y_vals.max() - y_vals.min())
                 ax.set_ylim(y_vals.min() - pad, y_vals.max() + pad)
 
-    fig = plt.figure(figsize=(12, 8))
-    gs = fig.add_gridspec(2, 2)
-    ax_full = fig.add_subplot(gs[0, :])
-    ax_zoom = fig.add_subplot(gs[1, 0])
-    ax_caustic = fig.add_subplot(gs[1, 1])
+    fig = plt.figure(figsize=(9, 12))
+    gs = fig.add_gridspec(3, 1, height_ratios=[4, 4, 1.5])
+    ax_season = fig.add_subplot(gs[0])
+    ax_zoom = fig.add_subplot(gs[1])
+    ax_resid = fig.add_subplot(gs[2], sharex=ax_zoom)
 
-    plot_panel(ax_full)
-    ax_full.set_title("2L1S fit, full baseline")
-    ax_full.legend(loc="upper right")
+    # event season, not the multi-year full baseline -- same HJD 2700-3000 window
+    # scratch/compare_2l1s_fits.py already uses for O-03-BLG235.
+    plot_panel(ax_season, xlim=(2700, 3000))
+    ax_season.set_title("2L1S fit, event season (HJD 2700-3000)")
+    ax_season.legend(loc="upper right")
+
     plot_panel(ax_zoom, xlim=(zoom_start, zoom_end))
     ax_zoom.set_title("zoomed on peak (auto-detected)")
-    ax_zoom.set_xlabel("HJD - 2450000")
+    ax_zoom.tick_params(labelbottom=False)
 
+    # caustic geometry as an inset in the zoomed panel's corner, rather than its own subplot
     caustic = caustic_curve(s, q)
     t_traj = np.linspace(zoom_start, zoom_end, 3000)
     delta_sN_traj, delta_sE_traj = sun_earth_projection(t_traj, COORDS, t0_par)
     traj = binary_trajectory(t_traj, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_traj, delta_sE_traj)
-    ax_caustic.scatter(caustic.real, caustic.imag, s=0.5, color="crimson", label="caustic")
-    ax_caustic.plot(traj.real, traj.imag, color="black", lw=1, label="source trajectory")
+    ax_caustic = make_square_inset_axes(ax_zoom, width=1.8, height=1.8, loc="upper right", borderpad=2.0)
+    ax_caustic.scatter(caustic.real, caustic.imag, s=0.5, color="crimson")
+    ax_caustic.plot(traj.real, traj.imag, color="black", lw=1)
     ax_caustic.set_aspect("equal")
-    ax_caustic.set_xlabel("Re(zeta)")
-    ax_caustic.set_ylabel("Im(zeta)")
-    ax_caustic.set_title(f"caustic geometry (s={s:.3f}, q={q:.4f})")
-    ax_caustic.legend(loc="upper right", fontsize=8)
+    ax_caustic.set_title(f"s={s:.3f}, q={q:.4f}", fontsize=8)
+    ax_caustic.tick_params(labelsize=6)
+
+    # raw (non-standardized) residuals, real per-instrument error bars -- matches
+    # zoom_utils.plot_fit_panels()'s convention (see CLAUDE.md) rather than the
+    # standardized plot_residual_panel()/plot_residual_hist() helpers, which hide
+    # OGLE's real ~4x-better precision when both instruments share one panel.
+    in_zoom_moa = (moa_time >= zoom_start) & (moa_time <= zoom_end)
+    ax_resid.axhline(0, color="gray", linestyle="--", linewidth=0.8)
+    resid_parts = [moa_resid[in_zoom_moa]]
+    if use_ogle:
+        in_zoom_ogle = (ogle_time >= zoom_start) & (ogle_time <= zoom_end)
+        ax_resid.errorbar(ogle_time[in_zoom_ogle], ogle_resid[in_zoom_ogle], yerr=ogle_A_err[in_zoom_ogle],
+                           fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5, color="black")
+        resid_parts.append(ogle_resid[in_zoom_ogle])
+    ax_resid.errorbar(moa_time[in_zoom_moa], moa_resid[in_zoom_moa], yerr=moa_A_err[in_zoom_moa],
+                       fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5, color="tab:orange")
+    all_resid_z = np.concatenate(resid_parts)
+    if all_resid_z.size:
+        ylim = np.abs(all_resid_z).max() * 1.1
+        ax_resid.set_ylim(-ylim, ylim)
+    ax_resid.set_ylabel("residual (A(t))")
+    ax_resid.set_xlabel("HJD - 2450000")
 
     fig.tight_layout()
 
     Path("scratch").mkdir(exist_ok=True)
-    suffix = "" if use_ogle else "_moa_only"
+    suffix = ("" if use_ogle else "_moa_only") + tag
     out_path = f"scratch/{SHORT_NAME}_2l1s{suffix}.png"
     fig.savefig(out_path, dpi=600)
     print(f"saved {out_path}")

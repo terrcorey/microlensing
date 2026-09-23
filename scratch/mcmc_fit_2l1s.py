@@ -24,6 +24,7 @@ from fit_2l1s import SHORT_NAME, chi2, guess, plot_fit, residuals
 from mcmc_fit import save_corner
 
 LABELS = ["t0", "u0", "tE", "alpha", "piE_N", "piE_E", "s", "q", "scale", "dof"]
+LABELS_CHI2 = ["t0", "u0", "tE", "alpha", "piE_N", "piE_E", "s", "q"]  # no scale/dof -- Gaussian chi2, not Student-t
 
 T0_WIDTH = 10.0  # days around the PSPL joint fit's t0
 U0_RANGE = (0.01, 1.0)
@@ -111,13 +112,14 @@ def run_mcmc(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
     samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
     log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
     best = samples[np.argmax(log_probs)]
+    binary_best = best[:8]  # drop scale/dof -- chi2()/plot_fit() take only the 8 physical params
 
     print(f"[{tag}] {samples.shape[0]} posterior samples")
-    print(f"[{tag}] best sample: chi2={chi2(best, use_ogle):.2f}")
+    print(f"[{tag}] best sample: chi2={chi2(binary_best, use_ogle):.2f}")
     for label, value in zip(LABELS, best):
         print(f"[{tag}] {label} = {value:.5f}")
 
-    plot_fit(best, use_ogle=use_ogle)
+    plot_fit(binary_best, use_ogle=use_ogle)
 
     save_corner(samples, LABELS, best, f"scratch/{SHORT_NAME}_2l1s_mcmc{suffix}.png")
     np.savez(f"scratch/{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS)
@@ -127,6 +129,83 @@ def run_mcmc(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
 
 def run_mcmc_moa_only():
     return run_mcmc(use_ogle=False)
+
+
+def log_prior_chi2(theta):
+    """Same bounds as log_prior(), minus scale/dof -- this run has no Student-t params."""
+    t0, u0, tE, alpha, piE_N, piE_E, s, q = theta
+    if not (guess["t0"] - T0_WIDTH < t0 < guess["t0"] + T0_WIDTH):
+        return -np.inf
+    if not (U0_RANGE[0] < u0 < U0_RANGE[1]):
+        return -np.inf
+    if not (TE_RANGE[0] < tE < TE_RANGE[1]):
+        return -np.inf
+    if not (0 <= alpha < 2 * np.pi):
+        return -np.inf
+    if s <= 0 or q <= 0:
+        return -np.inf
+    if not (S_RANGE[0] < s < S_RANGE[1]):
+        return -np.inf
+    if not (LOG_Q_RANGE[0] < np.log(q) < LOG_Q_RANGE[1]):
+        return -np.inf
+    if not (PIE_RANGE[0] < piE_N < PIE_RANGE[1]):
+        return -np.inf
+    if not (PIE_RANGE[0] < piE_E < PIE_RANGE[1]):
+        return -np.inf
+    return 0.0
+
+
+def log_probability_chi2(theta, use_ogle=True):
+    """Plain Gaussian likelihood (-0.5*chi2) in place of log_probability()'s Student-t --
+    a direct comparison run: does the caustic-crossing spike drag the whole fit toward
+    itself under chi2's unbounded quadratic penalty, the way it can't under Student-t's
+    logarithmic tail (see conversation)."""
+    lp = log_prior_chi2(theta)
+    if not np.isfinite(lp):
+        return -np.inf
+    c2 = chi2(theta, use_ogle)
+    return -np.inf if not np.isfinite(c2) else lp - 0.5 * c2
+
+
+def sample_prior_chi2(rng, n):
+    t0 = rng.uniform(guess["t0"] - T0_WIDTH, guess["t0"] + T0_WIDTH, n)
+    u0 = rng.uniform(*U0_RANGE, n)
+    tE = rng.uniform(*TE_RANGE, n)
+    alpha = rng.uniform(0, 2 * np.pi, n)
+    piE_N = rng.uniform(*PIE_RANGE, n)
+    piE_E = rng.uniform(*PIE_RANGE, n)
+    s = rng.uniform(*S_RANGE, n)
+    q = np.exp(rng.uniform(*LOG_Q_RANGE, n))
+    return np.column_stack([t0, u0, tE, alpha, piE_N, piE_E, s, q])
+
+
+def run_mcmc_chi2(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
+    tag = "mcmc-2l1s-chi2" if use_ogle else "mcmc-2l1s-chi2-moa-only"
+    suffix = ("" if use_ogle else "_moa_only") + "_chi2"
+
+    rng = np.random.default_rng(seed)
+    p0 = sample_prior_chi2(rng, nwalkers)
+
+    nprocs = int(os.environ["SLURM_CPUS_PER_TASK"]) if "SLURM_CPUS_PER_TASK" in os.environ else None
+    with get_context("spawn").Pool(processes=nprocs) as pool:
+        sampler = emcee.EnsembleSampler(nwalkers, len(LABELS_CHI2), log_probability_chi2, pool=pool, args=(use_ogle,))
+        sampler.run_mcmc(p0, nsteps, progress=True)
+
+    samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
+    log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
+    best = samples[np.argmax(log_probs)]
+
+    print(f"[{tag}] {samples.shape[0]} posterior samples")
+    print(f"[{tag}] best sample: chi2={chi2(best, use_ogle):.2f}")
+    for label, value in zip(LABELS_CHI2, best):
+        print(f"[{tag}] {label} = {value:.5f}")
+
+    plot_fit(best, use_ogle=use_ogle, tag="_chi2")
+
+    save_corner(samples, LABELS_CHI2, best, f"scratch/{SHORT_NAME}_2l1s_mcmc{suffix}.png")
+    np.savez(f"scratch/{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS_CHI2)
+
+    return sampler, samples
 
 
 if __name__ == "__main__":

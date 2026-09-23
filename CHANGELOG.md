@@ -918,3 +918,133 @@ actual point of this repo), and **Next session**'s planned goal.
   - The "MOA-2019-BLG-008 mag_err rescaling" and "resume the 2L1S search
     problem" backlog items were both considered and explicitly deferred in
     favor of this -- still backlog, not scheduled.
+
+## 2026-09-23 — session 10
+
+### Built
+- Completed session 9's confirmed goal: extended annual parallax
+  (`piE_N`/`piE_E`) + Student-t robust likelihood into the 2L1S scratch
+  track (`scratch/fit_2l1s.py`, `scratch/mcmc_fit_2l1s.py`), crossing the
+  boundary CLAUDE.md previously drew around it. `lc_models.binary_trajectory()`
+  gained `piE_N`/`piE_E`/`delta_sN`/`delta_sE` params, mirroring
+  `trajectory()`'s own `delta_tau`/`delta_beta` math exactly, no
+  flag/default. `fit_2l1s.py`'s `chi2()` now wraps a new `residuals()`
+  (extracted, returns the raw per-point standardized-residual array);
+  `mcmc_fit_2l1s.py`'s real MCMC adds `scale`/`dof` and a Student-t
+  log-likelihood mirroring `mcmc_fit.fit_parallax_pspl_mcmc()`'s existing
+  pattern (Gaussian chi2 for the point-estimate stage only, Student-t for
+  the real posterior).
+- User wrote most of this by hand per CLAUDE.md's usual mode; Claude's role
+  was reviewing each iteration against a live run and catching bugs before
+  they silently corrupted results -- six were caught this way, not by
+  inspection alone: `residuals()` returning a bare tuple for the joint
+  branch (crashed immediately), a pre-squared scalar for the MOA-only
+  branch (chi2 silently squared again), unpacking its own theta in a
+  different param order than every other call site used (silently swapped
+  `s`/`q` with `piE_N`/`piE_E`), `plot_fit()`'s caustic-panel trajectory
+  reusing a stale, wrong-length `delta_sN`/`delta_sE` against a freshly
+  resampled plotting grid (shape-mismatch crash, fixed twice -- missed one
+  call site the first pass), the Student-t log-likelihood keeping the old
+  Gaussian `-0.5*` scaling factor and missing the `-log(scale)` Jacobian
+  term after the switch, and a stale 6-item print-label list silently
+  mislabeling `piE_N`/`piE_E`'s printed values as `s`/`q` in console output
+  (real `s`/`q` never printed at all -- only recoverable from the saved
+  plot's caustic-panel title).
+- Reshaped `fit_2l1s.py`'s `plot_fit()`: full multi-year baseline panel
+  replaced with an "event season" window (HJD 2700-3000, matching
+  `compare_2l1s_fits.py`'s existing convention), caustic geometry moved
+  from its own subplot into a square inset
+  (`mpl_toolkits.axes_grid1.inset_locator.inset_axes`, physical inches --
+  `Axes.inset_axes()`'s fraction-based sizing doesn't give a square box
+  against a non-square parent) inside the zoomed panel, and a raw-residual
+  panel added beneath it (per-instrument real error bars, same convention
+  as `zoom_utils.plot_fit_panels()`, hand-rolled here since that helper has
+  no MOA-only mode). Gained a `tag` kwarg so a second fit to the same
+  `use_ogle` mode doesn't overwrite the first's plot.
+- Built a direct chi2-vs-Student-t MCMC comparison for the 2L1S track
+  (`mcmc_fit_2l1s.run_mcmc_chi2()`/`log_probability_chi2()`, plain
+  `-0.5*chi2`, no `scale`/`dof` -- a deliberate diagnostic, not wired into
+  `__main__`) to make concrete a hypothesis raised mid-session: does chi2's
+  unbounded quadratic penalty drag the whole fit toward one extreme point.
+- Investigated the SLURM cluster path: recommended the CPU partition over
+  GPU (the `Pool()` parallelism is per-walker OS processes each doing a
+  small, sub-GPU-batch-sized calculation -- many processes sharing one GPU
+  context would serialize, not speed up), drafted
+  `scratch/submit_mcmc_2l1s.sbatch`, and fixed `run_mcmc()`'s `Pool()` to
+  read `SLURM_CPUS_PER_TASK` explicitly rather than the default
+  `cpu_count()` (which reads the physical node's core count, not what
+  SLURM's cgroup actually allocated -- oversubscribes on a shared node).
+- Found and fixed a real, independent bug while building a Bond et al.
+  2004 comparison table: `preprocess_binary_data.py`'s hardcoded
+  `COORDS = SkyCoord("18h05m16.35s -28d53m42.0s")` had the wrong RA --
+  both raw OGLE and MOA files' own `\RA` header lines say `18h01m16.35s`,
+  4 arcmin of RA (~1 degree on sky) off, silently corrupting every
+  O-03-BLG235 parallax calculation made to date, this session included.
+  Ran `/grill-me` to scope the fix rather than guess: replaced the
+  hardcode with a new `preprocess_binary_data.load_coords()` that parses
+  each raw file's own header and raises if OGLE's and MOA's disagree,
+  deliberately scoped to O-03-BLG235 only (O-05-BLG086's `.dat` file has
+  no header to parse at all; MOA-2019-BLG-008's raw file isn't downloaded
+  yet, so scoping any further was guessing).
+- Re-ran the full O-03-BLG235 chain (`preprocess_binary_data.py` ->
+  `mcmc_fit_binary.py` -> `fit_2l1s.py` -> `mcmc_fit_2l1s.py`) with the
+  corrected coordinates to get valid post-fix numbers.
+
+### Learned & open questions
+- The chi2-vs-Student-t comparison's result was concrete, not just
+  theoretical: under chi2, the model curve visibly distorted into a
+  spurious double-peak trying to reach one extreme real MOA
+  caustic-crossing point -- and still missed it by ~8 magnification units
+  even so -- while the residual panel's scale grew ~3x across the *rest*
+  of the light curve as the cost of that chase. Under Student-t, the model
+  didn't bend toward that point at all and fit everything else cleanly.
+  Conclusion reached together: a single point neither likelihood can
+  explain by parameter tuning alone (even chi2's maximal chase falls short)
+  is more consistent with a single-epoch photometric anomaly or an
+  unresolved finite-source/cusp effect than with something this trajectory
+  model family can capture -- not worth chasing via the image-count check.
+- The coordinate bug's fix shifted real numbers, not just cosmetics:
+  joint MCMC's `alpha` moved from 74.7 deg (Bond: 223.8 deg -- way off) to
+  217.5 deg (within 6 deg) after the fix; `piE_N`/`piE_E` dropped from
+  being pinned at the prior's +/-2 boundary to modest `-0.109`/`-0.024`.
+  Plausible reading: the boundary-pinned parallax values seen
+  pre-fix were the wrong coordinates forcing the fit to explain away
+  geometric error as spurious parallax signal, not a real detection --
+  though this isn't proven, just newly plausible.
+- `alpha`'s posterior bimodality was checked quantitatively (KDE
+  peak-finding on the saved chains, not eyeballing the corner plot) and
+  turned out to be ~78-108 deg apart across both joint and MOA-only
+  chains -- not the ~180 deg mirror-image degeneracy assumed at a glance.
+  More consistent with genuinely separate local chi2 minima in the
+  still-unresolved search landscape (CLAUDE.md's "near-miss cusp" problem)
+  than with one clean, well-understood symmetry.
+- The MOA-only control fit still disagrees substantially with the joint
+  fit on topology even post-fix (`s=1.098`/`q=0.322` vs.
+  `s=1.537`/`q=0.0079`) -- predates and is unrelated to the coordinate
+  bug, still open.
+- Two bugs this session were caught only by actually running the code and
+  reading its output against expectations (a saved plot's title, a
+  Bond-comparison table) -- not by code review, and not close calls either
+  time. Reinforces this repo's own stated convention (CLAUDE.md, "Setup and
+  commands": correctness "judged by inspecting the plot/printed fit it
+  produces") over static inspection alone.
+- Known naming gap, not fixed this session (see Next session): `run_fit()`
+  and `run_mcmc()` both default to `plot_fit(..., tag="")`, so whichever
+  ran most recently silently overwrites the other's output at
+  `scratch/O-03-BLG235_2l1s.png`. Pre-dates this session; became concrete
+  while running the chi2-vs-Student-t comparison side by side.
+
+### Next session
+- Confirmed via `/grill-me`, scoped to the 2L1S track only (single-lens
+  PSPL stays on Student-t as-is -- already validated, and there's no
+  physical reason for a spatially-varying statistic there):
+  1. **File naming cleanup**: drop `plot_fit()`'s `tag=""` default (make it
+     required) and give every 2L1S call site a method-identifying tag
+     (e.g. `_nelder_mead`, `_mcmc_studentt`, `_mcmc_chi2`) so different
+     fitting methods stop silently overwriting each other's plots/corner
+     plots/chain files.
+  2. **Better-statistic exploration**: try Huber loss first -- a
+     well-documented, widely-used approach -- before anything custom. A
+     "joint statistic combining Student-t and chi2" idea was raised too,
+     explicitly deprioritized until Huber (and other established options)
+     have been tried.

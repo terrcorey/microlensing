@@ -85,7 +85,12 @@ give a fast/no-MCMC path without a second script to keep in sync.
 `fit_2l1s.py`, `mcmc_fit_2l1s.py`, `compare_2l1s_fits.py`,
 `cross_check_mulensmodel.py`, `cross_check_mulensmodel_fit.py`,
 `cross_check_mulensmodel_parallax.py`, `derive_binary_quintic.py`,
-`fit_2l1s_moa19008.py`. None are covered by the pip line above --
+`fit_2l1s_moa19008.py`, `submit_mcmc_2l1s.sbatch` (session 10, SLURM job
+script for running `mcmc_fit_2l1s.py` on a CPU partition -- see its own
+header comment for cluster-side directory-layout assumptions and why CPU
+not GPU: the parallelism is per-walker OS processes, not one large batched
+GPU call, so many processes sharing one GPU context would serialize rather
+than speed up). None are covered by the pip line above --
 `derive_binary_quintic.py` needs `sympy`, the three `cross_check_mulensmodel*.py`
 need `MulensModel`. All are self-documented in their own docstrings and run
 manually as `python3 scratch/<name>.py` from the project root (each has its
@@ -216,10 +221,21 @@ passing `maxfev=10000` explicitly.
 Target coordinates gathered so far: O-05-BLG086 RA 18h04m45.70s / Dec
 -26d59m15.5s (OGLE-III EWS alert page, field BLG234.6 -- a Wikipedia-
 sourced pair used briefly during development was off by ~3 degrees in
-both RA and Dec and was caught before it reached any fit); O-03-BLG235 RA
-18h05m16.35s / Dec -28d53m42.0s (Bond et al. 2004 / NASA Exoplanet
-Archive, `preprocess_binary_data.COORDS` -- `mcmc_fit_binary.py` imports
-it from there rather than redefining it).
+both RA and Dec and was caught before it reached any fit, still hardcoded
+inline in `mcmc_fit.py`'s `__main__`); O-03-BLG235 RA 18h01m16.35s / Dec
+-28d53m42.0s, via `preprocess_binary_data.COORDS = load_coords()` --
+**not** hardcoded (session 10 replaced a hardcoded `SkyCoord`, which
+itself had a real bug: RA `18h05m16.35s`, 4 arcmin of RA / ~1 degree on
+sky off from what both raw files' own headers say). `load_coords()`
+parses each raw file's own `\RA`/`\DEC` header line (same NASA Exoplanet
+Archive format `load_raw()` already parses the data rows from) and raises
+if OGLE's and MOA's disagree -- deliberately scoped to O-03-BLG235 only
+for now (its two files both carry this header; O-05-BLG086's `.dat` file
+has no header at all to pull from, and MOA-2019-BLG-008's raw file isn't
+even downloaded yet), not a general per-dataset mechanism.
+`mcmc_fit_binary.py` and `scratch/fit_2l1s.py`/`mcmc_fit_2l1s.py` all
+import `COORDS` from there rather than redefining it -- every O-03-BLG235
+parallax number computed before session 10's fix used the wrong RA.
 
 ## O-03-BLG235's calibrate-once-then-fit pipeline
 
@@ -273,7 +289,17 @@ artificially tight MCMC posterior), not just a style nit.
 
 `lc_models.py` also implements a point-source binary-lens (2L1S) model:
 `binary_trajectory`, `lens_position`, `binary_images`,
-`binary_magnification`. Image positions come from a degree-5 polynomial
+`binary_magnification`. As of session 10, `binary_trajectory(t, t0, u0,
+tE, alpha, piE_N, piE_E, delta_sN, delta_sE)` takes the same annual-parallax
+arguments `trajectory()` does (see "Annual parallax + robust likelihood"
+above) -- perturbs `tau`/`beta` by `delta_tau`/`delta_beta` before the
+`alpha` rotation, mirroring that function's own math exactly. No
+default/flag: every caller must pass all four now. `scratch/fit_2l1s.py`
+and `scratch/mcmc_fit_2l1s.py` were updated for this; **`scratch/compare_2l1s_fits.py`
+was not** (still calls the old 5-arg form) -- it's a frozen snapshot of
+pre-parallax candidates, left broken rather than guessing how to backfill
+parallax params for historical results that were never fit with them.
+Image positions come from a degree-5 polynomial
 whose coefficients were derived symbolically with `sympy`
 (`scratch/derive_binary_quintic.py`, a one-time dev script -- not a project
 dependency) rather than hand-transcribed from a paper, then hardcoded as
@@ -319,7 +345,58 @@ refined with a tight Nelder-Mead fit of its best sample, chi2=1825.35,
 solution, but session 2's BIC-vs-PSPL verdict is still blocked until this
 search problem is resolved. `scratch/compare_2l1s_fits.py` overlays every
 candidate found so far (both search modes x both instrument scopes, plus
-Bond's reference) on one figure for comparison.
+Bond's reference) on one figure for comparison -- broken by session 10's
+`binary_trajectory()` signature change, see above.
+
+**Session 10**: extended annual parallax + Student-t (see "Annual parallax
++ robust likelihood" above) into this track, crossing the boundary that
+section previously drew ("not the `scratch/` 2L1S code, a separate
+track"). `chi2()`/`residuals()` in `fit_2l1s.py` (the latter extracted
+from the former, returns the raw per-point standardized-residual array
+that both `chi2()`'s `np.sum(residuals(...)**2)` and
+`mcmc_fit_2l1s.py`'s Student-t log-likelihood now share) both take the
+8-param `(t0, u0, tE, alpha, piE_N, piE_E, s, q)` theta.
+`mcmc_fit_2l1s.py`'s real MCMC (`run_mcmc()`) adds `scale`/`dof` on top
+(10 params total), log-likelihood `student_t.logpdf(residuals(...)/scale,
+df=dof).sum() - residuals(...).size * np.log(scale)` -- mirrors
+`mcmc_fit.fit_parallax_pspl_mcmc()`'s pattern exactly (Gaussian chi2 for
+the point-estimate/multi-start stage only, Student-t for the real MCMC
+posterior). Also added `run_mcmc_chi2()`/`log_probability_chi2()` (plain
+`-0.5*chi2`, no `scale`/`dof`) as a deliberate side-by-side diagnostic,
+not part of the regular `__main__` run -- see "Learned" below.
+
+This session's implementation needed real debugging, not just wiring:
+`residuals()` originally returned a bare tuple for the joint branch
+(crashed on first use), a pre-squared scalar for the MOA-only branch
+(silently squared chi2 again), and unpacked its own theta in a different
+param order than every other call site (`seeds`, `plot_fit`, `LABELS`)
+used -- silently swapping `s`/`q` with `piE_N`/`piE_E` at the physics
+level. `log_probability()` also briefly kept the old Gaussian `-0.5*`
+scaling factor after switching to Student-t (double-penalizing the
+posterior) and was missing the `-log(scale)` Jacobian term. All caught by
+running the code, not by inspection -- see CHANGELOG session 10.
+
+`fit_2l1s.py`'s `plot_fit()` was also reshaped: full multi-year baseline
+panel replaced with an "event season" window (HJD 2700-3000, matching
+`compare_2l1s_fits.py`'s own convention), the caustic-geometry panel is
+now a square inset (`mpl_toolkits.axes_grid1.inset_locator.inset_axes`,
+physical inches, not axes-fraction -- fraction-based `Axes.inset_axes()`
+doesn't give a square box against a non-square parent) inside the zoomed
+panel instead of its own subplot, and a raw-residual panel sits beneath
+the zoomed panel (same per-instrument-real-error-bar convention as
+`zoom_utils.plot_fit_panels()`, hand-rolled here rather than calling that
+shared helper since it has no MOA-only mode). `plot_fit()` gained a `tag`
+kwarg so a second fit to the same `use_ogle` mode (e.g. the chi2 diagnostic
+above) doesn't overwrite the first's plot.
+
+**Known naming gap, not yet fixed**: `fit_2l1s.py`'s own `run_fit()`
+(Nelder-Mead point estimate) and `mcmc_fit_2l1s.py`'s `run_mcmc()`
+(Student-t MCMC) both call `plot_fit(..., tag="")` by default -- same
+output path, whichever ran most recently wins. Pre-dates session 10, not
+introduced by it, but session 10's chi2-vs-Student-t comparison made it
+concrete enough to plan around next session (see CHANGELOG's "Next
+session"): each method's output should get a name that says which method
+produced it, not just which instrument-scope/dataset.
 
 
 ## Output layout
