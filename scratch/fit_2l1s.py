@@ -17,8 +17,8 @@ from functools import partial
 from itertools import product
 from multiprocessing import get_context
 
-from lc_models import binary_magnification, binary_trajectory, caustic_curve, mag_to_flux
-from preprocess_binary_data import load_raw, moa_to_magnification, ogle_to_magnification
+from lc_models import binary_magnification, binary_trajectory, caustic_curve, mag_to_flux, sun_earth_projection
+from preprocess_binary_data import load_raw, moa_to_magnification, ogle_to_magnification, fit_joint_pspl, COORDS
 from zoom_utils import find_zoom_window
 
 SHORT_NAME = "O-03-BLG235"
@@ -29,6 +29,15 @@ SHORT_NAME = "O-03-BLG235"
 ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err = load_raw()
 ogle_flux, ogle_flux_err = mag_to_flux(ogle_mag, ogle_mag_err)
 
+zeros_ogle, zeros_moa = np.zeros_like(ogle_time), np.zeros_like(moa_time)
+plain_fit, _ = fit_joint_pspl(ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err,
+                                zeros_ogle, zeros_ogle, zeros_moa, zeros_moa)
+t0_par = plain_fit[0]
+print(f"t0_par (parallax reference epoch, from plain pre-parallax fit) = {t0_par:.5f}")
+
+delta_sN_ogle, delta_sE_ogle = sun_earth_projection(ogle_time, COORDS, t0_par)
+delta_sN_moa, delta_sE_moa = sun_earth_projection(moa_time, COORDS, t0_par)
+
 # t0/u0/tE seeded from the existing PSPL joint fit's posterior median.
 param, val = np.loadtxt(f"data/processed/{SHORT_NAME}_fit_summary.dat", unpack=True, usecols=(0, 2), dtype=str)
 guess = dict(zip(param, val.astype(float)))
@@ -37,7 +46,7 @@ guess = dict(zip(param, val.astype(float)))
 s_list = [0.7, 1, 1.3, 1.6]
 q_list = [0.01, 0.1]
 alpha_list = [i * np.pi / 8 for i in range(16)]
-seeds = [[guess["t0"], guess["u0"], guess["tE"], alpha, s, q] for s, q, alpha in product(s_list, q_list, alpha_list)]
+seeds = [[guess["t0"], guess["u0"], guess["tE"], alpha, guess["piE_N"], guess["piE_E"], s, q] for s, q, alpha in product(s_list, q_list, alpha_list)]
 
 
 def _profile_fs_moa(A_moa):
@@ -59,23 +68,20 @@ def profile_flux(A_ogle, A_moa):
     fs_ogle, fb_ogle = np.linalg.solve((X * w[:, None]).T @ X, (X * w[:, None]).T @ ogle_flux)
     return fs_ogle, fb_ogle, _profile_fs_moa(A_moa)
 
-
-def chi2(theta, use_ogle=True):
-    """Chi2 of the 2L1S model against raw flux, with each instrument's flux calibration
-    (fs/fb) profiled analytically for this specific trial trajectory. `use_ogle=False`
-    fits MOA alone (only fs_moa profiled) -- a calibration-ambiguity-free control on the
-    joint fit, since there's no cross-instrument scale to get wrong (see CHANGELOG)."""
-    t0, u0, tE, alpha, s, q = theta
+def residuals(theta, use_ogle=True):
+    t0, u0, tE, alpha, piE_N, piE_E, s, q = theta
     if tE <= 0 or s <= 0 or q <= 0:
         return np.inf  # unphysical
-    A_moa = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha), s, q)
+    if np.abs(piE_N) > 2 or np.abs(piE_E) > 2:
+        return np.inf
+    A_moa = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_moa, delta_sE_moa), s, q)
     if not use_ogle:
         fs_moa = _profile_fs_moa(A_moa)
         if fs_moa <= 0:
             return np.inf
-        return np.sum(((moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err) ** 2)
+        return (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
 
-    A_ogle = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha), s, q)
+    A_ogle = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle), s, q)
     try:
         fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle, A_moa)
     except np.linalg.LinAlgError:
@@ -84,12 +90,19 @@ def chi2(theta, use_ogle=True):
         return np.inf
     resid_ogle = (ogle_flux - (fs_ogle * A_ogle + fb_ogle)) / ogle_flux_err
     resid_moa = (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
-    return np.sum(resid_ogle ** 2) + np.sum(resid_moa ** 2)
+    return np.concatenate([resid_ogle, resid_moa])
+
+def chi2(theta, use_ogle=True):
+    """Chi2 of the 2L1S model against raw flux, with each instrument's flux calibration
+    (fs/fb) profiled analytically for this specific trial trajectory. `use_ogle=False`
+    fits MOA alone (only fs_moa profiled) -- a calibration-ambiguity-free control on the
+    joint fit, since there's no cross-instrument scale to get wrong (see CHANGELOG)."""
+    return np.sum(residuals(theta, use_ogle)**2)
 
 
 def _fit_one_seed(seed, use_ogle=True):
     """Nelder-Mead on one seed at loose tolerance; module-level so it can be pickled."""
-    t0, u0, tE, alpha, s, q = seed
+    t0, u0, tE, alpha, piE_N, piE_E, s, q = seed
     tag = "2l1s" if use_ogle else "2l1s-moa-only"
     result = minimize(chi2, x0=seed, args=(use_ogle,), method="Nelder-Mead",
                        options={"xatol": 1e-2, "fatol": 1e-2, "maxiter": 2000})
@@ -129,10 +142,10 @@ def plot_fit(theta, use_ogle=True):
     Magnification-space view only, for plotting -- inverts the raw flux using this
     theta's own profiled fs/fb (chi2's calibration), not the frozen PSPL one.
     """
-    t0, u0, tE, alpha, s, q = theta
-    A_moa_best = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha), s, q)
+    t0, u0, tE, alpha, piE_N, piE_E, s, q = theta
+    A_moa_best = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_moa, delta_sE_moa), s, q)
     if use_ogle:
-        A_ogle_best = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha), s, q)
+        A_ogle_best = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle), s, q)
         fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle_best, A_moa_best)
         ogle_A, ogle_A_err = ogle_to_magnification(ogle_mag, ogle_mag_err, fs_ogle, fb_ogle)
     else:
@@ -140,12 +153,14 @@ def plot_fit(theta, use_ogle=True):
     moa_A, moa_A_err = moa_to_magnification(moa_flux, moa_flux_err, fs_moa)
     time = np.concatenate([ogle_time, moa_time]) if use_ogle else moa_time
     A_obs = np.concatenate([ogle_A, moa_A]) if use_ogle else moa_A
-
+    delta_sN = np.concatenate([delta_sN_ogle, delta_sN_moa])
+    delta_sE = np.concatenate([delta_sE_ogle, delta_sE_moa])
     zoom_start, zoom_end = find_zoom_window(moa_time, moa_A, moa_A_err, padding_fraction=0.3)
 
     def plot_panel(ax, xlim=None):
         t_grid = np.linspace(*(xlim if xlim else (time.min(), time.max())), 3000)
-        A_model = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha), s, q)
+        delta_sN, delta_sE = sun_earth_projection(t_grid, COORDS, t0_par)
+        A_model = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE), s, q)
 
         if use_ogle:
             ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,
@@ -180,7 +195,8 @@ def plot_fit(theta, use_ogle=True):
 
     caustic = caustic_curve(s, q)
     t_traj = np.linspace(zoom_start, zoom_end, 3000)
-    traj = binary_trajectory(t_traj, t0, u0, tE, alpha)
+    delta_sN_traj, delta_sE_traj = sun_earth_projection(t_traj, COORDS, t0_par)
+    traj = binary_trajectory(t_traj, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_traj, delta_sE_traj)
     ax_caustic.scatter(caustic.real, caustic.imag, s=0.5, color="crimson", label="caustic")
     ax_caustic.plot(traj.real, traj.imag, color="black", lw=1, label="source trajectory")
     ax_caustic.set_aspect("equal")

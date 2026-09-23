@@ -61,11 +61,14 @@ def plain_magnitude(t, t0, u0, tE, f_source, f_blend):
     return ZERO_POINT_MAG - 2.5 * np.log10(plain_flux(t, t0, u0, tE, f_source, f_blend))
 
 
-def binary_trajectory(t, t0, u0, tE, alpha):
+def binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE):
     """Source-lens separation for binary lenses on the lens plane, given in
     complex form ζ(t), in units of the Einstein radius."""
-    tau = (t - t0) / tE
-    return (tau + 1j * u0) * np.exp(1j * alpha)
+    delta_tau = piE_N * delta_sN + piE_E * delta_sE
+    delta_beta = piE_N * delta_sE - piE_E * delta_sN
+    tau = (t - t0) / tE + delta_tau
+    beta = u0 + delta_beta
+    return (tau + 1j * beta) * np.exp(1j * alpha)
 
 
 def lens_position(s, q):
