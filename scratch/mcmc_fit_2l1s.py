@@ -151,8 +151,10 @@ def run_mcmc(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
 
     plot_fit(binary_best, use_ogle=use_ogle, tag="_mcmc_studentt")
 
-    save_corner(samples, LABELS, best, f"scratch/{SHORT_NAME}_2l1s_mcmc{suffix}.png")
-    np.savez(f"scratch/{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS)
+    out_dir = Path("scratch/2l1s/studentt")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    save_corner(samples, LABELS, best, str(out_dir / f"{SHORT_NAME}_2l1s_mcmc{suffix}.png"))
+    np.savez(out_dir / f"{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS)
 
     return sampler, samples
 
@@ -206,8 +208,10 @@ def run_mcmc_chi2(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
 
     plot_fit(best, use_ogle=use_ogle, tag="_chi2")
 
-    save_corner(samples, LABELS_CHI2, best, f"scratch/{SHORT_NAME}_2l1s_mcmc{suffix}.png")
-    np.savez(f"scratch/{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS_CHI2)
+    out_dir = Path("scratch/2l1s/chi2")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    save_corner(samples, LABELS_CHI2, best, str(out_dir / f"{SHORT_NAME}_2l1s_mcmc{suffix}.png"))
+    np.savez(out_dir / f"{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS_CHI2)
 
     return sampler, samples
 
@@ -272,8 +276,10 @@ def run_mcmc_huber(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
 
     plot_fit(binary_best, use_ogle=use_ogle, tag="_huber")
 
-    save_corner(samples, LABELS_HUBER, best, f"scratch/{SHORT_NAME}_2l1s_mcmc{suffix}.png")
-    np.savez(f"scratch/{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS_HUBER)
+    out_dir = Path("scratch/2l1s/huber")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    save_corner(samples, LABELS_HUBER, best, str(out_dir / f"{SHORT_NAME}_2l1s_mcmc{suffix}.png"))
+    np.savez(out_dir / f"{SHORT_NAME}_2l1s_mcmc_chain{suffix}.npz", samples=samples, log_probs=log_probs, labels=LABELS_HUBER)
 
     return sampler, samples
 

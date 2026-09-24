@@ -278,9 +278,15 @@ def plot_fit(theta, use_ogle=True, *, tag):
 
     fig.tight_layout()
 
-    Path("scratch").mkdir(exist_ok=True)
+    # tag -> subfolder, so each method's outputs land together under scratch/2l1s/
+    # instead of flat in scratch/ -- KeyError on an unregistered tag is deliberate,
+    # same "no silent default" reasoning as tag itself having no default (see above).
+    method_dir = {"_nelder_mead": "nelder_mead", "_mcmc_studentt": "studentt",
+                  "_chi2": "chi2", "_huber": "huber"}[tag]
+    out_dir = Path("scratch/2l1s") / method_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
     suffix = ("" if use_ogle else "_moa_only") + tag
-    out_path = f"scratch/{SHORT_NAME}_2l1s{suffix}.png"
+    out_path = out_dir / f"{SHORT_NAME}_2l1s{suffix}.png"
     fig.savefig(out_path, dpi=600)
     print(f"saved {out_path}")
 

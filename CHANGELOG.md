@@ -1173,3 +1173,73 @@ actual point of this repo), and **Next session**'s planned goal.
 - Not scheduled, but still open and unresolved: the near-miss-cusp
   search-landscape/basin-disagreement question, the `piE_N` boundary pin,
   Huber MOA-only's timing anomaly, and the finite-source-effects idea.
+
+### Planned roadmap (post-session addendum, papers + ordered next steps)
+User-supplied reading list and implementation order for the 2L1S track,
+recorded ahead of starting the work so intent is on record before code
+changes begin. Order as given, error-bar rescaling first (already the
+confirmed "Next session" item above):
+1. **Error bar rescaling** (in progress next -- see "Next session" above).
+2. **Finite source effects (`rho*`)** -- extend the point-source 2L1S model
+   to account for finite source size, the deferred step `lc_models.py`'s
+   own docstring already flags (see "O-03-BLG235's PSPL-vs-2L1S model
+   comparison" above) and the leading candidate explanation raised in
+   session 11's "Learned" section for why no point-source loss function
+   fits the caustic spike.
+3. **Caustic parametrisation** -- explore Cassan (2008)'s curvilinear
+   abscissa parametrisation of the caustic curve, as groundwork for the
+   genetic-algorithm step below.
+4. **(d, q) grid search** -- grid over separation/mass-ratio, chi2-fit
+   caustic entry/exit times, entry/exit points, and `rho*` at each grid
+   point to determine caustic geometry -- directly targets the still-open
+   near-miss-cusp/basin-disagreement problem (session 2 onward) by
+   replacing multi-start Nelder-Mead's ad hoc seed grid with a
+   geometry-driven search.
+5. **Genetic algorithm** (Charbonneau 1995) -- explore entry/exit points on
+   the parametrised caustic and entry/exit times, seeded/checked by eye;
+   MCMC refinement afterward, following the same point-estimate-then-MCMC
+   pattern already used elsewhere in this repo (see "Annual parallax +
+   robust likelihood" above).
+
+**References**:
+- Charbonneau (1995) -- genetic algorithm for fitting (step 5).
+- Cassan (2008) -- curvilinear abscissa parametrisation of the caustic
+  curve (step 3).
+- Kains (2009) -- a real dataset applying the Cassan (2008)/genetic-
+  algorithm methodology end to end; reference implementation to check
+  this repo's own approach against once steps 3-5 are underway.
+
+### Long-term pipeline direction (post-session addendum, via `/grill-me`)
+User described wanting this repo to eventually become a real pipeline, not
+just a two-event playground -- a genuine philosophy shift not previously
+recorded anywhere, so run through a full `/grill-me` round for consensus per
+CLAUDE.md rule 3 before any code changed. No code changed this round; this
+is a direction decision only.
+- **Vision**: config-driven, not fully automatic. A new event = a config
+  (raw file paths, coordinates, instrument format if it matches the existing
+  OGLE/MOA-style parsing, model choice, initial guesses) rather than a
+  system that auto-detects formats, auto-picks PSPL vs. 2L1S, or
+  auto-generates initial guesses -- explicitly ruled out as a much bigger,
+  more open-ended project than the config-driven version.
+- **Sequencing**: this is a later, separate goal. The physics/logistics
+  roadmap logged above (error-bar rescaling -> finite source effects ->
+  caustic parametrisation -> (d,q) grid search -> genetic algorithm)
+  continues uninterrupted; pipeline conversion doesn't start until that
+  work is further along -- generalizing plumbing around a model that
+  doesn't yet fit the one hard case in hand (O-03-BLG235's caustic) risks
+  building the wrong abstraction before it's clear what "general" needs to
+  support.
+- **Output bar**: whatever the pipeline eventually produces per event must
+  match the full treatment the two current datasets already get -- MCMC
+  posterior, corner plots, best-fit light curve overlay, derived physical
+  quantities (mass distribution, blend fraction, etc.) -- not a reduced
+  version.
+- **Claude's role unchanged**: still a guide, not an implementer, per
+  CLAUDE.md rule 6 -- but with a standing consideration added going
+  forward: favor implementation patterns that stay convertible later
+  (parameterized functions over hardcoded per-event constants scattered
+  inline, proper module structure) over anything better suited to
+  notebook-style exploration, without starting pipeline work itself yet.
+- A corresponding note was drafted for CLAUDE.md's "What this is" section
+  (not applied without the user's explicit sign-off on wording, per its own
+  rule 1).

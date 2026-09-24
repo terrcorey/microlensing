@@ -6,7 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A playground for analysing real microlensing light curves, to learn the
 challenges involved in modeling brown dwarf populations with microlensing --
-not an application anyone installs or upgrades. 
+not an application anyone installs or upgrades, at least for now.
+
+**Long-term direction** (confirmed 2026-09-24 via `/grill-me`, see
+CHANGELOG): eventually turn this into a config-driven pipeline -- point it
+at a new event's data plus a config (file paths, coordinates, instrument
+format, model choice, initial guesses) and get a fit, matching the same
+full treatment (MCMC posterior, corner plots, derived physical
+quantities) the two current datasets already get. That conversion doesn't
+start until the current physics/methodology roadmap (see CHANGELOG) is
+further along. Until then, favor implementation patterns that stay
+convertible later (parameterized functions over hardcoded per-event
+constants, proper module structure) over anything more suited to
+notebook-style exploration.
 
 ## Rules
 
