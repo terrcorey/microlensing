@@ -6,6 +6,7 @@ scratch/ with the project's other one-time/dev scripts, run manually as
 """
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -21,6 +22,22 @@ from multiprocessing import get_context
 from lc_models import binary_magnification, binary_trajectory, caustic_curve, mag_to_flux, sun_earth_projection
 from preprocess_binary_data import load_raw, moa_to_magnification, ogle_to_magnification, fit_joint_pspl, COORDS
 from zoom_utils import find_zoom_window
+
+class TwoL1SParams(NamedTuple):
+    """The 2L1S track's 8 physical parameters, in one canonical order -- every
+    call site (seeds, residuals, plot_fit, MCMC theta) unpacks through this
+    instead of re-deriving the order by hand. A previously real bug (see
+    CHANGELOG session 10): residuals() was once unpacked in a different order
+    than seeds/plot_fit/LABELS, silently swapping s/q with piE_N/piE_E."""
+    t0: float
+    u0: float
+    tE: float
+    alpha: float
+    piE_N: float
+    piE_E: float
+    s: float
+    q: float
+
 
 SHORT_NAME = "O-03-BLG235"
 
@@ -44,10 +61,15 @@ param, val = np.loadtxt(f"data/processed/{SHORT_NAME}_fit_summary.dat", unpack=T
 guess = dict(zip(param, val.astype(float)))
 
 # Multi-start only over (s, q, alpha): close/resonant/wide topologies x approach angle.
-s_list = [0.7, 1, 1.3, 1.6]
-q_list = [0.01, 0.1]
-alpha_list = [i * np.pi / 8 for i in range(16)]
-seeds = [[guess["t0"], guess["u0"], guess["tE"], alpha, guess["piE_N"], guess["piE_E"], s, q] for s, q, alpha in product(s_list, q_list, alpha_list)]
+# Same overall range as before (s: 0.4-1.9, q: 0.001-1.0 log-spaced, alpha: full circle),
+# just fewer/wider-spaced points -- 4x3x8=96 seeds instead of 384, on a 6-core machine
+# (ProcessPoolExecutor defaults to os.cpu_count() workers) that's 16/core instead of 64/core.
+s_list = [0.5, 1.0, 1.5, 2.0]
+q_list = [0.001, 0.03, 1.0]
+alpha_list = [i * np.pi / 4 for i in range(8)]
+seeds = [TwoL1SParams(t0=guess["t0"], u0=guess["u0"], tE=guess["tE"], alpha=alpha,
+                       piE_N=guess["piE_N"], piE_E=guess["piE_E"], s=s, q=q)
+         for s, q, alpha in product(s_list, q_list, alpha_list)]
 
 
 def _profile_fs_moa(A_moa):
@@ -70,25 +92,31 @@ def profile_flux(A_ogle, A_moa):
     return fs_ogle, fb_ogle, _profile_fs_moa(A_moa)
 
 def residuals(theta, use_ogle=True):
-    t0, u0, tE, alpha, piE_N, piE_E, s, q = theta
+    """Per-point standardized residuals of the 2L1S model against raw flux.
+    Always returns an array shaped like the data -- an unphysical/degenerate
+    trial fills it with np.inf rather than returning a bare scalar, so callers
+    check np.isfinite() alone instead of also guarding for np.isscalar()."""
+    t0, u0, tE, alpha, piE_N, piE_E, s, q = TwoL1SParams(*theta)
+    invalid = np.full(len(moa_time) + (len(ogle_time) if use_ogle else 0), np.inf)
+
     if tE <= 0 or s <= 0 or q <= 0:
-        return np.inf  # unphysical
+        return invalid  # unphysical
     if np.abs(piE_N) > 2 or np.abs(piE_E) > 2:
-        return np.inf
+        return invalid
     A_moa = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_moa, delta_sE_moa), s, q)
     if not use_ogle:
         fs_moa = _profile_fs_moa(A_moa)
         if fs_moa <= 0:
-            return np.inf
+            return invalid
         return (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
 
     A_ogle = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle), s, q)
     try:
         fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle, A_moa)
     except np.linalg.LinAlgError:
-        return np.inf  # degenerate trial (e.g. flat A_ogle) -- singular normal equations
+        return invalid  # degenerate trial (e.g. flat A_ogle) -- singular normal equations
     if fs_ogle <= 0 or fs_moa <= 0:
-        return np.inf
+        return invalid
     resid_ogle = (ogle_flux - (fs_ogle * A_ogle + fb_ogle)) / ogle_flux_err
     resid_moa = (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
     return np.concatenate([resid_ogle, resid_moa])
@@ -100,10 +128,13 @@ def chi2(theta, use_ogle=True):
     joint fit, since there's no cross-instrument scale to get wrong (see CHANGELOG)."""
     return np.sum(residuals(theta, use_ogle)**2)
 
+def huber(residual, delta):
+    loss = np.where(np.abs(residual) <= delta, 0.5 * residual ** 2, delta * (np.abs(residual) - 0.5 * delta))
+    return np.sum(loss)
 
 def _fit_one_seed(seed, use_ogle=True):
     """Nelder-Mead on one seed at loose tolerance; module-level so it can be pickled."""
-    t0, u0, tE, alpha, piE_N, piE_E, s, q = seed
+    t0, u0, tE, alpha, piE_N, piE_E, s, q = TwoL1SParams(*seed)
     tag = "2l1s" if use_ogle else "2l1s-moa-only"
     result = minimize(chi2, x0=seed, args=(use_ogle,), method="Nelder-Mead",
                        options={"xatol": 1e-2, "fatol": 1e-2, "maxiter": 2000})
@@ -125,11 +156,12 @@ def run_fit(use_ogle=True):
 
     result = minimize(chi2, x0=best.x, args=(use_ogle,), method="Nelder-Mead",
                        options={"xatol": 1e-6, "fatol": 1e-6, "maxiter": 20000})
+    best_params = TwoL1SParams(*result.x)
     print(f"[{tag}] final chi2={result.fun:.2f}")
-    for label, value in zip(["t0", "u0", "tE", "alpha", "piE_N", "piE_E", "s", "q"], result.x):
+    for label, value in zip(TwoL1SParams._fields, best_params):
         print(f"[{tag}] {label} = {value:.5f}")
 
-    plot_fit(result.x, use_ogle=use_ogle)
+    plot_fit(best_params, use_ogle=use_ogle, tag="_nelder_mead")
     return result
 
 
@@ -137,7 +169,7 @@ def run_fit_moa_only():
     return run_fit(use_ogle=False)
 
 
-def plot_fit(theta, use_ogle=True, tag=""):
+def plot_fit(theta, use_ogle=True, *, tag):
     """Overlay the 2L1S model on the data: event season (HJD 2700-3000), then a
     zoomed peak panel carrying a caustic-geometry inset and a raw-residual panel
     beneath it.
@@ -145,11 +177,12 @@ def plot_fit(theta, use_ogle=True, tag=""):
     Magnification-space view only, for plotting -- inverts the raw flux using this
     theta's own profiled fs/fb (chi2's calibration), not the frozen PSPL one.
 
-    tag: extra suffix appended to the output filename (e.g. "_chi2" for a
-    likelihood-comparison run), so two fits to the same use_ogle mode don't
-    overwrite each other's plot.
+    tag: required, method-identifying suffix appended to the output filename
+    (e.g. "_nelder_mead", "_mcmc_studentt", "_mcmc_chi2") -- no default, so a new
+    call site can't silently collide with an existing method's output the way
+    run_fit()/run_mcmc() used to (see CHANGELOG).
     """
-    t0, u0, tE, alpha, piE_N, piE_E, s, q = theta
+    t0, u0, tE, alpha, piE_N, piE_E, s, q = TwoL1SParams(*theta)
 
     def model_fn(t):
         delta_sN, delta_sE = sun_earth_projection(t, COORDS, t0_par)
@@ -215,7 +248,10 @@ def plot_fit(theta, use_ogle=True, tag=""):
     ax_caustic = make_square_inset_axes(ax_zoom, width=1.8, height=1.8, loc="upper right", borderpad=2.0)
     ax_caustic.scatter(caustic.real, caustic.imag, s=0.5, color="crimson")
     ax_caustic.plot(traj.real, traj.imag, color="black", lw=1)
-    ax_caustic.set_aspect("equal")
+    # adjustable="datalim" (not the default "box") -- keeps the inset's box the square
+    # shape we just requested from inset_axes(), and instead pads the *data* limits on
+    # whichever axis is narrower so x/y data units stay equal-scaled.
+    ax_caustic.set_aspect("equal", adjustable="datalim")
     ax_caustic.set_title(f"s={s:.3f}, q={q:.4f}", fontsize=8)
     ax_caustic.tick_params(labelsize=6)
 

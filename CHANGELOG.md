@@ -1048,3 +1048,128 @@ actual point of this repo), and **Next session**'s planned goal.
      "joint statistic combining Student-t and chi2" idea was raised too,
      explicitly deprioritized until Huber (and other established options)
      have been tried.
+
+## 2026-09-24 — session 11
+
+### Built
+- **File-naming fix** (closes session 10 goal #1): `fit_2l1s.py`'s
+  `plot_fit()` dropped its `tag=""` default -- keyword-only, required now.
+  Every 2L1S call site passes its own method-identifying tag:
+  `run_fit()` -> `"_nelder_mead"`, `run_mcmc()` -> `"_mcmc_studentt"`
+  (`run_mcmc_chi2()`'s `"_chi2"` was already distinct pre-session-11, left
+  as is), `run_mcmc_huber()` -> `"_huber"` (see below). No more silent
+  overwrite between methods' plots.
+- **`TwoL1SParams` refactor** (landed mid-session, in parallel): a
+  `NamedTuple` holding the 8 physical params in one canonical order.
+  `seeds`, `residuals()`, `_fit_one_seed()`, `run_fit()`, and `plot_fit()`
+  in `fit_2l1s.py` all unpack through it now instead of each re-deriving
+  the order by hand -- directly closes the bug class session 10 hit
+  (`residuals()` silently swapping `s`/`q` with `piE_N`/`piE_E`).
+  `mcmc_fit_2l1s.py`'s `LABELS`/`LABELS_CHI2`/`LABELS_HUBER` are now
+  derived from `TwoL1SParams._fields` rather than three hand-typed lists
+  that could drift apart. `residuals()` also now always returns an
+  ndarray (`np.inf`-filled on an unphysical/degenerate trial) instead of
+  sometimes a bare scalar -- callers simplified their `np.isscalar(resids)
+  or ...` guard down to just the finite check. The three near-identical
+  likelihoods' bound-checks and walker-seeding were deduplicated into
+  `_physical_log_prior()`/`_sample_physical_prior()`.
+- **Better-statistic exploration** (closes session 10 goal #2, Huber tried
+  first as planned): implemented a Huber-loss likelihood for the 2L1S
+  track (`huber()`, `log_prior_huber()`, `log_probability_huber()`,
+  `sample_prior_huber()`, `run_mcmc_huber()`). `DELTA=1.345` fixed, not
+  fit, so it needs no normalizing-constant correction of its own; `scale`
+  stays free with the same `-log(scale)` Jacobian term `log_probability()`
+  already has. Six real debugging passes went into getting this right,
+  including a missing `delta` argument to `huber()` and a `sample_prior`
+  that didn't include a `scale` column for the sampler's dimensionality.
+- Fixed the caustic-geometry inset plot not actually rendering square:
+  `inset_axes(width=1.8, height=1.8, ...)` requested a square box, but
+  `set_aspect("equal")`'s default `adjustable="box"` was silently
+  reshaping that box to match the data's own aspect ratio. Fixed with
+  `set_aspect("equal", adjustable="datalim")`.
+- Fixed docstring/style inconsistencies across `mcmc_fit_2l1s.py` (missing
+  space in tuple-unpack lines, trailing whitespace, inconsistent blank-line
+  spacing between defs, a stale copy-pasted docstring on `log_prior_huber`,
+  missing docstrings on `log_probability()`/`log_probability_huber()`/
+  `sample_prior_chi2()`).
+- Cleaned `scratch/`: removed 3 files with zero code references, all last
+  touched in the very first pre-parallax/pre-weighting 2L1S commit
+  (`O-03-BLG235_2l1s_refined_theta.npy`, `fit_2l1s_run.log`,
+  `mcmc_fit_2l1s_run.log`), plus 3 stale plot outputs that no current call
+  site produces filenames for any more post-naming-fix
+  (`O-03-BLG235_2l1s.png`, `O-03-BLG235_2l1s_moa_only.png`,
+  `O-03-BLG235_2l1s_studentt.png`), plus `__pycache__`. Deliberately kept
+  `compare_2l1s_fits.py`/`fit_2l1s_moa19008.py` (documented as
+  intentionally frozen/incomplete, not dead) and the
+  `cross_check_mulensmodel*.py`/`derive_binary_quintic.py` provenance
+  scripts.
+- Widened the search to reach more extreme topologies: `mcmc_fit_2l1s.py`'s
+  `S_RANGE` (0.7-1.8 -> 0.5-2.0) and `LOG_Q_RANGE` (1e-4-1.0 -> 1e-5-1.0)
+  priors, and `fit_2l1s.py`'s Nelder-Mead multi-start seed grid. The seed
+  grid went through two revisions: first expanded to 6x4x16=384 seeds,
+  which on this machine's 6 physical cores (`ProcessPoolExecutor` defaults
+  to `os.cpu_count()` workers) was a real ~3x wall-clock jump; a two-stage
+  coarse-then-refine search was implemented as a fix, then deliberately
+  reverted in favor of simply widening the grid spacing and cutting seed
+  count back down -- single-stage, 96 seeds (`s_list=[0.5,1.0,1.5,2.0]`,
+  `q_list=[0.001,0.03,1.0]`, 8 `alpha` values), same overall range as the
+  384-seed attempt, just sparser.
+- Ran all six joint/MOA-only x chi2/Student-t/Huber combinations for real,
+  post-refactor -- the first time every one of them has had a genuine
+  end-to-end run under current code (previously only unit-level checks
+  and one earlier joint-Huber run existed). All six completed without
+  exceptions.
+
+### Learned & open questions
+- **All three statistics (chi2, Student-t, Huber) fail to fit the obvious
+  caustic spike.** None actually captures the sharp caustic-crossing
+  feature -- they just differ in how much they tolerate or chase it as an
+  apparent outlier. This effectively answers (and closes, for now) the
+  three-way "which loss function is best" comparison session 10 planned:
+  the answer is none of them, so it's not currently a likelihood-shape
+  question.
+- **More fundamental finding**: the six runs' fitted parameters disagree
+  with each other far more than a likelihood-shape difference alone should
+  cause -- joint `alpha` ranges 6.60 rad (Nelder-Mead) -> 2.96 rad
+  (Student-t) -> 1.34 rad (chi2 MCMC), with `s`/`q` moving comparably.
+  Consistent with the older, still-open "near-miss cusp" search-landscape
+  problem (session 2's BIC-vs-PSPL verdict, blocked since before this
+  session) being the dominant issue right now, not the loss function.
+- Two smaller loose ends, flagged but not investigated: MOA-only
+  Nelder-Mead's `piE_N` landed exactly on `PIE_RANGE`'s `2.0` boundary (a
+  prior-boundary pin, not a converged interior value); Huber MOA-only's
+  MCMC run took 24:33 at only 43% CPU vs. 2-10 min at 400-500% for every
+  other run this session -- looks like a resource-contention artifact, not
+  genuinely more computation.
+- Statistics alternatives discussed but not implemented: whether Poisson
+  statistics would suit the heavy tails better than Huber/Student-t
+  (concluded no -- Poisson-vs-Gaussian is about noise shape at low photon
+  counts, not applicable to this bright-bulge photometry, and not
+  implementable anyway without raw counts, which OGLE/MOA's published
+  magnitudes/relative fluxes don't provide); a Sivia & Skilling
+  good-and-bad-data mixture likelihood; an additive jitter term
+  (`sigma_eff^2 = sigma_reported^2 + sigma_jitter^2`) as a physically-closer
+  alternative to the current multiplicative `scale` for systematics that
+  don't scale with the reported error. Finite-source effects (2L1S+FS)
+  were also raised as the physical explanation for why *no* point-source
+  loss function can consistently fit a caustic spike -- not evaluated
+  against the alternatives above yet.
+- Two full `/grill-me` rounds were run this session trying to scope the
+  statistic-comparison work methodically; the user found the back-and-forth
+  unproductive once the real run batch had already answered the practical
+  question. Worth remembering: once actual results are in hand, re-deriving
+  next steps from first principles via further questioning has diminishing
+  returns -- a direct decision from the person who just saw the results is
+  faster and no less valid than another interview round.
+
+### Next session
+- Confirmed directly (not via further `/grill-me` -- see note above):
+  explore rescaling the reported per-point error bars (e.g. an additive
+  jitter term, per "Learned" above, or another recalibration approach) and
+  re-fit with plain Gaussian chi2, rather than continuing to tune the loss
+  function's shape.
+- Huber loss is explicitly parked -- not considered the right next step
+  for the caustic-spike problem.
+- Not scheduled, but still open and unresolved: the near-miss-cusp
+  search-landscape/basin-disagreement question, the `piE_N` boundary pin,
+  Huber MOA-only's timing anomaly, and the finite-source-effects idea.

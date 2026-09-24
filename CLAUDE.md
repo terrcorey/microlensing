@@ -382,21 +382,76 @@ panel replaced with an "event season" window (HJD 2700-3000, matching
 now a square inset (`mpl_toolkits.axes_grid1.inset_locator.inset_axes`,
 physical inches, not axes-fraction -- fraction-based `Axes.inset_axes()`
 doesn't give a square box against a non-square parent) inside the zoomed
-panel instead of its own subplot, and a raw-residual panel sits beneath
+panel instead of its own subplot. That box wasn't actually rendering
+square until session 11: `set_aspect("equal")`'s default
+`adjustable="box"` reshapes the box itself to match the caustic/trajectory
+data's own aspect ratio, silently undoing the square request -- fixed by
+`set_aspect("equal", adjustable="datalim")`, which keeps the box square
+and pads the data limits instead. A raw-residual panel sits beneath
 the zoomed panel (same per-instrument-real-error-bar convention as
 `zoom_utils.plot_fit_panels()`, hand-rolled here rather than calling that
 shared helper since it has no MOA-only mode). `plot_fit()` gained a `tag`
 kwarg so a second fit to the same `use_ogle` mode (e.g. the chi2 diagnostic
 above) doesn't overwrite the first's plot.
 
-**Known naming gap, not yet fixed**: `fit_2l1s.py`'s own `run_fit()`
-(Nelder-Mead point estimate) and `mcmc_fit_2l1s.py`'s `run_mcmc()`
-(Student-t MCMC) both call `plot_fit(..., tag="")` by default -- same
-output path, whichever ran most recently wins. Pre-dates session 10, not
-introduced by it, but session 10's chi2-vs-Student-t comparison made it
-concrete enough to plan around next session (see CHANGELOG's "Next
-session"): each method's output should get a name that says which method
-produced it, not just which instrument-scope/dataset.
+**Naming gap fixed in session 11**: `plot_fit()`'s `tag` kwarg has no
+default any more (keyword-only, required) -- pre-session-11, `fit_2l1s.py`'s
+`run_fit()` and `mcmc_fit_2l1s.py`'s `run_mcmc()` both called
+`plot_fit(..., tag="")`, so whichever ran most recently silently overwrote
+the other's output. Every 2L1S call site now passes its own
+method-identifying tag: `run_fit()` -> `"_nelder_mead"`, `run_mcmc()` ->
+`"_mcmc_studentt"`, `run_mcmc_chi2()` -> `"_chi2"` (already distinct
+pre-session-11, left as is), `run_mcmc_huber()` -> `"_huber"` (see below).
+
+**Session 11**: `fit_2l1s.py` gained a `TwoL1SParams` `NamedTuple` (the 8
+physical params, one canonical order) that `seeds`, `residuals()`,
+`_fit_one_seed()`, `run_fit()`, and `plot_fit()` all unpack through now,
+instead of each re-deriving the order by hand -- directly closes the class
+of bug session 10 hit (`residuals()` silently swapping `s`/`q` with
+`piE_N`/`piE_E` by unpacking in a different order than everyone else).
+`mcmc_fit_2l1s.py`'s `LABELS`/`LABELS_CHI2`/`LABELS_HUBER` are now derived
+from `TwoL1SParams._fields` rather than three hand-typed lists that could
+drift apart. `residuals()` also now always returns an ndarray (`np.inf`-filled
+on an unphysical/degenerate trial) instead of sometimes a bare scalar, so
+callers dropped their `np.isscalar(resids) or ...` guard down to just the
+finite check. The three near-identical likelihoods' bound-checks and
+walker-seeding were deduplicated into `_physical_log_prior()` and
+`_sample_physical_prior()` -- `log_prior`/`log_prior_chi2`/`log_prior_huber`
+and `sample_prior`/`sample_prior_chi2`/`sample_prior_huber` are now each
+just that shared piece plus their own extra params (`scale`+`dof` /
+nothing / `scale`).
+
+Also added a third likelihood option alongside chi2/Student-t: Huber loss
+(`huber()`, `log_prior_huber()`, `log_probability_huber()`,
+`sample_prior_huber()`, `run_mcmc_huber()`) -- quadratic near zero, linear
+past a fixed `DELTA=1.345` (the conventional value, not fit, specifically
+so it needs no normalizing-constant correction of its own; `scale` stays
+free with the same `-log(scale)` Jacobian term `log_probability()` already
+has).
+
+All six joint/MOA-only x chi2/Student-t/Huber combinations have now been
+run for real, post-refactor (see CHANGELOG session 11 for every printed
+parameter set) -- but **all three statistics fail to fit the obvious
+caustic spike**: none actually captures it, they just differ in how much
+they tolerate or chase it as an apparent outlier. More fundamentally, the
+six runs' fitted parameters disagree with each other far more than a
+likelihood-shape difference should cause (joint `alpha` alone ranges 6.60
+rad -> 2.96 rad -> 1.34 rad across Nelder-Mead / Student-t / chi2 MCMC,
+`s`/`q` moving comparably) -- consistent with the "near-miss cusp"
+search-landscape problem above still being the dominant issue, not yet a
+question of which loss function is best. `MCMC_RANGE`-style priors
+(`S_RANGE`, `LOG_Q_RANGE` in `mcmc_fit_2l1s.py`) and `fit_2l1s.py`'s
+Nelder-Mead seed grid were both widened this session to reach more
+extreme topologies -- the grid specifically as a single-stage, wider-spaced
+96-seed version (`s_list`/`q_list`/`alpha_list`, see the file) after an
+initial 384-seed attempt proved ~3x too slow on this machine's 6 physical
+cores (`ProcessPoolExecutor` defaults to `os.cpu_count()` workers, so seed
+count directly divides into wall-clock time). Two loose ends flagged, not
+yet investigated: MOA-only Nelder-Mead's `piE_N` landed exactly on
+`PIE_RANGE`'s `2.0` boundary (a prior-boundary pin, not a converged
+interior value), and Huber MOA-only's MCMC run took 24:33 at only 43% CPU
+(vs. 2-10 min at 400-500% for every other run this session) -- looks like
+a resource-contention artifact, not genuinely more computation.
 
 
 ## Output layout
