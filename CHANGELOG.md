@@ -1243,3 +1243,116 @@ is a direction decision only.
 - A corresponding note was drafted for CLAUDE.md's "What this is" section
   (not applied without the user's explicit sign-off on wording, per its own
   rule 1).
+
+## 2026-09-24 — session 12
+
+### Built
+- Diagnosed why every current 2L1S fit method (Nelder-Mead, Student-t/chi2/
+  Huber MCMC) fails to produce a trustworthy fit, by actually looking at the
+  fit-overlay plots rather than reasoning from chi2 numbers alone:
+  Nelder-Mead's point estimate produces a razor-thin, physically implausible
+  A~27 spike chasing a single outlier MOA point at HJD~2843, not a real
+  caustic crossing. The three MCMC runs each look locally plausible (small
+  residuals, a real double-hump structure) but land on substantially
+  different (s,q) geometries (Student-t: s=1.64,q=0.106; chi2:
+  s=0.97,q=0.0034; Huber: s=1.64,q=0.085) and none of them reach up to match
+  that same extreme point -- confirming this is the search-landscape/
+  near-miss-cusp problem (open since session 2), not something error-bar
+  rescaling could fix (rescaling only reweights residuals at a given
+  trajectory, it doesn't change which basin the search finds).
+- User identified, by eye, that the caustic entry point is around HJD~2835
+  (where the data persistently departs above the single-lens model) -- a
+  concrete anchor the current (t0,u0,tE,alpha,s,q) parametrisation has no
+  direct way to use, since entry/exit time is only an indirect, emergent
+  property of that parametrisation rather than a fittable quantity. Decided
+  directly (not via `/grill-me`, given results were already in hand) to
+  implement Cassan (2008)'s curvilinear-abscissa caustic parametrisation
+  next -- ahead of session 11's error-bar-rescaling roadmap item, since
+  rescaling only matters once there's a trustworthy trajectory to rescale
+  around.
+- Reorganized `scratch/`'s 2L1S outputs into
+  `scratch/2l1s/{nelder_mead,chi2,huber,studentt,stylecheck}/` (previously
+  ~25 files flat in `scratch/`), and updated `fit_2l1s.py`'s `plot_fit()`
+  and `mcmc_fit_2l1s.py`'s three `run_mcmc*()` functions to write into those
+  subfolders going forward (tag -> folder mapping in `plot_fit()`, `KeyError`
+  on an unregistered tag -- same "no silent default" reasoning as `tag`
+  itself having no default). Already committed by the user (`d369ff1`,
+  "added scratch folder layers").
+- Started implementing the Cassan parametrisation's prerequisites in
+  `lc_models.py` (uncommitted, still in progress):
+  - `caustic_curve()` now orders its 4 roots-per-`phi` into continuous
+    branches via nearest-neighbor continuation
+    (`scipy.optimize.linear_sum_assignment` on the pairwise distance matrix
+    between consecutive `phi` steps) -- previously each `phi` step's 4 roots
+    were returned in whatever arbitrary order `np.roots()` gave, fine for
+    the existing scatter-plot-only caller but meaningless for defining arc
+    length along the curve. Also added a closed-curve check (`phi` now
+    sampled with `endpoint=True` specifically so `phi=0`/`phi=2*pi` can be
+    compared; matched via the same assignment approach, compared with a
+    tolerance rather than `==`, since two independent `np.roots()` calls at
+    mathematically-identical `phi` values won't be bit-identical).
+  - `equidistant_caustic()`: resamples each of the 4 ordered branches to be
+    evenly spaced *in arc length* (not `phi`) -- cumulative arc length via
+    `np.diff`/`np.cumsum` along the `phi` axis, normalized per-branch
+    (deliberately not sharing one normalization constant across branches),
+    then interpolated (`np.interp` on real/imaginary parts separately,
+    recombined) at a uniform `zeta` grid. This is a numerical answer to the
+    concern that a naive chord-based method under/over-resolves
+    high-curvature regions like cusps -- raised when the user pointed out
+    Cassan's own paper derives an analytic `d(zeta)/d(phi)` via implicit
+    differentiation for exactly this reason. Worked out the analytic route
+    too (`d(zeta)/d(phi) = dz/dphi + e^(-i*phi) * d(zbar)/dphi`, following
+    directly from conjugating the critical curve equation already in this
+    file's docstring -- no need for `m1/m2/z1/z2` in that step at all) but
+    decided to go numerical instead, deferring the analytic derivative
+    rather than implementing it now.
+
+### Learned & open questions
+- Confirmed the failure mode across all six existing 2L1S fits is real, not
+  a rescaling-fixable likelihood-shape issue -- visual inspection of the
+  fit-overlay plots (not just the chi2/parameter numbers already in session
+  11's notes) was needed to see this clearly, particularly Nelder-Mead's
+  unphysical spike, which isn't visible from its `chi2` value alone.
+- Two validation gaps in the new `caustic_curve()`/`equidistant_caustic()`
+  code, not yet checked: (1) whether the closed-curve check actually passes
+  for all 4 branches at a real `(s,q)` (or whether some need the
+  cross-branch permutation-stitching case flagged during development, which
+  isn't implemented); (2) whether `equidistant_caustic()`'s output distances
+  are actually uniform (the sanity check suggested wasn't run before the
+  session ended).
+- Deliberately deferred: the analytic `d(zeta)/d(phi)` derivative (formula
+  above) in favor of the numerical resampling approach, on the reasoning
+  that the numerical route is simpler to get right immediately and should
+  already resolve the cusp-clustering concern, given the underlying `phi`
+  sampling (n_phi=600) is dense enough. Revisit the analytic route only if
+  the numerical resampling turns out not to be accurate enough in practice.
+- CLAUDE.md's "O-03-BLG235's PSPL-vs-2L1S model comparison" section
+  (documenting `lc_models.py`'s binary-lens functions) was deliberately NOT
+  updated to describe `caustic_curve()`'s new behavior or
+  `equidistant_caustic()` this session -- both are still unvalidated
+  (see gaps above), and documenting unvalidated behavior risks committing to
+  a description that changes once actually checked. Fold into CLAUDE.md once
+  validated, not before.
+
+### Next session
+- Not yet confirmed via `/grill-me` -- session ended on a time constraint,
+  picking up exactly where this one stopped rather than re-opening the
+  direction question:
+  1. Run the two validation checks flagged above (closed-curve check passes
+     per-branch; equidistant output is actually evenly spaced) before
+     trusting either function further.
+  2. Pick which of the (possibly multiple, topology-dependent) disjoint
+     caustic branches is the physically relevant one for an existing
+     solution (e.g. Student-t's `s=1.641, q=0.106`), cross-checked against
+     that solution's own caustic-inset plot.
+  3. Build the actual reparametrisation function: `(zeta_entry, zeta_exit,
+     t_entry, t_exit)` + fixed `(s,q)` -> `(t0, u0, tE, alpha)`, via the two
+     caustic points' implied velocity.
+  4. Validate in `scratch/cassan_caustic.py` (created this session, still
+     empty): fix `(s,q)`, pick `zeta_entry`/`zeta_exit` by eye,
+     `t_entry~=2835` (the user's visual anchor) plus a guessed `t_exit`, run
+     one Nelder-Mead refinement, sanity-check the resulting light curve
+     before building the full `(d,q)` grid search on top.
+- `/graphify --update` not run this session -- the new caustic-geometry code
+  is still mid-implementation/unvalidated, so deferred until this track is
+  further along rather than rebuilding the graph around unfinished code.

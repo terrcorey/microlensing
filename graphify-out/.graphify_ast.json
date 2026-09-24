@@ -1,0 +1,3042 @@
+{
+  "nodes": [
+    {
+      "id": "lc_models",
+      "label": "lc_models.py",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_mag_to_flux",
+      "label": "mag_to_flux()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L19",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_trajectory",
+      "label": "trajectory()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L26",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_magnification",
+      "label": "magnification()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L35",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_flux",
+      "label": "flux()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L41",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_magnitude",
+      "label": "magnitude()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L47",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_plain_flux",
+      "label": "plain_flux()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L52",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_plain_magnitude",
+      "label": "plain_magnitude()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L60",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_binary_trajectory",
+      "label": "binary_trajectory()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L65",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_lens_position",
+      "label": "lens_position()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L75",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_caustic_curve",
+      "label": "caustic_curve()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L84",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_equidistant_caustic",
+      "label": "equidistant_caustic()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L126",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_equidistant_caustic_norm_arclengths",
+      "label": "_norm_arclengths()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L127",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_equidistant_caustic_zeta_to_point",
+      "label": "_zeta_to_point()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L134",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_quintic_coefficients",
+      "label": "_quintic_coefficients()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L147",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_companion_eigvals",
+      "label": "_companion_eigvals()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L216",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_binary_images_batch",
+      "label": "_binary_images_batch()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L230",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_binary_images",
+      "label": "binary_images()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L255",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_binary_magnification",
+      "label": "binary_magnification()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L263",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_project",
+      "label": "_project()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L277",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_sun_earth_projection",
+      "label": "sun_earth_projection()",
+      "file_type": "code",
+      "source_file": "lc_models.py",
+      "source_location": "L288",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_1",
+      "label": "Functional forms used to model a microlensing light curve. Point-source point-…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_20",
+      "label": "Calibrated magnitude + error -> flux + error on the ZERO_POINT_MAG scale.",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L20",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_27",
+      "label": "Source-lens separation u(t), in units of the Einstein radius.",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L27",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_36",
+      "label": "Paczynski point-lens magnification A(u).",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L36",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_42",
+      "label": "Observed flux: magnified source plus a constant blend flux.",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L42",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_48",
+      "label": "Observed magnitude, for overplotting against real photometry.",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L48",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_53",
+      "label": "flux() with piE_N=piE_E=0 -- the exact pre-parallax model, used only to…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L53",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_61",
+      "label": "magnitude() with piE_N=piE_E=0 -- see plain_flux().",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L61",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_66",
+      "label": "Source-lens separation for binary lenses on the lens plane, given in complex…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L66",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_76",
+      "label": "Returns the lens masses and positions from separation s and mass ratio q",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L76",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_85",
+      "label": "Caustic curve(s) in the source plane: the image, under the lens equation, of…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L85",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_148",
+      "label": "Coefficients (highest degree first) of the degree-5 polynomial in z equivalent…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L148",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_217",
+      "label": "Roots of a batch of degree-5 polynomials via a batched companion-matrix…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L217",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_231",
+      "label": "Shared batched core for binary_images/binary_magnification. Solves the binary…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L231",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_256",
+      "label": "True image positions for a binary lens at source position(s) `zeta`.",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L256",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_264",
+      "label": "Total binary-lens magnification at source position(s) `zeta`. Sums 1/|J| over…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L264",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_278",
+      "label": "Project a Cartesian position/velocity vector onto the sky's (N, E) tangent-…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L278",
+      "_origin": "ast"
+    },
+    {
+      "id": "lc_models_rationale_289",
+      "label": "Returns (delta_s_n, delta_s_e): Earth's sky-projected position relative to the…",
+      "file_type": "rationale",
+      "source_file": "lc_models.py",
+      "source_location": "L289",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_cassan_caustic",
+      "label": "cassan_caustic.py",
+      "file_type": "code",
+      "source_file": "scratch/cassan_caustic.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s",
+      "label": "fit_2l1s.py",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_twol1sparams",
+      "label": "TwoL1SParams",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L26",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "namedtuple",
+      "label": "NamedTuple",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_profile_fs_moa",
+      "label": "_profile_fs_moa()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L75",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_profile_flux",
+      "label": "profile_flux()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L82",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_residuals",
+      "label": "residuals()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L94",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_chi2",
+      "label": "chi2()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L124",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_huber",
+      "label": "huber()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L131",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_fit_one_seed",
+      "label": "_fit_one_seed()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L135",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_run_fit",
+      "label": "run_fit()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L145",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_run_fit_moa_only",
+      "label": "run_fit_moa_only()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L168",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_plot_fit",
+      "label": "plot_fit()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L172",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_plot_fit_model_fn",
+      "label": "model_fn()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L187",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_plot_fit_plot_panel",
+      "label": "plot_panel()",
+      "file_type": "code",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L205",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_1",
+      "label": "Multi-start Nelder-Mead 2L1S fit for OGLE-2003-BLG-235/MOA-2003-BLG-53. Not yet…",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_27",
+      "label": "The 2L1S track's 8 physical parameters, in one canonical order -- every call…",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L27",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_76",
+      "label": "Closed-form weighted-least-squares fs_moa alone (MOA has no additive blend…",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L76",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_83",
+      "label": "Closed-form weighted-least-squares fs_ogle/fb_ogle/fs_moa for one trial's model…",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L83",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_95",
+      "label": "Per-point standardized residuals of the 2L1S model against raw flux. Always…",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L95",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_125",
+      "label": "Chi2 of the 2L1S model against raw flux, with each instrument's flux…",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L125",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_136",
+      "label": "Nelder-Mead on one seed at loose tolerance; module-level so it can be pickled.",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L136",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_146",
+      "label": "Parallel multi-start search, then a tight-tolerance refit of the best seed.",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L146",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_fit_2l1s_rationale_173",
+      "label": "Overlay the 2L1S model on the data: event season (HJD 2700-3000), then a zoomed…",
+      "file_type": "rationale",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L173",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s",
+      "label": "mcmc_fit_2l1s.py",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_physical_log_prior",
+      "label": "_physical_log_prior()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L43",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_log_range_ok",
+      "label": "_log_range_ok()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L70",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_log_prior",
+      "label": "log_prior()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L74",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_log_probability",
+      "label": "log_probability()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L88",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_sample_physical_prior",
+      "label": "_sample_physical_prior()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L104",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_sample_prior",
+      "label": "sample_prior()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L118",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "label": "run_mcmc()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L125",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_run_mcmc_moa_only",
+      "label": "run_mcmc_moa_only()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L162",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_log_prior_chi2",
+      "label": "log_prior_chi2()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L166",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_log_probability_chi2",
+      "label": "log_probability_chi2()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L171",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_sample_prior_chi2",
+      "label": "sample_prior_chi2()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L183",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_run_mcmc_chi2",
+      "label": "run_mcmc_chi2()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L188",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "label": "log_prior_huber()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L219",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "label": "log_probability_huber()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L232",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_sample_prior_huber",
+      "label": "sample_prior_huber()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L249",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "label": "run_mcmc_huber()",
+      "file_type": "code",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L255",
+      "_callable": true,
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_1",
+      "label": "MCMC (emcee) exploration of the full 2L1S parameter space for…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L1",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_44",
+      "label": "Flat-prior bound checks on the 8 physical params, shared by all three 2L1S…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L44",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_75",
+      "label": "Student-t variant: physical bounds plus scale/dof.",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L75",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_89",
+      "label": "Student-t log-likelihood (heavier-tailed than Gaussian chi2), with the…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L89",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_105",
+      "label": "Draw n walker start columns for the 8 physical params -- shared by all three…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L105",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_119",
+      "label": "Draw n walker start positions directly from the prior -- broad coverage in…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L119",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_167",
+      "label": "Same bounds as log_prior(), minus scale/dof -- this run has no Student-t params.",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L167",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_172",
+      "label": "Plain Gaussian likelihood (-0.5*chi2) in place of log_probability()'s Student-t…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L172",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_184",
+      "label": "Draw n walker start positions directly from the prior -- broad coverage in…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L184",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_220",
+      "label": "Same bounds as log_prior(), minus dof -- Huber has no dof-like shape parameter…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L220",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_233",
+      "label": "Huber loss in place of log_probability()'s Student-t -- quadratic near zero,…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L233",
+      "_origin": "ast"
+    },
+    {
+      "id": "scratch_mcmc_fit_2l1s_rationale_250",
+      "label": "Draw n walker start positions directly from the prior -- broad coverage in…",
+      "file_type": "rationale",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L250",
+      "_origin": "ast"
+    }
+  ],
+  "edges": [
+    {
+      "source": "lc_models",
+      "target": "numpy",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "torch",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "astropy_coordinates",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "astropy_time",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "scipy_optimize",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "astropy_units",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_mag_to_flux",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_trajectory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_magnification",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_flux",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_magnitude",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L47",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_plain_flux",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L52",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_plain_magnitude",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_binary_trajectory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_lens_position",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_caustic_curve",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L84",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_equidistant_caustic",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_equidistant_caustic",
+      "target": "lc_models_equidistant_caustic_norm_arclengths",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L127",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_equidistant_caustic",
+      "target": "lc_models_equidistant_caustic_zeta_to_point",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L134",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_quintic_coefficients",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L147",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_companion_eigvals",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L216",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_binary_images_batch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L230",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_binary_images",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L255",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_binary_magnification",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L263",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_project",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L277",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models",
+      "target": "lc_models_sun_earth_projection",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L288",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_flux",
+      "target": "lc_models_magnification",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_flux",
+      "target": "lc_models_trajectory",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_magnitude",
+      "target": "lc_models_flux",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L49",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_plain_flux",
+      "target": "lc_models_flux",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_plain_magnitude",
+      "target": "lc_models_plain_flux",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_caustic_curve",
+      "target": "lc_models_lens_position",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_equidistant_caustic",
+      "target": "lc_models_equidistant_caustic_norm_arclengths",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L142",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_equidistant_caustic",
+      "target": "lc_models_equidistant_caustic_zeta_to_point",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L144",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_binary_images_batch",
+      "target": "lc_models_lens_position",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L243",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_binary_images_batch",
+      "target": "lc_models_quintic_coefficients",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L245",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_binary_images_batch",
+      "target": "lc_models_companion_eigvals",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L248",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_binary_images",
+      "target": "lc_models_binary_images_batch",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L258",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_binary_magnification",
+      "target": "lc_models_binary_images_batch",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L271",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_sun_earth_projection",
+      "target": "lc_models_project",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L306",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_1",
+      "target": "lc_models",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_20",
+      "target": "lc_models_mag_to_flux",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_27",
+      "target": "lc_models_trajectory",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_36",
+      "target": "lc_models_magnification",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_42",
+      "target": "lc_models_flux",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_48",
+      "target": "lc_models_magnitude",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L48",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_53",
+      "target": "lc_models_plain_flux",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L53",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_61",
+      "target": "lc_models_plain_magnitude",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_66",
+      "target": "lc_models_binary_trajectory",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L66",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_76",
+      "target": "lc_models_lens_position",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_85",
+      "target": "lc_models_caustic_curve",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_148",
+      "target": "lc_models_quintic_coefficients",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L148",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_217",
+      "target": "lc_models_companion_eigvals",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L217",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_231",
+      "target": "lc_models_binary_images_batch",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L231",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_256",
+      "target": "lc_models_binary_images",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L256",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_264",
+      "target": "lc_models_binary_magnification",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L264",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_278",
+      "target": "lc_models_project",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L278",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "lc_models_rationale_289",
+      "target": "lc_models_sun_earth_projection",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "lc_models.py",
+      "source_location": "L289",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "sys",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "pathlib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "typing",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "numpy",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "matplotlib_pyplot",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "mpl_toolkits_axes_grid1_inset_locator",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scipy_optimize",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "concurrent_futures",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "functools",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "itertools",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L19",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "multiprocessing",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "lc_models",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "preprocess_binary_data",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "zoom_utils",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_twol1sparams",
+      "target": "namedtuple",
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_profile_fs_moa",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_profile_flux",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L82",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_residuals",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L124",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_huber",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L131",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_fit_one_seed",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L135",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_run_fit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L145",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_run_fit_moa_only",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L168",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "scratch_fit_2l1s_plot_fit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L172",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "scratch_fit_2l1s_plot_fit_model_fn",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L187",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "scratch_fit_2l1s_plot_fit_plot_panel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L205",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_profile_flux",
+      "target": "scratch_fit_2l1s_profile_fs_moa",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L92",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_residuals",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_residuals",
+      "target": "scratch_fit_2l1s_profile_fs_moa",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L108",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_residuals",
+      "target": "scratch_fit_2l1s_profile_flux",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L115",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_chi2",
+      "target": "scratch_fit_2l1s_residuals",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L129",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_fit_one_seed",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L137",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_fit_one_seed",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L139",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_run_fit",
+      "target": "scratch_fit_2l1s_fit_one_seed",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L153",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_run_fit",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L157",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_run_fit",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L159",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_run_fit",
+      "target": "scratch_fit_2l1s_plot_fit",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L164",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_run_fit_moa_only",
+      "target": "scratch_fit_2l1s_run_fit",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L169",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L185",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "scratch_fit_2l1s_plot_fit_model_fn",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L191",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "scratch_fit_2l1s_profile_flux",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L194",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "scratch_fit_2l1s_profile_fs_moa",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L198",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "scratch_fit_2l1s_plot_fit_plot_panel",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L235",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit_plot_panel",
+      "target": "scratch_fit_2l1s_plot_fit_model_fn",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L207",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_1",
+      "target": "scratch_fit_2l1s",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_27",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_76",
+      "target": "scratch_fit_2l1s_profile_fs_moa",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_83",
+      "target": "scratch_fit_2l1s_profile_flux",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L83",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_95",
+      "target": "scratch_fit_2l1s_residuals",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L95",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_125",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L125",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_136",
+      "target": "scratch_fit_2l1s_fit_one_seed",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L136",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_146",
+      "target": "scratch_fit_2l1s_run_fit",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L146",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_rationale_173",
+      "target": "scratch_fit_2l1s_plot_fit",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L173",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "os",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L13",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "sys",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "multiprocessing",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L15",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "pathlib",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "emcee",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "numpy",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scipy_stats",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_fit_2l1s",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "mcmc_fit",
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_physical_log_prior",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_log_range_ok",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L70",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_log_prior",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L74",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_log_probability",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L88",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_sample_physical_prior",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L104",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L118",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L125",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_run_mcmc_moa_only",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L162",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_log_prior_chi2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L166",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_log_probability_chi2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L171",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior_chi2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L183",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_run_mcmc_chi2",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L188",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L219",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L232",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior_huber",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L249",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L255",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior",
+      "target": "scratch_mcmc_fit_2l1s_physical_log_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L78",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior",
+      "target": "scratch_mcmc_fit_2l1s_log_range_ok",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L81",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability",
+      "target": "scratch_mcmc_fit_2l1s_log_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L94",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_sample_prior",
+      "target": "scratch_mcmc_fit_2l1s_sample_physical_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L122",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L130",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "target": "scratch_mcmc_fit_2l1s_log_probability",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L139",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_moa_only",
+      "target": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L163",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior_chi2",
+      "target": "scratch_mcmc_fit_2l1s_physical_log_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L168",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability_chi2",
+      "target": "scratch_mcmc_fit_2l1s_log_prior_chi2",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L176",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_sample_prior_chi2",
+      "target": "scratch_mcmc_fit_2l1s_sample_physical_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L185",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_chi2",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior_chi2",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L193",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_chi2",
+      "target": "scratch_mcmc_fit_2l1s_log_probability_chi2",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L197",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "target": "scratch_mcmc_fit_2l1s_physical_log_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L224",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "target": "scratch_mcmc_fit_2l1s_log_range_ok",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L227",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "target": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L239",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_sample_prior_huber",
+      "target": "scratch_mcmc_fit_2l1s_sample_physical_prior",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L252",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior_huber",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L260",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "target": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "relation": "indirect_call",
+      "context": "argument",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L264",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_1",
+      "target": "scratch_mcmc_fit_2l1s",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_44",
+      "target": "scratch_mcmc_fit_2l1s_physical_log_prior",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L44",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_75",
+      "target": "scratch_mcmc_fit_2l1s_log_prior",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_89",
+      "target": "scratch_mcmc_fit_2l1s_log_probability",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L89",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_105",
+      "target": "scratch_mcmc_fit_2l1s_sample_physical_prior",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L105",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_119",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_167",
+      "target": "scratch_mcmc_fit_2l1s_log_prior_chi2",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L167",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_172",
+      "target": "scratch_mcmc_fit_2l1s_log_probability_chi2",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L172",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_184",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior_chi2",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L184",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_220",
+      "target": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L220",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_233",
+      "target": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L233",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_rationale_250",
+      "target": "scratch_mcmc_fit_2l1s_sample_prior_huber",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L250",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "lc_models_binary_magnification",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "lc_models_binary_trajectory",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "lc_models_caustic_curve",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "lc_models_mag_to_flux",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s",
+      "target": "lc_models_sun_earth_projection",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_fit_2l1s_plot_fit",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_fit_2l1s_residuals",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s",
+      "target": "scratch_fit_2l1s_huber",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_residuals",
+      "target": "lc_models_binary_magnification",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L106",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_residuals",
+      "target": "lc_models_binary_trajectory",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L106",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "lc_models_sun_earth_projection",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L188",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "lc_models_binary_magnification",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L189",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "lc_models_binary_trajectory",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L189",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit",
+      "target": "lc_models_caustic_curve",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L244",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L92",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability",
+      "target": "scratch_fit_2l1s_residuals",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L97",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L145",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L148",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "target": "scratch_fit_2l1s_plot_fit",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L152",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior_chi2",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L168",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability_chi2",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L179",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_chi2",
+      "target": "scratch_fit_2l1s_chi2",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L205",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_chi2",
+      "target": "scratch_fit_2l1s_plot_fit",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L209",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L222",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L237",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "target": "scratch_fit_2l1s_residuals",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L242",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "target": "scratch_fit_2l1s_huber",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L245",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L270",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "target": "scratch_fit_2l1s_huber",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L273",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "target": "scratch_fit_2l1s_residuals",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L273",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "target": "scratch_fit_2l1s_plot_fit",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L277",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L76",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L92",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L145",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior_chi2",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L168",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_prior_huber",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L222",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_log_probability_huber",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L237",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_mcmc_fit_2l1s_run_mcmc_huber",
+      "target": "scratch_fit_2l1s_twol1sparams",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "scratch/mcmc_fit_2l1s.py",
+      "source_location": "L270",
+      "weight": 0.8,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit_model_fn",
+      "target": "lc_models_sun_earth_projection",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L188",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit_model_fn",
+      "target": "lc_models_binary_magnification",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L189",
+      "weight": 1.0,
+      "_origin": "ast"
+    },
+    {
+      "source": "scratch_fit_2l1s_plot_fit_model_fn",
+      "target": "lc_models_binary_trajectory",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scratch/fit_2l1s.py",
+      "source_location": "L189",
+      "weight": 1.0,
+      "_origin": "ast"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "failed_sources": [],
+  "extracted_sources": [
+    "/Users/tcorey/Desktop/microlensing/lc_models.py",
+    "/Users/tcorey/Desktop/microlensing/scratch/cassan_caustic.py",
+    "/Users/tcorey/Desktop/microlensing/scratch/fit_2l1s.py",
+    "/Users/tcorey/Desktop/microlensing/scratch/mcmc_fit_2l1s.py"
+  ]
+}

@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from astropy.coordinates import get_body_barycentric_posvel, SkyCoord
 from astropy.time import Time
+from scipy.optimize import linear_sum_assignment
 import astropy.units as u
 
 ZERO_POINT_MAG = 18.0  # arbitrary; cancels out of every fitted flux ratio
@@ -80,7 +81,7 @@ def lens_position(s, q):
     return m1, m2, z1, z2
 
 
-def caustic_curve(s, q, n_phi=600):
+def caustic_curve(s, q, n_phi=600, tol=1e-5):
     """Caustic curve(s) in the source plane: the image, under the lens
     equation, of the critical curve where the lens map's Jacobian vanishes.
 
@@ -98,12 +99,49 @@ def caustic_curve(s, q, n_phi=600):
     base = np.zeros(5, dtype=complex)
     base[-3:] = m1 * c2_sq + m2 * c1_sq  # degree 2, right-aligned into the degree-4 slot
 
-    phis = np.linspace(0, 2 * np.pi, n_phi, endpoint=False)
+    phis = np.linspace(0, 2 * np.pi, n_phi)
     points = []
     for phi in phis:
         z_crit = np.roots(base - complex(np.exp(1j * phi)) * quad_coeffs)
-        points.append(z_crit - m1 / np.conj(z_crit - z1) - m2 / np.conj(z_crit - z2))
-    return np.concatenate(points)
+        next_solution = z_crit - m1 / np.conj(z_crit - z1) - m2 / np.conj(z_crit - z2)
+        if not points:
+            points.append(next_solution)
+        else:
+            previous = points[-1]
+            dist_matrix = np.abs(previous[:, None] - next_solution[None, :])
+            _, col = linear_sum_assignment(dist_matrix)
+            new_points = next_solution[col]
+            points.append(new_points)
+    start = points[0]
+    end = points[-1]
+    closed_matrix = np.abs(start[:, None] - end[None, :])
+    _, col = linear_sum_assignment(closed_matrix)
+    matched_end_points = end[col]
+    is_closed = (start - matched_end_points < tol)
+    print(f"Closed curve check for the four curves: {is_closed}")
+    return np.array(points)
+
+
+
+def equidistant_caustic(caustic4):
+    def _norm_arclengths(caustic4):
+        diffs = np.diff(caustic4, axis=0)           
+        step_lengths = np.abs(diffs)                  
+        cumulative = np.cumsum(step_lengths, axis=0)  
+        arclen = np.concatenate([np.zeros((1, 4)), cumulative], axis=0)
+        norm_arclen = arclen / arclen[-1, :]
+        return norm_arclen
+    def _zeta_to_point(zeta_query, zeta, points):
+        interpolated4 = []
+        for k in range(len(zeta[0])):
+            real = np.interp(zeta_query, zeta[:, k], points[:, k].real)
+            imag = np.interp(zeta_query, zeta[:, k], points[:, k].imag)
+            interpolated = real + 1j * imag
+            interpolated4.append(interpolated)
+        return np.array(interpolated4).T
+    norm_arclengths = _norm_arclengths(caustic4)
+    zeta_query = np.linspace(0, 1, len(caustic4))
+    return _zeta_to_point(zeta_query, norm_arclengths, caustic4)
 
 
 def _quintic_coefficients(zeta, zetab, m1, z1, z2):
