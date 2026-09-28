@@ -21,4 +21,5 @@ scipy==1.18.1
 setuptools==78.1.0
 six==1.17.0
 torch==2.14.0
+tqdm==4.70.1
 typing_extensions==4.16.0

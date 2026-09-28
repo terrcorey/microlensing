@@ -142,7 +142,7 @@ def plot_fit(theta):
     ax_zoom.set_title("zoomed on peak (auto-detected)")
     ax_zoom.set_xlabel("HJD - 2450000")
 
-    caustic = caustic_curve(s, q)
+    caustic = np.concatenate(caustic_curve(s, q))
     t_traj = np.linspace(zoom_start, zoom_end, 3000)
     traj = binary_trajectory(t_traj, t0, u0, tE, alpha)
     ax_caustic.scatter(caustic.real, caustic.imag, s=0.5, color="crimson", label="caustic")

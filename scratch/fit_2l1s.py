@@ -224,11 +224,12 @@ def plot_fit(theta, use_ogle=True, *, tag):
                 pad = 0.1 * (y_vals.max() - y_vals.min())
                 ax.set_ylim(y_vals.min() - pad, y_vals.max() + pad)
 
-    fig = plt.figure(figsize=(9, 12))
-    gs = fig.add_gridspec(3, 1, height_ratios=[4, 4, 1.5])
-    ax_season = fig.add_subplot(gs[0])
-    ax_zoom = fig.add_subplot(gs[1])
-    ax_resid = fig.add_subplot(gs[2], sharex=ax_zoom)
+    fig = plt.figure(figsize=(10.5, 12))
+    gs = fig.add_gridspec(3, 2, height_ratios=[4, 4, 1.5], width_ratios=[6, 1])
+    ax_season = fig.add_subplot(gs[0, 0])
+    ax_zoom = fig.add_subplot(gs[1, 0])
+    ax_resid = fig.add_subplot(gs[2, 0], sharex=ax_zoom)
+    ax_hist = fig.add_subplot(gs[2, 1], sharey=ax_resid)
 
     # event season, not the multi-year full baseline -- same HJD 2700-3000 window
     # scratch/compare_2l1s_fits.py already uses for O-03-BLG235.
@@ -241,7 +242,7 @@ def plot_fit(theta, use_ogle=True, *, tag):
     ax_zoom.tick_params(labelbottom=False)
 
     # caustic geometry as an inset in the zoomed panel's corner, rather than its own subplot
-    caustic = caustic_curve(s, q)
+    caustic = np.concatenate(caustic_curve(s, q))
     t_traj = np.linspace(zoom_start, zoom_end, 3000)
     delta_sN_traj, delta_sE_traj = sun_earth_projection(t_traj, COORDS, t0_par)
     traj = binary_trajectory(t_traj, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_traj, delta_sE_traj)
@@ -276,13 +277,24 @@ def plot_fit(theta, use_ogle=True, *, tag):
     ax_resid.set_ylabel("residual (A(t))")
     ax_resid.set_xlabel("HJD - 2450000")
 
+    # rotated residual histogram per instrument (same zoom window), sharing the residual panel's y-axis
+    ax_hist.axhline(0, color="gray", linestyle="--", linewidth=0.8)
+    bins = np.linspace(*ax_resid.get_ylim(), 31)
+    if use_ogle:
+        ax_hist.hist(ogle_resid[in_zoom_ogle], bins=bins, orientation="horizontal", histtype="step", color="black")
+    ax_hist.hist(moa_resid[in_zoom_moa], bins=bins, orientation="horizontal", histtype="step", color="tab:orange")
+    ax_hist.tick_params(labelleft=False)
+    ax_hist.set_xlabel("count")
+
     fig.tight_layout()
 
     # tag -> subfolder, so each method's outputs land together under scratch/2l1s/
     # instead of flat in scratch/ -- KeyError on an unregistered tag is deliberate,
     # same "no silent default" reasoning as tag itself having no default (see above).
     method_dir = {"_nelder_mead": "nelder_mead", "_mcmc_studentt": "studentt",
-                  "_chi2": "chi2", "_huber": "huber"}[tag]
+                  "_chi2": "chi2", "_huber": "huber",
+                  "_cassan_from_bond_sq": "cassan", "_cassan_from_studentt_sq": "cassan",
+                  "_cassan_mcmc": "cassan"}[tag]
     out_dir = Path("scratch/2l1s") / method_dir
     out_dir.mkdir(parents=True, exist_ok=True)
     suffix = ("" if use_ogle else "_moa_only") + tag

@@ -90,20 +90,16 @@ def caustic_curve(s, q, n_phi=600, tol=1e-5):
     clear (unlike the quintic lens equation), so its coefficients are built
     directly via polynomial multiplication (np.convolve) rather than a
     symbolic derivation.
+
+    Returns a list of closed caustics (1-D complex arrays, one per caustic:
+    1 resonant, 2 wide, 3 close), in binary_trajectory()'s frame.
     """
-    m1, m2, z1, z2 = lens_position(s, q)
-    c1_sq = np.convolve([1, -z1], [1, -z1])  # (z-z1)^2, degree 2
-    c2_sq = np.convolve([1, -z2], [1, -z2])  # (z-z2)^2, degree 2
-    quad_coeffs = np.convolve(c1_sq, c2_sq)  # (z-z1)^2 (z-z2)^2, degree 4
-
-    base = np.zeros(5, dtype=complex)
-    base[-3:] = m1 * c2_sq + m2 * c1_sq  # degree 2, right-aligned into the degree-4 slot
-
+    m1 = 1 / (1 + q)
     phis = np.linspace(0, 2 * np.pi, n_phi)
     points = []
     for phi in phis:
-        z_crit = np.roots(base - complex(np.exp(1j * phi)) * quad_coeffs)
-        next_solution = z_crit - m1 / np.conj(z_crit - z1) - m2 / np.conj(z_crit - z2)
+        z_crit = np.roots([1, 2*s, s**2 - np.exp(1j * phi), -2 * m1 * s * np.exp(1j * phi), -s ** 2 * m1 * np.exp(1j * phi)])
+        next_solution = z_crit - m1 * (1/np.conj(z_crit) + q / (np.conj(z_crit) + s))
         if not points:
             points.append(next_solution)
         else:
@@ -112,36 +108,78 @@ def caustic_curve(s, q, n_phi=600, tol=1e-5):
             _, col = linear_sum_assignment(dist_matrix)
             new_points = next_solution[col]
             points.append(new_points)
-    start = points[0]
-    end = points[-1]
-    closed_matrix = np.abs(start[:, None] - end[None, :])
-    _, col = linear_sum_assignment(closed_matrix)
-    matched_end_points = end[col]
-    is_closed = (start - matched_end_points < tol)
-    print(f"Closed curve check for the four curves: {is_closed}")
-    return np.array(points)
+    # Cassan's frame (m1 at 0, m2 at -s) -> binary_trajectory()'s frame (lens_position(): m1 left, m2 right, COM at 0)
+    pieces = -np.conj(np.array(points).T) + lens_position(s, q)[2]
+
+    # each piece's phi=2pi end is some piece's phi=0 start; follow those links into closed caustics
+    row, col = linear_sum_assignment(np.abs(pieces[:, 0][:, None] - pieces[:, -1][None, :]))
+    if np.any(np.abs(pieces[row, 0] - pieces[col, -1]) > tol):
+        raise ValueError(f"caustic pieces don't join up within tol={tol} at s={s}, q={q}")
+    next_piece = dict(zip(col, row))  # piece col[i] ends where piece row[i] starts
+    caustics, unused = [], set(range(len(pieces)))
+    while unused:
+        k = min(unused)
+        chain = []
+        while k in unused:
+            unused.remove(k)
+            chain.append(pieces[k, :-1])  # drop the end point, it's the next piece's start
+            k = next_piece[k]
+        caustics.append(np.concatenate(chain))
+    return caustics
 
 
 
-def equidistant_caustic(caustic4):
-    def _norm_arclengths(caustic4):
-        diffs = np.diff(caustic4, axis=0)           
-        step_lengths = np.abs(diffs)                  
-        cumulative = np.cumsum(step_lengths, axis=0)  
-        arclen = np.concatenate([np.zeros((1, 4)), cumulative], axis=0)
-        norm_arclen = arclen / arclen[-1, :]
-        return norm_arclen
-    def _zeta_to_point(zeta_query, zeta, points):
-        interpolated4 = []
-        for k in range(len(zeta[0])):
-            real = np.interp(zeta_query, zeta[:, k], points[:, k].real)
-            imag = np.interp(zeta_query, zeta[:, k], points[:, k].imag)
-            interpolated = real + 1j * imag
-            interpolated4.append(interpolated)
-        return np.array(interpolated4).T
-    norm_arclengths = _norm_arclengths(caustic4)
-    zeta_query = np.linspace(0, 1, len(caustic4))
-    return _zeta_to_point(zeta_query, norm_arclengths, caustic4)
+def equidistant_caustic(caustic):
+    """Resample one closed caustic (an element of caustic_curve()'s list) to
+    points evenly spaced in arc length, including the closing segment."""
+    closed = np.append(caustic, caustic[0])
+    arclen = np.concatenate([[0], np.cumsum(np.abs(np.diff(closed)))])
+    query = np.linspace(0, arclen[-1], len(caustic), endpoint=False)
+    return np.interp(query, arclen, closed.real) + 1j * np.interp(query, arclen, closed.imag)
+
+
+def cassan_caustic(s, q, idx=0, n_phi=600):
+    """caustic_curve(s, q)[idx], resampled evenly in arc length, starting at its
+    rightmost point and running counter-clockwise -- so sigma in [0, 1) along it
+    is Cassan (2008)'s curvilinear abscissa (his s in [0, 2), rescaled), with an
+    origin/direction that don't depend on np.roots' arbitrary root ordering.
+    ponytail: caustic chosen by list index -- fine at fixed topology, but the index
+    can point at a different caustic once (s, q) crosses a topology boundary."""
+    c = caustic_curve(s, q, n_phi)[idx]
+    c = np.roll(c, -np.argmax(c.real))
+    if np.sum(np.conj(c) * np.roll(c, -1)).imag < 0:  # shoelace: negative signed area = clockwise
+        c = np.concatenate([c[:1], c[:0:-1]])
+    return equidistant_caustic(c)
+
+
+def caustic_point(caustic, sigma):
+    """Point at abscissa sigma (wraps with period 1) on a cassan_caustic() output."""
+    grid = np.arange(len(caustic)) / len(caustic)
+    return np.interp(sigma, grid, caustic.real, period=1) + 1j * np.interp(sigma, grid, caustic.imag, period=1)
+
+
+def cassan_to_standard(caustic, sigma_in, sigma_out, t_in, t_out):
+    """Cassan (2008) caustic-crossing parameters -> binary_trajectory()'s (t0, u0, tE, alpha):
+    the straight, parallax-free trajectory through the caustic at abscissa sigma_in at time
+    t_in and sigma_out at t_out, so every trial is a genuine caustic crossing by construction."""
+    zeta_in, zeta_out = caustic_point(caustic, sigma_in), caustic_point(caustic, sigma_out)
+    velocity = (zeta_out - zeta_in) / (t_out - t_in)  # = e^(i*alpha) / tE
+    tE, alpha = 1 / np.abs(velocity), np.angle(velocity)
+    rotated = zeta_in * np.exp(-1j * alpha)  # = tau_in + i*u0
+    return t_in - rotated.real * tE, rotated.imag, tE, alpha
+
+
+def standard_to_cassan(caustic, t0, u0, tE, alpha):
+    """Inverse of cassan_to_standard(): every (sigma, t) where the parallax-free straight
+    trajectory crosses the caustic, sorted by time (empty if it misses)."""
+    rotated = caustic * np.exp(-1j * alpha)  # trajectory frame: the path is Im == u0
+    d = rotated.imag - u0
+    k = np.nonzero(np.sign(d) != np.sign(np.roll(d, -1)))[0]
+    frac = d[k] / (d[k] - np.roll(d, -1)[k])  # linear interpolation along each crossed segment
+    sigma = (k + frac) / len(caustic)
+    tau = rotated.real[k] + frac * (np.roll(rotated.real, -1)[k] - rotated.real[k])
+    order = np.argsort(tau)
+    return sigma[order], t0 + tau[order] * tE
 
 
 def _quintic_coefficients(zeta, zetab, m1, z1, z2):
@@ -211,7 +249,7 @@ def _quintic_coefficients(zeta, zetab, m1, z1, z2):
 
 
 _TORCH_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
+torch.set_num_threads(1)
 
 def _companion_eigvals(coeffs):
     """Roots of a batch of degree-5 polynomials via a batched companion-matrix

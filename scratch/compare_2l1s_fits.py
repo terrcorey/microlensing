@@ -102,7 +102,7 @@ ax_caustic = ax_zoom.inset_axes([0.548, 0.475, 0.432, 0.495])
 t_traj = np.linspace(zoom_start, zoom_end, 3000)
 for (label, theta, chi2, crosses), color in zip(CANDIDATES, COLORS):
     t0, u0, tE, alpha, s, q = theta
-    caustic = caustic_curve(s, q)
+    caustic = np.concatenate(caustic_curve(s, q))
     if label == "moa-only MCMC best":
         caustic = caustic[np.abs(caustic.real) < 0.6]  # wide topology's 2nd island sits far from zeta=0
     traj = binary_trajectory(t_traj, t0, u0, tE, alpha)

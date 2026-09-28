@@ -1200,6 +1200,21 @@ confirmed "Next session" item above):
    MCMC refinement afterward, following the same point-estimate-then-MCMC
    pattern already used elsewhere in this repo (see "Annual parallax +
    robust likelihood" above).
+6. **Anomaly vs. outlier test** (added 2026-09-25, session 13; order
+   relative to steps 1-5 not yet decided) -- adopt Dominik et al. (2007)'s
+   SIGNALMEN criterion to decide whether a deviation from the ordinary
+   (PSPL) model is real signal or a bad point: an anomaly needs >=5 recent
+   points deviating to the same side, >=3 of them significantly
+   (`DEV_SIG=2` sigma, scatter-adjusted), no contradicting non-deviant
+   points in between, and no "zig-zag" (more than one change of direction
+   => likely photometry failure). A lone deviant point is only a "check",
+   not an anomaly. First use: the single MOA point at HJD~2843 that no
+   2L1S fit reaches -- is it signal or an outlier? (vs. the persistent
+   departure from HJD~2835, which already looks anomaly-shaped). Test
+   against the ordinary model only -- SIGNALMEN's bisquare down-weighting
+   rejects exactly the large residuals a caustic fit needs, so it isn't a
+   2L1S likelihood. Formulas/defaults were read via a summarised fetch of
+   the arXiv HTML; verify against the PDF before implementing.
 
 **References**:
 - Charbonneau (1995) -- genetic algorithm for fitting (step 5).
@@ -1208,6 +1223,8 @@ confirmed "Next session" item above):
 - Kains (2009) -- a real dataset applying the Cassan (2008)/genetic-
   algorithm methodology end to end; reference implementation to check
   this repo's own approach against once steps 3-5 are underway.
+- Dominik et al. (2007), MNRAS 380, 792 (arXiv:0706.2566) -- SIGNALMEN
+  anomaly detector (step 6).
 
 ### Long-term pipeline direction (post-session addendum, via `/grill-me`)
 User described wanting this repo to eventually become a real pipeline, not
