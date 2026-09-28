@@ -19,16 +19,14 @@ from functools import partial
 from itertools import product
 from multiprocessing import get_context
 
-from lc_models import binary_magnification, binary_trajectory, caustic_curve, mag_to_flux, sun_earth_projection
+from lc_models import binary_magnification_fs, binary_trajectory, caustic_curve, mag_to_flux, sun_earth_projection
 from preprocess_binary_data import load_raw, moa_to_magnification, ogle_to_magnification, fit_joint_pspl, COORDS
 from zoom_utils import find_zoom_window
 
 class TwoL1SParams(NamedTuple):
-    """The 2L1S track's 8 physical parameters, in one canonical order -- every
+    """The 2L1S track's 9 physical parameters, in one canonical order -- every
     call site (seeds, residuals, plot_fit, MCMC theta) unpacks through this
-    instead of re-deriving the order by hand. A previously real bug (see
-    CHANGELOG session 10): residuals() was once unpacked in a different order
-    than seeds/plot_fit/LABELS, silently swapping s/q with piE_N/piE_E."""
+    instead of re-deriving the order by hand."""
     t0: float
     u0: float
     tE: float
@@ -37,6 +35,7 @@ class TwoL1SParams(NamedTuple):
     piE_E: float
     s: float
     q: float
+    rho: float
 
 
 SHORT_NAME = "O-03-BLG235"
@@ -68,7 +67,7 @@ s_list = [0.5, 1.0, 1.5, 2.0]
 q_list = [0.001, 0.03, 1.0]
 alpha_list = [i * np.pi / 4 for i in range(8)]
 seeds = [TwoL1SParams(t0=guess["t0"], u0=guess["u0"], tE=guess["tE"], alpha=alpha,
-                       piE_N=guess["piE_N"], piE_E=guess["piE_E"], s=s, q=q)
+                       piE_N=guess["piE_N"], piE_E=guess["piE_E"], s=s, q=q, rho=1e-3)
          for s, q, alpha in product(s_list, q_list, alpha_list)]
 
 
@@ -96,21 +95,21 @@ def residuals(theta, use_ogle=True):
     Always returns an array shaped like the data -- an unphysical/degenerate
     trial fills it with np.inf rather than returning a bare scalar, so callers
     check np.isfinite() alone instead of also guarding for np.isscalar()."""
-    t0, u0, tE, alpha, piE_N, piE_E, s, q = TwoL1SParams(*theta)
+    t0, u0, tE, alpha, piE_N, piE_E, s, q, rho = TwoL1SParams(*theta)
     invalid = np.full(len(moa_time) + (len(ogle_time) if use_ogle else 0), np.inf)
 
-    if tE <= 0 or s <= 0 or q <= 0:
+    if tE <= 0 or s <= 0 or q <= 0 or rho <= 0:
         return invalid  # unphysical
     if np.abs(piE_N) > 2 or np.abs(piE_E) > 2:
         return invalid
-    A_moa = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_moa, delta_sE_moa), s, q)
+    A_moa = binary_magnification_fs(binary_trajectory(moa_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_moa, delta_sE_moa), s, q, rho)
     if not use_ogle:
         fs_moa = _profile_fs_moa(A_moa)
         if fs_moa <= 0:
             return invalid
         return (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
 
-    A_ogle = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle), s, q)
+    A_ogle = binary_magnification_fs(binary_trajectory(ogle_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle), s, q, rho)
     try:
         fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle, A_moa)
     except np.linalg.LinAlgError:
@@ -134,7 +133,7 @@ def huber(residual, delta):
 
 def _fit_one_seed(seed, use_ogle=True):
     """Nelder-Mead on one seed at loose tolerance; module-level so it can be pickled."""
-    t0, u0, tE, alpha, piE_N, piE_E, s, q = TwoL1SParams(*seed)
+    t0, u0, tE, alpha, piE_N, piE_E, s, q, rho = TwoL1SParams(*seed)
     tag = "2l1s" if use_ogle else "2l1s-moa-only"
     result = minimize(chi2, x0=seed, args=(use_ogle,), method="Nelder-Mead",
                        options={"xatol": 1e-2, "fatol": 1e-2, "maxiter": 2000})
@@ -182,11 +181,11 @@ def plot_fit(theta, use_ogle=True, *, tag):
     call site can't silently collide with an existing method's output the way
     run_fit()/run_mcmc() used to (see CHANGELOG).
     """
-    t0, u0, tE, alpha, piE_N, piE_E, s, q = TwoL1SParams(*theta)
+    t0, u0, tE, alpha, piE_N, piE_E, s, q, rho = TwoL1SParams(*theta)
 
     def model_fn(t):
         delta_sN, delta_sE = sun_earth_projection(t, COORDS, t0_par)
-        return binary_magnification(binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE), s, q)
+        return binary_magnification_fs(binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE), s, q, rho)
 
     A_moa_best = model_fn(moa_time)
     if use_ogle:

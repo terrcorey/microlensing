@@ -58,6 +58,8 @@ notebook-style exploration.
 3. Whenever the user describes wanting to do or build something that isn't
    already covered in CHANGELOG.md, use `/grill-me` to reach a consensus
    before taking any action.
+4. When you are looking for relevant information in the codebase, use the graphify
+   output (`graphify-out/`) to help locate the required files easily.
 
 ## Setup and commands
 

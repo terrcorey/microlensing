@@ -1373,3 +1373,158 @@ is a direction decision only.
 - `/graphify --update` not run this session -- the new caustic-geometry code
   is still mid-implementation/unvalidated, so deferred until this track is
   further along rather than rebuilding the graph around unfinished code.
+
+## 2026-09-28 — session 13
+
+### Built
+- **Cassan (2008) caustic parametrisation, end to end** (session 11
+  roadmap item 3; session 12's "Next session" steps 1-4). Most of the
+  code and every output under `scratch/2l1s/cassan/` date from 2026-09-25
+  (file timestamps); committed 2026-09-28 in `a261e54` ("cassan mcmc
+  implemented") on top of session 12's `a2eb25d` ("mid-update on the
+  cassan caustic implementation"). Only the SIGNALMEN roadmap addendum
+  below was logged at the time -- this entry backfills the rest.
+- `lc_models.py`:
+  - `caustic_curve()` now returns a **list of closed caustics** (1
+    resonant, 2 wide, 3 close) instead of a raw `(n_phi, 4)` array. The
+    critical-curve quartic is solved in Cassan's frame (`m1` at 0, `m2` at
+    `-s`) and mapped back to `binary_trajectory()`'s frame via
+    `-conj(z) + z1`. Per-`phi` root ordering keeps session 12's
+    `linear_sum_assignment` continuation; the 4 resulting phi-pieces are
+    then stitched into closed curves by matching each piece's `phi=2pi`
+    end to some piece's `phi=0` start (same assignment trick), and it
+    **raises `ValueError`** if any join is off by more than `tol` (1e-5)
+    instead of printing a check. This closes session 12's validation gap
+    #1: a non-closing caustic is now an error, not a silent print, and the
+    cross-piece stitching that session flagged as unimplemented is exactly
+    what the new code does.
+  - `equidistant_caustic()` rewritten to take **one** closed curve (an
+    element of `caustic_curve()`'s list) and resample it evenly in arc
+    length *including the closing segment* back to the first point --
+    the old version worked on all 4 branches at once, each open-ended.
+  - New: `cassan_caustic(s, q, idx=0)` (one caustic, rolled to start at
+    its rightmost point, forced counter-clockwise via the shoelace sign,
+    then equidistantly resampled -- so abscissa `sigma` in [0, 1) is
+    Cassan's curvilinear abscissa rescaled, with an origin/direction that
+    don't depend on `np.roots`' ordering); `caustic_point(caustic, sigma)`
+    (periodic interpolation); `cassan_to_standard()` (`sigma_in`,
+    `sigma_out`, `t_in`, `t_out` -> `t0`, `u0`, `tE`, `alpha` for the
+    straight, parallax-free trajectory through both caustic points -- every
+    trial is a genuine crossing by construction); `standard_to_cassan()`
+    (inverse: every `(sigma, t)` where a given trajectory crosses the
+    caustic, time-sorted, empty on a miss).
+  - `torch.set_num_threads(1)` at import -- stops each spawned emcee
+    worker also spinning up a full torch thread pool.
+  - Uncommitted (the only `git diff`): dropped the now-unused `SkyCoord`
+    import.
+- `scratch/cassan_caustic.py` (empty at end of session 12, now 152
+  lines): `CassanParams` NamedTuple `(sigma_in, sigma_out, t_in, t_out,
+  s, q)`; `__main__` first round-trips Bond et al. 2004's published
+  solution standard -> Cassan -> standard and prints both chi2s, then
+  runs `fit()` from two starting `(s, q)` -- Bond's (1.120, 0.0039) and
+  session 11's Student-t basin (1.641, 0.106) -- each a 20x20 `sigma`
+  grid x 5 `t_out` values at `t_in=2835` (the by-eye anchor; `t_out`
+  gridded, not assumed), Nelder-Mead on the best 5 grid points with
+  `(s, q)` fixed, then a final 6-param Nelder-Mead with `(s, q)` free.
+  The better of the two seeds `run_mcmc()`: emcee, 32 walkers x 3000
+  steps, spawn-context pool, Gaussian `-0.5*chi2` under flat priors
+  (`t_in < t_out` inside `T_WINDOW` 2820-2870, `S_RANGE`/`LOG_Q_RANGE`/
+  `TE_RANGE` reused from `mcmc_fit_2l1s.py`, resonant topology only).
+  Chain saved to `scratch/2l1s/cassan/O-03-BLG235_2l1s_cassan_mcmc_chain.npz`.
+- `scratch/fit_2l1s.py`'s `plot_fit()`: gained a rotated per-instrument
+  residual histogram (`ax_hist`, sharing the residual panel's y-axis,
+  zoom window only; figure widened to 10.5in), and three new tag ->
+  folder entries (`_cassan_from_bond_sq`, `_cassan_from_studentt_sq`,
+  `_cassan_mcmc` -> `scratch/2l1s/cassan/`). It and
+  `compare_2l1s_fits.py`/`fit_2l1s_moa19008.py` now
+  `np.concatenate(caustic_curve(...))` for their scatter-only insets.
+- `requirements.txt`: `tqdm==4.70.1` (emcee's `progress=True`).
+- Roadmap addendum: item 6, the SIGNALMEN anomaly-vs-outlier test
+  (Dominik et al. 2007), was added to session 11's "Planned roadmap" on
+  2026-09-25, during this same session -- the "session 13" label there
+  refers to this entry.
+
+### Learned & open questions
+- **First Cassan-parametrised result is a genuine resonant-caustic
+  crossing near Bond et al.'s solution.** MCMC best sample: `s`=1.108,
+  `q`=0.0079 (Bond: 1.120, 0.0039 -- `s` close, `q` ~2x higher), which
+  maps to `t0`=2847.72, `u0`=0.135, `tE`=60.9 d, `alpha`~214.6deg (Bond:
+  2848.06, 0.133, 61.5, 223.8deg). The `alpha` gap to Bond narrows from
+  session 6's ~15deg to ~9deg. Best-sample chi2 = -2*max(log_probs) =
+  **1765.98**. Posterior (16/50/84 percentiles, 4800 samples after
+  discarding 750 steps and thinning by 15):
+  `sigma_in` 0.1064 +0.0120/-0.0100, `sigma_out` 0.7370 +0.0073/-0.0068,
+  `t_in` 2832.61 +0.61/-0.29, `t_out` 2842.075 +0.012/-0.008,
+  `s` 1.1096 +0.0078/-0.0069, `q` 0.00775 +0.00102/-0.00096.
+- The Bond-seeded Nelder-Mead fit (`_cassan_from_bond_sq`: s=1.113,
+  q=0.0087) is essentially the same solution the MCMC then explored; the
+  Student-t-seeded fit (`_cassan_from_studentt_sq`) stayed near its old
+  geometry (s=1.640, q=0.0772), grazing one end of an elongated
+  caustic, with large structured residuals -- a clearly worse fit.
+  Neither run's printed chi2 was saved, and neither was the Bond round-trip
+  check's output, so the round trip is implemented but its result isn't on
+  record.
+- **The caustic-exit spike lands on the single MOA point at HJD~2842**
+  (`t_out` = 2842.075) that every earlier 2L1S fit treated as an outlier
+  (session 12: Nelder-Mead's implausible A~27 spike chased it, the three
+  MCMC runs all missed it). Under this parametrisation it reads as the
+  exit caustic crossing, not a bad point -- directly relevant to roadmap
+  item 6's stated first use case ("is the HJD~2843 point signal or an
+  outlier?"), which this result now argues is signal. SIGNALMEN would
+  still be a useful independent check, but the question it was meant to
+  settle first has a strong model-based answer already.
+- The model's caustic **entry is at ~2832.6**, inside a data gap, slightly
+  earlier than the user's by-eye anchor of ~2835 (which was only ever
+  `fit()`'s grid starting point, not a constraint). The entry spike is
+  therefore unconstrained by any point sitting on it.
+- **Point-source spikes are razor-thin** (both crossings in the fit plot
+  are near-vertical lines peaking far above any data) -- physically
+  implausible for a real source of finite size, and the natural next thing
+  to fix.
+- **chi2 comparison with session 6's best**: 1765.98 vs. the previous best
+  validated genuine crossing, chi2=1825.35 (session 6, joint MCMC best
+  sample tight-refined). Comparable on paper: both are the same
+  flux-profiled Gaussian chi2 (`fs_ogle`/`fb_ogle`/`fs_moa` solved per
+  trial, introduced in session 6), both joint OGLE+MOA against raw flux,
+  both parallax-free with 6 free trajectory params (session 6 predates
+  parallax; session 10's RA fix only touches parallax terms, which vanish
+  at `piE`=0). On that basis this is ~59 lower, and ~187 below Bond's own
+  1952.90. Not re-evaluated under current code this session, so the
+  1825.35 figure is from the session 6 log, not a fresh recomputation.
+- **Session 12's validation gap #2** (whether `equidistant_caustic()`'s
+  output is actually evenly spaced): no numerical check found anywhere --
+  `scratch/scratchpad.ipynb` only plots resampled caustics as `+` markers
+  (including an `ipywidgets` (s, q) explorer), which is at best a visual
+  check. **Still unverified.**
+- Known limitations of the current Cassan fit:
+  - **Parallax-free** (`piE_N`=`piE_E`=0): the two-point -> straight-line
+    mapping is only exact without parallax.
+  - `cassan_caustic()` picks the caustic by **list index** (`idx=0`):
+    unambiguous at fixed topology, but the index can point at a different
+    caustic once `(s, q)` crosses a topology boundary -- hence the MCMC
+    prior's resonant-only restriction (`len(caustic_curve(...)) == 1`,
+    with `ValueError` at a boundary also rejected).
+  - The MCMC starts from a **tight ball around the Nelder-Mead best**
+    (1e-3 in `sigma`/`s`, 0.05 d in `t`, 1% in `q`), so it explores that
+    one solution's posterior -- not a global search, and says nothing
+    about other crossing geometries.
+  - Likelihood is **Gaussian chi2**, not Student-t -- no `scale`/`dof`.
+- `caustic_curve()`'s docstring still describes the old formulation
+  (`m1/(z-z1)^2 + m2/(z-z2)^2`, coefficients via `np.convolve`); the code
+  now solves the Cassan-frame quartic directly. Stale, not yet fixed.
+
+### Next session
+- Roadmap reordered by the user (Cassan parametrisation, old item 3, is
+  done):
+  1. **Finite-source effects (`rho*`)** -- starting now; motivated
+     directly by the razor-thin point-source spikes above.
+  2. **Error-bar rescaling** -- pushed to second.
+  3. The rest unchanged: **(d, q) grid search**, then the **genetic
+     algorithm** (Charbonneau 1995). The SIGNALMEN anomaly test's
+     position is still undecided.
+- For the user to fold in at "save state" (not fixed here): CLAUDE.md
+  doesn't yet document the Cassan functions in `lc_models.py` or
+  `scratch/cassan_caustic.py` (deliberately deferred in session 12 until
+  validated -- gap #1 is now resolved, gap #2 still isn't); CLAUDE.md lists
+  a `scratch/submit_mcmc_2l1s.sbatch` that doesn't exist on disk; and
+  `scratch/scratchpad.ipynb` exists but isn't listed.

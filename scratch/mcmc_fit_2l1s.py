@@ -28,6 +28,7 @@ from mcmc_fit import save_corner
 LABELS = list(TwoL1SParams._fields) + ["scale", "dof"]
 LABELS_CHI2 = list(TwoL1SParams._fields)  # no scale/dof -- Gaussian chi2, not Student-t
 LABELS_HUBER = list(TwoL1SParams._fields) + ["scale"]
+N_PHYS = len(TwoL1SParams._fields)  # theta[:N_PHYS] is physical, anything after is likelihood-shape params
 
 T0_WIDTH = 10.0  # days around the PSPL joint fit's t0
 U0_RANGE = (0.01, 1.0)
@@ -37,15 +38,16 @@ LOG_Q_RANGE = (np.log(1e-5), np.log(1.0))
 PIE_RANGE = (-2.0, 2.0)
 LOG_SCALE_RANGE = (np.log(0.1), np.log(10.0))
 LOG_DOF_RANGE = (np.log(0.5), np.log(50.0))
+RHO_RANGE = (1e-5, 1e-1)
 DELTA = 1.345
 
 
 def _physical_log_prior(params):
-    """Flat-prior bound checks on the 8 physical params, shared by all three 2L1S
+    """Flat-prior bound checks on the physical params, shared by all three 2L1S
     likelihoods below (Student-t, chi2, Huber) -- previously an identical 9-line
     if-chain copy-pasted three times as log_prior/log_prior_chi2/log_prior_huber.
     log(s)/log(q) uniform so orders of magnitude get equal weight."""
-    t0, u0, tE, alpha, piE_N, piE_E, s, q = params
+    t0, u0, tE, alpha, piE_N, piE_E, s, q, rho = params
     if not (guess["t0"] - T0_WIDTH < t0 < guess["t0"] + T0_WIDTH):
         return -np.inf
     if not (U0_RANGE[0] < u0 < U0_RANGE[1]):
@@ -64,6 +66,8 @@ def _physical_log_prior(params):
         return -np.inf
     if not (PIE_RANGE[0] < piE_E < PIE_RANGE[1]):
         return -np.inf
+    if not (RHO_RANGE[0] < rho < RHO_RANGE[1]):
+        return -np.inf
     return 0.0
 
 
@@ -73,8 +77,8 @@ def _log_range_ok(x, log_range):
 
 def log_prior(theta):
     """Student-t variant: physical bounds plus scale/dof."""
-    params = TwoL1SParams(*theta[:8])
-    scale, dof = theta[8], theta[9]
+    params = TwoL1SParams(*theta[:N_PHYS])
+    scale, dof = theta[N_PHYS], theta[N_PHYS + 1]
     lp = _physical_log_prior(params)
     if not np.isfinite(lp):
         return -np.inf
@@ -89,8 +93,8 @@ def log_probability(theta, use_ogle=True):
     """Student-t log-likelihood (heavier-tailed than Gaussian chi2), with the
     `-log(scale)` Jacobian term for the r -> r/scale change of variables -- dropping it
     would let the sampler inflate `scale` for free (see conversation)."""
-    params = TwoL1SParams(*theta[:8])
-    scale, dof = theta[8], theta[9]
+    params = TwoL1SParams(*theta[:N_PHYS])
+    scale, dof = theta[N_PHYS], theta[N_PHYS + 1]
     lp = log_prior(theta)
     if not np.isfinite(lp):
         return -np.inf
@@ -102,7 +106,7 @@ def log_probability(theta, use_ogle=True):
 
 
 def _sample_physical_prior(rng, n):
-    """Draw n walker start columns for the 8 physical params -- shared by all three
+    """Draw n walker start columns for the physical params -- shared by all three
     likelihoods' sample_prior* below, previously copy-pasted three times."""
     t0 = rng.uniform(guess["t0"] - T0_WIDTH, guess["t0"] + T0_WIDTH, n)
     u0 = rng.uniform(*U0_RANGE, n)
@@ -112,7 +116,8 @@ def _sample_physical_prior(rng, n):
     piE_E = rng.uniform(*PIE_RANGE, n)
     s = rng.uniform(*S_RANGE, n)
     q = np.exp(rng.uniform(*LOG_Q_RANGE, n))
-    return [t0, u0, tE, alpha, piE_N, piE_E, s, q]
+    rho = np.exp(rng.uniform(*np.log(RHO_RANGE), n))
+    return [t0, u0, tE, alpha, piE_N, piE_E, s, q, rho]
 
 
 def sample_prior(rng, n):
@@ -142,7 +147,7 @@ def run_mcmc(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
     samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
     log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
     best = samples[np.argmax(log_probs)]
-    binary_best = TwoL1SParams(*best[:8])  # drop scale/dof -- chi2()/plot_fit() take only the 8 physical params
+    binary_best = TwoL1SParams(*best[:N_PHYS])  # drop scale/dof -- chi2()/plot_fit() take only the physical params
 
     print(f"[{tag}] {samples.shape[0]} posterior samples")
     print(f"[{tag}] best sample: chi2={chi2(binary_best, use_ogle):.2f}")
@@ -219,8 +224,8 @@ def run_mcmc_chi2(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
 def log_prior_huber(theta):
     """Same bounds as log_prior(), minus dof -- Huber has no dof-like shape parameter
     (delta is fixed, not fit)."""
-    params = TwoL1SParams(*theta[:8])
-    scale = theta[8]
+    params = TwoL1SParams(*theta[:N_PHYS])
+    scale = theta[N_PHYS]
     lp = _physical_log_prior(params)
     if not np.isfinite(lp):
         return -np.inf
@@ -234,8 +239,8 @@ def log_probability_huber(theta, use_ogle=True):
     linear past DELTA (see conversation). DELTA is fixed, not fit, so its own
     normalizing constant is a dropped constant; `scale` is still free, so it keeps
     the same `-log(scale)` Jacobian term log_probability() has."""
-    params = TwoL1SParams(*theta[:8])
-    scale = theta[8]
+    params = TwoL1SParams(*theta[:N_PHYS])
+    scale = theta[N_PHYS]
     lp = log_prior_huber(theta)
     if not np.isfinite(lp):
         return -np.inf
@@ -267,7 +272,7 @@ def run_mcmc_huber(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
     samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
     log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
     best = samples[np.argmax(log_probs)]
-    binary_best = TwoL1SParams(*best[:8])  # drop scale -- chi2()/residuals()/plot_fit() take only the 8 physical params
+    binary_best = TwoL1SParams(*best[:N_PHYS])  # drop scale -- chi2()/residuals()/plot_fit() take only the physical params
 
     print(f"[{tag}] {samples.shape[0]} posterior samples")
     print(f"[{tag}] best sample: huber_loss={huber(residuals(binary_best, use_ogle), DELTA):.2f}")
