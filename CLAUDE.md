@@ -98,14 +98,18 @@ give a fast/no-MCMC path without a second script to keep in sync.
 `scratch/` holds every one-time/dev script, not just their output:
 `fit_2l1s.py`, `mcmc_fit_2l1s.py`, `compare_2l1s_fits.py`,
 `cross_check_mulensmodel.py`, `cross_check_mulensmodel_fit.py`,
-`cross_check_mulensmodel_parallax.py`, `derive_binary_quintic.py`,
-`fit_2l1s_moa19008.py`, `submit_mcmc_2l1s.sbatch` (session 10, SLURM job
+`cross_check_mulensmodel_parallax.py`, `cross_check_mulensmodel_fs.py`,
+`derive_binary_quintic.py`, `fit_2l1s_moa19008.py`, `cassan_caustic.py` (Cassan-parametrised 2L1S fit,
+see "PSPL-vs-2L1S" below), `scratchpad.ipynb` (interactive exploration:
+caustic explorer, finite-source sample-point plots -- not a pipeline step),
+`submit_mcmc_2l1s.sbatch` (session 10, SLURM job
 script for running `mcmc_fit_2l1s.py` on a CPU partition -- see its own
 header comment for cluster-side directory-layout assumptions and why CPU
 not GPU: the parallelism is per-walker OS processes, not one large batched
 GPU call, so many processes sharing one GPU context would serialize rather
-than speed up). None are covered by the pip line above --
-`derive_binary_quintic.py` needs `sympy`, the three `cross_check_mulensmodel*.py`
+than speed up; **not currently on disk or in git history** -- presumably
+cluster-side only). None are covered by the pip line above --
+`derive_binary_quintic.py` needs `sympy`, the four `cross_check_mulensmodel*.py`
 need `MulensModel`. All are self-documented in their own docstrings and run
 manually as `python3 scratch/<name>.py` from the project root (each has its
 own `sys.path` line so that works despite living one directory down). If one
@@ -129,7 +133,7 @@ correctness is judged by inspecting the plot/printed fit it produces.
 
 This repo fits a Paczynski point-source point-lens (PSPL) model
 (`lc_models.py`: `trajectory`, `magnification`, `flux`, `magnitude`, plus a
-point-source binary-lens (2L1S) extension -- see below) to two
+binary-lens (2L1S) extension, point- and finite-source -- see below) to two
 real, published microlensing events, at different levels of complexity:
 
 - **O-05-BLG086** (OGLE-2005-BLG-086): single instrument, single band.
@@ -143,7 +147,8 @@ real, published microlensing events, at different levels of complexity:
   flux -- it's what makes plain "convert flux to magnitude" invalid here,
   since it can be negative and has no shared zero point with OGLE).
 
-Only PSPL is implemented, so fits to O-03-BLG235 are a known-incomplete
+Only PSPL is implemented in the pipeline (2L1S lives in `scratch/`, see
+below), so pipeline fits to O-03-BLG235 are a known-incomplete
 sanity check, not a claim that the model is correct -- the caustic
 anomaly is visible in the auto-zoomed panel as points sitting above the
 smooth fitted curve (most obviously in the MOA data, which has the cadence
@@ -467,6 +472,59 @@ interior value), and Huber MOA-only's MCMC run took 24:33 at only 43% CPU
 (vs. 2-10 min at 400-500% for every other run this session) -- looks like
 a resource-contention artifact, not genuinely more computation.
 
+**Cassan (2008) caustic-crossing parametrisation (sessions 12-14)** -- the
+answer to the near-miss-cusp search problem above. `lc_models.py`:
+`caustic_curve(s, q)` returns a *list* of closed caustics (1 resonant, 2
+wide, 3 close) in `binary_trajectory()`'s frame, stitched from per-`phi`
+root branches via `linear_sum_assignment`, raising `ValueError` if the
+pieces don't join (its docstring still describes an older formulation --
+stale). `equidistant_caustic()` resamples one closed caustic evenly in arc
+length; `cassan_caustic(s, q, idx=0)` orders it (rightmost point,
+counter-clockwise) so `sigma` in [0, 1) is Cassan's curvilinear abscissa;
+`caustic_point()`, `cassan_to_standard()` / `standard_to_cassan()` map
+`(sigma_in, sigma_out, t_in, t_out)` <-> `(t0, u0, tE, alpha)` for a
+straight, parallax-free trajectory. `scratch/cassan_caustic.py` fits
+`CassanParams` `(sigma_in, sigma_out, t_in, t_out, s, q, rho)` -- every
+trial crosses the caustic by construction. `fit(s, q, rho, t_in,
+t_out_list)`: point-source (`GRID_RHO=1e-6`) grid over
+`(sigma_in, sigma_out, t_out)` + Nelder-Mead at fixed `(s, q)`, then a
+final Nelder-Mead with `s`, `q`, `rho` freed and finite source on;
+`run_mcmc()` explores around that best fit (Gaussian chi2, resonant-only
+prior). Known limits: parallax-free; caustic chosen by list index.
+
+**Finite source (session 14)**: `lc_models.binary_magnification_fs(zeta, s,
+q, rho, n=4000, gate=5)`. `rho` is the source angular *radius* in
+Einstein radii (Bond et al.'s theta_*/theta_E convention). Uniform disk,
+no limb darkening: plain mean of `binary_magnification()` over `n` points
+on a Fibonacci/sunflower spiral (`r_i = rho*sqrt((i+0.5)/n)`, `theta_i = i
+* golden angle`, equal area per point) -- chosen over equal-area rings,
+which crowd inner rings and leave a central hole. Only points within
+`gate*rho` of any caustic point get the disk average; the rest are plain
+point-source (~70x faster than ungated, 1.4 s vs 97 s on 1800 points).
+Validated against MulensModel's VBBL (`scratch/cross_check_mulensmodel_fs.py`,
+same pattern as the other cross-checks): ~1e-6 away from the caustic,
+0.3-1.6% at n=4000 when the disk straddles a fold (convergence is only
+~1/sqrt(n) there -- the point-source magnification jumps and diverges
+across the caustic line, a property of any fixed source-plane quadrature,
+not a bug). `gate=5` because inside a fold the finite-source correction
+decays slowly (~0.3% at 4 rho, ~0.05% at 8 rho). `TwoL1SParams` now has 9
+fields (`rho` last, no default); `fit_2l1s.residuals()`/`plot_fit()` use
+`binary_magnification_fs` everywhere and reject `rho <= 0`.
+`mcmc_fit_2l1s.py` slices theta by `N_PHYS = len(TwoL1SParams._fields)`
+rather than hardcoded indices, and bounds/draws `rho` in `RHO_RANGE`
+(1e-5..0.1, log-uniform draws). A finite-source chi2 costs ~0.8 s (vs.
+~0.06 s point-source), which is why `cassan_caustic.fit()` grids at
+`GRID_RHO`.
+
+**Status (session 14)**: the Cassan + finite-source fit from Bond's
+`(s, q)` recovers Bond et al. 2004's published best fit -- chi2=1650.06,
+`s`=1.122, `q`=0.00390, `rho`=0.00097, `alpha`=224.4 deg, `tE`=65.1 d
+(Bond: 1.120, 0.0039, 0.00096, 223.8 deg, 61.5 d). The earlier point-source
+Cassan fit (chi2=1766) had instead landed near Bond's *"early caustic"*
+alternative. The fit from session 11's Student-t `(s, q)` stays in a wrong
+basin (chi2=3305). Not yet run: the finite-source Cassan MCMC, so `rho`/`q`
+have no posterior yet.
+
 
 ## Output layout
 
@@ -476,7 +534,8 @@ a resource-contention artifact, not genuinely more computation.
   diagnostic/not-yet-graduated script (currently: fit_2l1s.py,
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
-  derive_binary_quintic.py, fit_2l1s_moa19008.py). If a script
+  cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
+  scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in the four dirs above -- when a script graduates into
   the pipeline, move both its code and its output path out at the same

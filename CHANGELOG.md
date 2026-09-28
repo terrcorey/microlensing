@@ -1528,3 +1528,129 @@ is a direction decision only.
   validated -- gap #1 is now resolved, gap #2 still isn't); CLAUDE.md lists
   a `scratch/submit_mcmc_2l1s.sbatch` that doesn't exist on disk; and
   `scratch/scratchpad.ipynb` exists but isn't listed.
+
+## 2026-09-28 — session 14
+
+### Built
+- Session 13's CHANGELOG entry (written this session, by a subagent, from the
+  commits and saved outputs). Roadmap reordered by the user: **finite source
+  (`rho*`) first, error-bar rescaling second**, the rest unchanged.
+- **Finite-source 2L1S magnification**, `lc_models.binary_magnification_fs(zeta,
+  s, q, rho, n=4000, gate=5)`, written by the user with guidance. Went through
+  three sampling designs:
+  1. Equal-area rings at edge radii `sqrt(k/n)` -- corrected to midpoint
+     radii `rho*sqrt((k+0.5)/n)` (samples on the edges bias outward and leave
+     the centre unsampled), and `rho` confirmed as the source *radius*, not
+     diameter (literature convention; a factor-2 error would break both the
+     analytic and MulensModel checks).
+  2. Rings with a per-ring angular stagger -- worked, but a sample-point plot
+     showed inner rings grossly oversampled (same `n_theta` on every ring)
+     and a hole inside the innermost ring.
+  3. **Fibonacci/sunflower spiral** (`r_i = rho*sqrt((i+0.5)/n)`, `theta_i =
+     i * golden angle`): one radius per point, uniform density, no central
+     hole, no spoke alignment. Kept.
+- **Gating**: plain point-source everywhere, disk average only for points
+  within `gate*rho` of any caustic point (min distance to
+  `np.concatenate([equidistant_caustic(c) for c in caustic_curve(s, q)])`,
+  caustic spacing ~0.29 rho at `n_phi=1000` -- `caustic_curve`/
+  `cassan_caustic` defaults raised from 600 to 1000). Final filter is
+  `A[mask] = _disk_average(zeta_arr[mask], ...)`, deliberately not
+  `np.where` (which would evaluate the expensive branch for every point).
+- **Threaded `rho` through the 2L1S track**: `TwoL1SParams` gains `rho` (9
+  fields); `fit_2l1s.residuals()`/`plot_fit()` switch to
+  `binary_magnification_fs` and reject `rho <= 0`; seeds use `rho=1e-3`
+  (not gridded -- the seed grid is for topology, not source size).
+  `mcmc_fit_2l1s.py`: `RHO_RANGE=(1e-5, 0.1)`, `rho` bounded in
+  `_physical_log_prior` and drawn log-uniformly in `_sample_physical_prior`,
+  and every hardcoded `theta[:8]`/`theta[8]`/`theta[9]` replaced by `N_PHYS =
+  len(TwoL1SParams._fields)`. `cassan_caustic.py`: `CassanParams` gains
+  `rho`; `fit(s, q, rho, ...)` runs its grid + fixed-`(s, q)` stages at
+  `GRID_RHO=1e-6` (~point source, 0.06 s/chi2) and frees `(s, q, rho)` only
+  in the final Nelder-Mead (finite source ~0.8 s/chi2); MCMC ball and prior
+  gain `rho`; Bond check uses Bond's own `rho=0.00096`.
+- `scratch/scratchpad.ipynb`: a cell plotting every disk sample
+  `binary_magnification_fs` evaluates, coloured by `log10(A_PS,i / A_FS)`
+  (captures `binary_magnification`'s real inputs/outputs by temporarily
+  wrapping it, rather than re-deriving the grid).
+- Ran both `cassan_caustic.fit()` starts with finite source (MCMC stage not
+  run). Outputs overwrite `scratch/2l1s/cassan/*_from_{bond,studentt}_sq.png`
+  (point-source versions recoverable from `a261e54`).
+
+### Learned & open questions
+- **Bond et al. 2004's Table 1, read from the arXiv PDF** (not previously
+  recorded in this repo): best fit q=0.0039(+11/-7), **rho=0.00096(11)**,
+  s=1.120(7), alpha=223.8(1.4) deg, u0=0.133(3), t0=2848.06(13),
+  tE=61.5(1.8) d, chi2=1390.49 on 1267 dof (their reduction -- not
+  comparable to ours in absolute terms). Also an **"early caustic"**
+  alternative: q=0.0070, rho=0.00104, s=1.121, alpha=218.9 deg, tE=58.5,
+  chi2 +7.4. Bennett et al. 2006 quote t*=0.059(7) d (= rho*tE, consistent).
+- **Finite source recovers Bond's best fit.** Cassan fit from Bond's
+  `(s, q)`, `rho` free: **chi2=1650.06**, s=1.1223, q=0.00390, rho=0.00097,
+  alpha=224.4 deg, t0=2848.03, u0=0.123, tE=65.1 d, caustic entry/exit
+  2834.26/2842.07 (entry near the user's by-eye ~2835 anchor). 116 below
+  session 13's point-source best (1766), which, in hindsight, had matched
+  Bond's *early-caustic* solution (q=0.0079, alpha~214.6, entry ~2832.6)
+  rather than the best one. The high MOA points at the exit (HJD~2842) are now
+  fitted by a finite-height spike rather than chased or missed. A few MOA
+  points just after the entry (~2835) sit ~2-3 below the model.
+- At Bond's published geometry, chi2 vs rho: 1952.90 (rho=1e-5, ~point
+  source) -> **1776.24 (rho=0.00096)** -> 1889.83 (rho=3e-3) -- a clean,
+  independent confirmation of both the finite-source code and Bond's rho.
+- Fit from session 11's Student-t `(s, q)`=(1.641, 0.106): stuck,
+  chi2=3304.85 (worse than its own point-source stage, 3267.99), tE=214 d
+  (outside the MCMC prior's 10-150), rho unmoved from its start. A wrong
+  basin, not a competitor (Delta chi2 ~1655).
+- **Open**: in the winning fit, q finished at exactly its start (0.00390) and
+  rho moved only 0.00096 -> 0.00097. Could be genuine (Bond's rho
+  uncertainty, 0.00011, is about Nelder-Mead's initial 5% step) or an
+  under-explored simplex -- only an MCMC posterior will tell.
+- **Validation of `binary_magnification_fs`** (VBBL check saved to the repo,
+  the rest were one-off scratchpad scripts):
+  - rho->0 matches `binary_magnification` to ~1e-13.
+  - Point lens, source centred (exact `A=sqrt(1+4/rho^2)`): error -0.302/sqrt(n_r)
+    with rings -- matches the analytic midpoint-rule error on the 1/sqrt(u)
+    singularity to three digits, i.e. the method's limit, not a bug.
+  - vs MulensModel VBBL (source stepped along the caustic normal at the
+    session-13 fit's exit point), saved as
+    `scratch/cross_check_mulensmodel_fs.py`: ~1e-6 away from the caustic;
+    straddling (|d|<1 rho) up to 2.6% at n=1000, **0.3-1.6% at n=4000**,
+    0.5-0.9% at n=16000 -- ~1/sqrt(n), noisy. Hence the n=4000 default
+    (below MOA's few-% errors). The gate edge (d=+5 rho) costs 0.1%.
+  - Outside the caustic the finite-source effect vanishes by d~1 rho;
+    inside a fold it decays slowly (~9% at 1 rho, ~1% at 2, ~0.3% at 4, ~0.05%
+    at 8) -- hence `gate=5` (worst gate miss ~0.15%; `gate=3` measured
+    0.57%).
+- **Speed**: ungated disk average on 1800 points = 16 s at n=1250 / 97 s at
+  n=4000; gated = 1.4 s; point source = 0.13 s; caustic computation inside
+  the gate = 0.02 s. One finite-source chi2 on the real data ~0.8 s -> a
+  32x3000 Cassan MCMC is hours even on 6 cores.
+- Why source-plane brute force converges slowly near caustics: the
+  integrand jumps and diverges along the caustic line. The standard
+  alternatives work in the image plane or avoid the full integral
+  (hexadecapole, Gould 2008 / Pejcha & Heyrovsky 2009; contour integration,
+  Gould & Gaucherel 1997 / Dominik 1998 / Bozza 2010 VBBinaryLensing) --
+  discussed, not implemented; the brute-force version stays as the
+  reference either way.
+- Minor: a VS Code Jupyter kernel desync (cell "running", kernel idle in its
+  message loop) cost some time; fixed by restarting/reloading, not a code
+  issue.
+- Still stale/unverified from session 13: `caustic_curve()`'s docstring;
+  `equidistant_caustic()` spacing never numerically checked (though the gate
+  measured max caustic-point spacing 0.29 rho at `n_phi=1000`, which is
+  indirect evidence).
+
+### Next session
+Confirmed with the user (quick question round, per session 11's note that
+long `/grill-me` rounds add little once results are in hand):
+1. **Finite-source Cassan MCMC** (first): `cassan_caustic.run_mcmc()` around
+   the chi2=1650.06 fit, for real posteriors on `rho` and `q` -- settles
+   whether Nelder-Mead actually explored them (see "Open" above). Hours at
+   ~0.8 s/chi2; a cluster candidate. It will overwrite the point-source
+   `O-03-BLG235_2l1s_cassan_mcmc_chain.npz` with 7 columns -- the notebook
+   cells that unpack 6 values from it need a `, rho` added then.
+2. **Error-bar rescaling** (roadmap item 2): additive jitter, Gaussian chi2
+   refit, now that there's a trustworthy trajectory to rescale around.
+- Not scheduled but discussed: seeding a finite-source fit from Bond's
+  early-caustic solution to reproduce their Delta chi2 (+7.4); a
+  hexadecapole / contour-integration speed-up; fixing `caustic_curve()`'s
+  stale docstring.
