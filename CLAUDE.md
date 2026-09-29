@@ -314,10 +314,10 @@ arguments `trajectory()` does (see "Annual parallax + robust likelihood"
 above) -- perturbs `tau`/`beta` by `delta_tau`/`delta_beta` before the
 `alpha` rotation, mirroring that function's own math exactly. No
 default/flag: every caller must pass all four now. `scratch/fit_2l1s.py`
-and `scratch/mcmc_fit_2l1s.py` were updated for this; **`scratch/compare_2l1s_fits.py`
-was not** (still calls the old 5-arg form) -- it's a frozen snapshot of
-pre-parallax candidates, left broken rather than guessing how to backfill
-parallax params for historical results that were never fit with them.
+and `scratch/mcmc_fit_2l1s.py` were updated for this; `scratch/compare_2l1s_fits.py`
+(a frozen snapshot of pre-parallax, point-source candidates) passes
+`piE_N=piE_E=0` instead, which collapses the parallax terms exactly rather
+than backfilling parallax params those results were never fit with.
 Image positions come from a degree-5 polynomial
 whose coefficients were derived symbolically with `sympy`
 (`scratch/derive_binary_quintic.py`, a one-time dev script -- not a project
@@ -364,8 +364,7 @@ refined with a tight Nelder-Mead fit of its best sample, chi2=1825.35,
 solution, but session 2's BIC-vs-PSPL verdict is still blocked until this
 search problem is resolved. `scratch/compare_2l1s_fits.py` overlays every
 candidate found so far (both search modes x both instrument scopes, plus
-Bond's reference) on one figure for comparison -- broken by session 10's
-`binary_trajectory()` signature change, see above.
+Bond's reference) on one figure for comparison.
 
 **Session 10**: extended annual parallax + Student-t (see "Annual parallax
 + robust likelihood" above) into this track, crossing the boundary that

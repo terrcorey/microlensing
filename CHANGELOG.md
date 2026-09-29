@@ -1654,3 +1654,24 @@ long `/grill-me` rounds add little once results are in hand):
   early-caustic solution to reproduce their Delta chi2 (+7.4); a
   hexadecapole / contour-integration speed-up; fixing `caustic_curve()`'s
   stale docstring.
+
+## 2026-09-29 — session 15
+
+### Built
+- **Revived `scratch/compare_2l1s_fits.py`**, broken since session 10 made
+  `binary_trajectory()` take `piE_N, piE_E, delta_sN, delta_sE`. Its four
+  calls now pass `0, 0, 0, 0`. Every candidate in it was a pre-parallax,
+  point-source fit, so this gives exactly their old trajectories instead of
+  backfilling parallax values they were never fit with. It runs and writes
+  `scratch/O-03-BLG235_2l1s_comparison.png` again. CLAUDE.md's two
+  "broken" notes about it were updated to match.
+
+### Learned & open questions
+- The comparison still omits session 14's finite-source Cassan fit
+  (chi2=1650.06, the current best). Its candidate list and recorded chi2
+  values are all point-source. Adding it would need a finite-source curve
+  (`binary_magnification_fs`) for that one entry.
+
+### Next session
+Not yet set -- to be confirmed at "save state". Session 14's plan still
+stands: the finite-source Cassan MCMC first, then error-bar rescaling.

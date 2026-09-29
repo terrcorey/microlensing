@@ -26,7 +26,8 @@ from lc_models import binary_magnification, binary_trajectory, caustic_curve
 from preprocess_binary_data import moa_to_magnification, ogle_to_magnification
 from zoom_utils import find_zoom_window
 
-# label, theta=(t0,u0,tE,alpha,s,q), chi2, crosses_caustic
+# label, theta=(t0,u0,tE,alpha,s,q), chi2, crosses_caustic -- all pre-parallax, point-source fits,
+# so trajectories below pass piE_N=piE_E=0 (collapses binary_trajectory's parallax terms exactly)
 CANDIDATES = [
     ("joint multi-start",    (2848.97616, 0.12824, 66.13835, 6.66082, 0.92931, 0.00257), 1909.02, False),
     ("joint MCMC best",      (2848.18893, 0.11076, 76.77174, 3.62710, 1.08204, 0.00632), 1932.17, True),
@@ -40,8 +41,8 @@ COLORS = plt.get_cmap("tab10").colors  # one distinct color per candidate, share
 # Fixed data calibration for display -- the tight refit, our best validated solution.
 refit_theta = CANDIDATES[2][1]
 t0, u0, tE, alpha, s, q = refit_theta
-A_ogle_ref = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha), s, q)
-A_moa_ref = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha), s, q)
+A_ogle_ref = binary_magnification(binary_trajectory(ogle_time, t0, u0, tE, alpha, 0, 0, 0, 0), s, q)
+A_moa_ref = binary_magnification(binary_trajectory(moa_time, t0, u0, tE, alpha, 0, 0, 0, 0), s, q)
 fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle_ref, A_moa_ref)
 ogle_A, ogle_A_err = ogle_to_magnification(ogle_mag, ogle_mag_err, fs_ogle, fb_ogle)
 moa_A, moa_A_err = moa_to_magnification(moa_flux, moa_flux_err, fs_moa)
@@ -59,7 +60,7 @@ def plot_panel(ax, xlim=None, cap_mult=2.0):
     model_y_vals = []
     for (label, theta, chi2, crosses), color in zip(CANDIDATES, COLORS):
         t0, u0, tE, alpha, s, q = theta
-        A_model = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha), s, q)
+        A_model = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha, 0, 0, 0, 0), s, q)
         ls = "-" if crosses else "--"
         ax.plot(t_grid, A_model, color=color, lw=1.5, ls=ls, zorder=2,
                  label=f"{label} (chi2={chi2:.0f}{'' if crosses else ', no crossing'})")
@@ -105,7 +106,7 @@ for (label, theta, chi2, crosses), color in zip(CANDIDATES, COLORS):
     caustic = np.concatenate(caustic_curve(s, q))
     if label == "moa-only MCMC best":
         caustic = caustic[np.abs(caustic.real) < 0.6]  # wide topology's 2nd island sits far from zeta=0
-    traj = binary_trajectory(t_traj, t0, u0, tE, alpha)
+    traj = binary_trajectory(t_traj, t0, u0, tE, alpha, 0, 0, 0, 0)
     ax_caustic.scatter(caustic.real, caustic.imag, s=1, color=color)
     ls = "-" if crosses else "--"
     ax_caustic.plot(traj.real, traj.imag, color=color, lw=1, ls=ls)
