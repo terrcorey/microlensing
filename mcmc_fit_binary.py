@@ -27,7 +27,7 @@ from scipy.optimize import minimize
 from scipy.stats import t as student_t
 
 from lc_models import ZERO_POINT_MAG, magnification, magnitude, sun_earth_projection, trajectory
-from mcmc_fit import estimate_mass, fit_parallax_pspl_mcmc, get_t0_par, plot_fit_lc, plot_histograms, save_corner, save_summary
+from mcmc_fit import estimate_mass, fit_parallax_pspl_mcmc, flat_chain, get_t0_par, plot_fit_lc, plot_histograms, save_corner, save_summary
 from preprocess_binary_data import COORDS
 from zoom_utils import plot_fit_panels
 
@@ -81,7 +81,7 @@ def run_ogle_only_diagnostic(stage="mcmc"):
                                          u0_guess=u0_guess, tE_guess=tE_guess,
                                          run_mcmc=(stage == "mcmc"))
 
-    chi2 = np.sum(((mag - magnitude(time, *fit_result.best_fit, delta_sN, delta_sE)) / mag_err) ** 2)
+    chi2 = np.sum(((mag - magnitude(time, *fit_result.best_fit, delta_sN=delta_sN, delta_sE=delta_sE)) / mag_err) ** 2)
     print(f"[ogle_only] PSPL curve_fit chi2/dof = {chi2 / (len(time) - len(fit_result.best_fit)):.1f}  (bad fit expected)")
 
     plot_fit_lc(time, mag, mag_err, fit_result.best_fit, COORDS, t0_par,
@@ -90,6 +90,7 @@ def run_ogle_only_diagnostic(stage="mcmc"):
     if stage != "mcmc":
         return
 
+    assert fit_result.samples is not None  # run_mcmc=True above
     print(f"[ogle_only] {fit_result.samples.shape[0]} posterior samples after burn-in/thinning")
     u0_s, tE_s, fs_s, fb_s = (fit_result.column(name) for name in ("u0", "tE", "f_source", "f_blend"))
     derived = {
@@ -199,7 +200,7 @@ def run_joint_fit(stage="mcmc"):
     sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability)
     sampler.run_mcmc(p0, 4000, progress=False)
 
-    samples = sampler.get_chain(discard=1000, thin=15, flat=True)
+    samples, _ = flat_chain(sampler, discard=1000)
     print(f"[joint] {samples.shape[0]} posterior samples after burn-in/thinning")
     u0_s, tE_s = samples[:, 1], samples[:, 2]
     derived = {"A_max": magnification(u0_s), "t_eff": u0_s * tE_s, "M_lens": estimate_mass(tE_s)}

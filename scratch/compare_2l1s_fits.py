@@ -36,7 +36,7 @@ CANDIDATES = [
     ("moa-only MCMC best",   (2847.20542, 0.19141, 85.50410, 1.65220, 1.96359, 0.08877), 1653.42, False),
     ("Bond et al. 2004",     (2848.06, 0.133, 61.5, np.radians(223.8), 1.120, 0.0039), 1952.90, True),
 ]
-COLORS = plt.get_cmap("tab10").colors  # one distinct color per candidate, shared by every panel
+COLORS = plt.color_sequences["tab10"]  # one distinct color per candidate, shared by every panel
 
 # Fixed data calibration for display -- the tight refit, our best validated solution.
 refit_theta = CANDIDATES[2][1]
@@ -50,7 +50,7 @@ moa_A, moa_A_err = moa_to_magnification(moa_flux, moa_flux_err, fs_moa)
 zoom_start, zoom_end = find_zoom_window(moa_time, moa_A, moa_A_err, padding_fraction=0.3)
 
 
-def plot_panel(ax, xlim=None, cap_mult=2.0):
+def plot_panel(ax, xlim: tuple[float, float] | None = None, cap_mult=2.0):
     t_grid = np.linspace(*(xlim if xlim else (ogle_time.min(), moa_time.max())), 4000)
     ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=6, mew=1.2, elinewidth=1.2, capsize=3, capthick=1.2,
                 color="black", alpha=0.5, zorder=1, label="OGLE")
@@ -99,7 +99,7 @@ ax_zoom.set_xlabel("HJD - 2450000")
 
 # Caustic geometry as an inset in the zoom panel's top-right corner -- that corner is
 # clear of any curve (they've all decayed back down by the right edge of the window).
-ax_caustic = ax_zoom.inset_axes([0.548, 0.475, 0.432, 0.495])
+ax_caustic = ax_zoom.inset_axes((0.548, 0.475, 0.432, 0.495))
 t_traj = np.linspace(zoom_start, zoom_end, 3000)
 for (label, theta, chi2, crosses), color in zip(CANDIDATES, COLORS):
     t0, u0, tE, alpha, s, q = theta

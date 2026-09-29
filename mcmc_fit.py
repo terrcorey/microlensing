@@ -24,7 +24,17 @@ class FitResult(NamedTuple):
     labels: list
 
     def column(self, name):
+        assert self.samples is not None, "quicklook FitResult has no samples"
         return self.samples[:, self.labels.index(name)]
+
+
+def flat_chain(sampler: emcee.EnsembleSampler, discard: int, thin: int = 15) -> tuple[np.ndarray, np.ndarray]:
+    """Flat (samples, log_probs) after burn-in/thinning -- shared by every emcee
+    caller. emcee's getters are inferred Optional (None before run_mcmc), hence the assert."""
+    samples = sampler.get_chain(discard=discard, thin=thin, flat=True)
+    log_probs = sampler.get_log_prob(discard=discard, thin=thin, flat=True)
+    assert samples is not None and log_probs is not None
+    return samples, log_probs
 
 
 def fit_pspl_mcmc(time, mag, mag_err, u0_guess=0.5, tE_guess=50.0, run_mcmc=True):
@@ -76,7 +86,7 @@ def fit_pspl_mcmc(time, mag, mag_err, u0_guess=0.5, tE_guess=50.0, run_mcmc=True
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability)
     sampler.run_mcmc(p0, 4000, progress=False)
-    return FitResult(best_fit, sampler.get_chain(discard=1000, thin=15, flat=True), labels)
+    return FitResult(best_fit, flat_chain(sampler, discard=1000)[0], labels)
 
 
 def fit_parallax_pspl_mcmc(time, mag, mag_err, delta_sN, delta_sE, u0_guess=0.5, tE_guess=50.0, piE_N_guess=0.0, piE_E_guess=0.0, run_mcmc=True):
@@ -151,7 +161,7 @@ def fit_parallax_pspl_mcmc(time, mag, mag_err, delta_sN, delta_sE, u0_guess=0.5,
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, log_probability)
     sampler.run_mcmc(p0, 4000, progress=False)
-    return FitResult(best_fit, sampler.get_chain(discard=1000, thin=15, flat=True), labels)
+    return FitResult(best_fit, flat_chain(sampler, discard=1000)[0], labels)
 
 
 KAPPA = 8.144  # mas / Msun; theta_E[mas]^2 = KAPPA * M[Msun] * pi_rel[mas]
@@ -265,16 +275,16 @@ def plot_fit_lc(time, mag, mag_err, best_fit, coords, t0_par, dataset_label, out
 
     t_model = np.linspace(time.min(), time.max(), 2000)
     delta_sN_model, delta_sE_model = sun_earth_projection(t_model, coords, t0_par)
-    mag_model = magnitude(t_model, *best_fit, delta_sN_model, delta_sE_model)
+    mag_model = magnitude(t_model, *best_fit, delta_sN=delta_sN_model, delta_sE=delta_sE_model)
 
     zoom_start, zoom_end = find_zoom_window(time, -mag, mag_err)
     in_zoom = (time >= zoom_start) & (time <= zoom_end)
     t_model_zoom = np.linspace(zoom_start, zoom_end, 2000)
     delta_sN_zoom, delta_sE_zoom = sun_earth_projection(t_model_zoom, coords, t0_par)
-    mag_model_zoom = magnitude(t_model_zoom, *best_fit, delta_sN_zoom, delta_sE_zoom)
+    mag_model_zoom = magnitude(t_model_zoom, *best_fit, delta_sN=delta_sN_zoom, delta_sE=delta_sE_zoom)
 
     delta_sN_data, delta_sE_data = sun_earth_projection(time, coords, t0_par)
-    residuals = (mag - magnitude(time, *best_fit, delta_sN_data, delta_sE_data)) / mag_err
+    residuals = (mag - magnitude(time, *best_fit, delta_sN=delta_sN_data, delta_sE=delta_sE_data)) / mag_err
 
     fig = plt.figure(figsize=(9, 13))
     gs = fig.add_gridspec(4, 2, height_ratios=[3, 2, 3, 2], width_ratios=[4, 1], hspace=0.6, wspace=0.05)
@@ -365,13 +375,14 @@ if __name__ == "__main__":
 
         fit_result = fit_parallax_pspl_mcmc(time, mag, mag_err, delta_sN, delta_sE, run_mcmc=(args.stage == "mcmc"))
 
-        chi2 = np.sum(((mag - magnitude(time, *fit_result.best_fit, delta_sN, delta_sE)) / mag_err) ** 2)
+        chi2 = np.sum(((mag - magnitude(time, *fit_result.best_fit, delta_sN=delta_sN, delta_sE=delta_sE)) / mag_err) ** 2)
         print(f"chi2/dof = {chi2 / (len(time) - len(fit_result.best_fit)):.3f}")
         for label, value in zip(fit_result.labels, fit_result.best_fit):
             print(f"{label} = {value:.5f}")
         plot_fit_lc(time, mag, mag_err, fit_result.best_fit, coords, t0_par, "OGLE-2005-BLG-086", f"fit_lc/{SHORT_NAME}.png")
 
         if args.stage == "mcmc":
+            assert fit_result.samples is not None  # run_mcmc=True above
             print(f"{fit_result.samples.shape[0]} posterior samples after burn-in/thinning")
             u0_s, tE_s, fs_s, fb_s = (fit_result.column(name) for name in ("u0", "tE", "f_source", "f_blend"))
             derived = {

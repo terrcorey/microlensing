@@ -43,7 +43,7 @@ SHORT_NAME = "O-03-BLG235"
 # Raw flux, not the old data/processed/*_magnification.dat -- those froze fs/fb from a
 # one-time PSPL point estimate that's since been shown biased for a real caustic-crossing
 # trajectory (see CHANGELOG session 5). chi2() below re-solves fs/fb per trial instead.
-K_OGLE, K_MOA = 1.1894704390708772, 1.0014620074784661
+K_OGLE, K_MOA = 1.1894704390708772, 1.0014620074784661 # Estimated error rescaling at the Cassan finite-source best fit (χ² = 1650.06), no floor needed 
 ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err = load_raw()
 ogle_mag_err = K_OGLE * ogle_mag_err
 moa_flux_err = K_MOA * moa_flux_err
@@ -196,21 +196,21 @@ def plot_fit(theta, use_ogle=True, *, tag):
         delta_sN, delta_sE = sun_earth_projection(t, COORDS, t0_par)
         return binary_magnification_fs(binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE), s, q, rho)
 
-    A_moa_best = model_fn(moa_time)
-    if use_ogle:
-        A_ogle_best = model_fn(ogle_time)
-        fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle_best, A_moa_best)
-        ogle_A, ogle_A_err = ogle_to_magnification(ogle_mag, ogle_mag_err, fs_ogle, fb_ogle)
-        ogle_resid = ogle_A - A_ogle_best
-    else:
+    # OGLE's calibration is computed even for MOA-only (just not plotted) -- keeps every
+    # ogle_* name unconditionally bound instead of branching on use_ogle twice.
+    A_moa_best, A_ogle_best = model_fn(moa_time), model_fn(ogle_time)
+    fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle_best, A_moa_best)
+    if not use_ogle:
         fs_moa = _profile_fs_moa(A_moa_best)
+    ogle_A, ogle_A_err = ogle_to_magnification(ogle_mag, ogle_mag_err, fs_ogle, fb_ogle)
+    ogle_resid = ogle_A - A_ogle_best
     moa_A, moa_A_err = moa_to_magnification(moa_flux, moa_flux_err, fs_moa)
     moa_resid = moa_A - A_moa_best
     time = np.concatenate([ogle_time, moa_time]) if use_ogle else moa_time
     A_obs = np.concatenate([ogle_A, moa_A]) if use_ogle else moa_A
     zoom_start, zoom_end = find_zoom_window(moa_time, moa_A, moa_A_err, padding_fraction=0.3)
 
-    def plot_panel(ax, xlim=None):
+    def plot_panel(ax, xlim: tuple[float, float] | None = None):
         t_grid = np.linspace(*(xlim if xlim else (time.min(), time.max())), 3000)
         A_model = model_fn(t_grid)
 
@@ -269,10 +269,10 @@ def plot_fit(theta, use_ogle=True, *, tag):
     # standardized plot_residual_panel()/plot_residual_hist() helpers, which hide
     # OGLE's real ~4x-better precision when both instruments share one panel.
     in_zoom_moa = (moa_time >= zoom_start) & (moa_time <= zoom_end)
+    in_zoom_ogle = (ogle_time >= zoom_start) & (ogle_time <= zoom_end)
     ax_resid.axhline(0, color="gray", linestyle="--", linewidth=0.8)
     resid_parts = [moa_resid[in_zoom_moa]]
     if use_ogle:
-        in_zoom_ogle = (ogle_time >= zoom_start) & (ogle_time <= zoom_end)
         ax_resid.errorbar(ogle_time[in_zoom_ogle], ogle_resid[in_zoom_ogle], yerr=ogle_A_err[in_zoom_ogle],
                            fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5, color="black")
         resid_parts.append(ogle_resid[in_zoom_ogle])
@@ -287,7 +287,7 @@ def plot_fit(theta, use_ogle=True, *, tag):
 
     # rotated residual histogram per instrument (same zoom window), sharing the residual panel's y-axis
     ax_hist.axhline(0, color="gray", linestyle="--", linewidth=0.8)
-    bins = np.linspace(*ax_resid.get_ylim(), 31)
+    bins = np.linspace(*ax_resid.get_ylim(), 31).tolist()  # matplotlib's stub rejects ndarray bins
     if use_ogle:
         ax_hist.hist(ogle_resid[in_zoom_ogle], bins=bins, orientation="horizontal", histtype="step", color="black")
     ax_hist.hist(moa_resid[in_zoom_moa], bins=bins, orientation="horizontal", histtype="step", color="tab:orange")

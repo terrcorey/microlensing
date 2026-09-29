@@ -25,7 +25,7 @@ from scipy.optimize import minimize
 
 from lc_models import caustic_curve, cassan_caustic, cassan_to_standard, standard_to_cassan
 from fit_2l1s import SHORT_NAME, TwoL1SParams, chi2, plot_fit
-from mcmc_fit import save_corner
+from mcmc_fit import flat_chain, save_corner
 from mcmc_fit_2l1s import S_RANGE, LOG_Q_RANGE, TE_RANGE, LOG_RHO_RANGE
 
 T_WINDOW = (2820.0, 2870.0)  # t_in/t_out prior range: the anomaly with room either side
@@ -118,9 +118,8 @@ def run_mcmc(best, nwalkers=32, nsteps=3000, seed=42):
         sampler = emcee.EnsembleSampler(nwalkers, len(best), log_probability, pool=pool)
         sampler.run_mcmc(p0, nsteps, progress=True)
 
-    samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
+    samples, log_probs = flat_chain(sampler, discard=nsteps // 4)
     samples[:, :2] %= 1  # sigma is periodic
-    log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
     top = CassanParams(*samples[np.argmax(log_probs)])
     print(f"[mcmc-cassan] {samples.shape[0]} samples, acceptance={np.mean(sampler.acceptance_fraction):.2f}, "
           f"best sample chi2={chi2_cassan(top):.2f}")

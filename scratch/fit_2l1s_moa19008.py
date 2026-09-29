@@ -72,7 +72,7 @@ def chi2(theta):
     t0, u0, tE, alpha, s, q = theta
     if tE <= 0 or s <= 0 or q <= 0:
         return np.inf
-    A_model = binary_magnification(binary_trajectory(time, t0, u0, tE, alpha), s, q)
+    A_model = binary_magnification(binary_trajectory(time, t0, u0, tE, alpha, 0, 0, 0, 0), s, q)
     fs, fb = solve_flux_calibration(A_model)
     return np.sum(((flux_obs - (fs * A_model + fb)) / flux_err) ** 2)
 
@@ -108,15 +108,15 @@ def plot_fit(theta):
     """Data + 2L1S fit overlay (full baseline + auto-zoomed peak, magnitude space)
     plus the caustic-geometry panel -- same shape as fit_2l1s.py's plot_fit."""
     t0, u0, tE, alpha, s, q = theta
-    A_model = binary_magnification(binary_trajectory(time, t0, u0, tE, alpha), s, q)
+    A_model = binary_magnification(binary_trajectory(time, t0, u0, tE, alpha, 0, 0, 0, 0), s, q)
     fs, fb = solve_flux_calibration(A_model)
 
     zoom_start, zoom_end = find_zoom_window(time, -mag, mag_err, padding_fraction=0.3)
 
-    def plot_panel(ax, xlim=None):
+    def plot_panel(ax, xlim: tuple[float, float] | None = None):
         window = slice(None) if xlim is None else (time >= xlim[0]) & (time <= xlim[1])
         t_grid = np.linspace(*(xlim if xlim else (time.min(), time.max())), 3000)
-        A_grid = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha), s, q)
+        A_grid = binary_magnification(binary_trajectory(t_grid, t0, u0, tE, alpha, 0, 0, 0, 0), s, q)
         mag_grid = ZERO_POINT_MAG - 2.5 * np.log10(fs * A_grid + fb)
 
         ax.errorbar(time, mag, yerr=mag_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5, color="black", label="KMT I")
@@ -144,7 +144,7 @@ def plot_fit(theta):
 
     caustic = np.concatenate(caustic_curve(s, q))
     t_traj = np.linspace(zoom_start, zoom_end, 3000)
-    traj = binary_trajectory(t_traj, t0, u0, tE, alpha)
+    traj = binary_trajectory(t_traj, t0, u0, tE, alpha, 0, 0, 0, 0)
     ax_caustic.scatter(caustic.real, caustic.imag, s=0.5, color="crimson", label="caustic")
     ax_caustic.plot(traj.real, traj.imag, color="black", lw=1, label="source trajectory")
     ax_caustic.set_aspect("equal")

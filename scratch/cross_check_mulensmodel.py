@@ -82,6 +82,7 @@ for label, s, q in topologies:
     # near-caustic points: perturb actual caustic points slightly
     caustics = mm.CausticsBinary(q=q, s=s)
     cx, cy = caustics.get_caustics(n_points=2000)
+    assert cx is not None and cy is not None  # MulensModel's return type is inferred Optional
     idx = rng.choice(len(cx), size=5, replace=False)
     near_points = np.array(
         [complex(cx[i], cy[i]) + complex(rng.uniform(-1, 1), rng.uniform(-1, 1)) * 1e-3

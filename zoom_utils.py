@@ -82,7 +82,7 @@ def plot_fit_panels(ogle, moa, model_fn, fit_label, out_path):
     ogle_resid = ogle_A - model_fn(ogle_time)
     moa_resid = moa_A - model_fn(moa_time)
 
-    def plot_panel(ax, ax_resid, ax_hist, xlim=None):
+    def plot_panel(ax, ax_resid, ax_hist, xlim: tuple[float, float] | None = None):
         t_grid = np.linspace(*(xlim if xlim else (time.min(), time.max())), 3000)
         A_model = model_fn(t_grid)
         ax.errorbar(ogle_time, ogle_A, yerr=ogle_A_err, fmt="+", ms=3, elinewidth=0.5, capsize=2, markeredgewidth=0.5, capthick=0.5,

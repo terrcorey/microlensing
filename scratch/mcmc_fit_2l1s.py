@@ -21,7 +21,7 @@ import emcee
 import numpy as np
 from scipy.stats import t as student_t
 from fit_2l1s import SHORT_NAME, TwoL1SParams, chi2, guess, plot_fit, residuals, huber
-from mcmc_fit import save_corner
+from mcmc_fit import flat_chain, save_corner
 
 # Derived from TwoL1SParams._fields rather than hand-typed three times, so the
 # physical ordering can't drift between the three likelihood variants below.
@@ -144,8 +144,7 @@ def run_mcmc(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
         sampler = emcee.EnsembleSampler(nwalkers, len(LABELS), log_probability, pool=pool, args=(use_ogle,))
         sampler.run_mcmc(p0, nsteps, progress=True)
 
-    samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
-    log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
+    samples, log_probs = flat_chain(sampler, discard=nsteps // 4)
     best = samples[np.argmax(log_probs)]
     binary_best = TwoL1SParams(*best[:N_PHYS])  # drop scale/dof -- chi2()/plot_fit() take only the physical params
 
@@ -202,8 +201,7 @@ def run_mcmc_chi2(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
         sampler = emcee.EnsembleSampler(nwalkers, len(LABELS_CHI2), log_probability_chi2, pool=pool, args=(use_ogle,))
         sampler.run_mcmc(p0, nsteps, progress=True)
 
-    samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
-    log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
+    samples, log_probs = flat_chain(sampler, discard=nsteps // 4)
     best = samples[np.argmax(log_probs)]
 
     print(f"[{tag}] {samples.shape[0]} posterior samples")
@@ -269,8 +267,7 @@ def run_mcmc_huber(nwalkers=48, nsteps=1500, seed=42, use_ogle=True):
         sampler = emcee.EnsembleSampler(nwalkers, len(LABELS_HUBER), log_probability_huber, pool=pool, args=(use_ogle,))
         sampler.run_mcmc(p0, nsteps, progress=True)
 
-    samples = sampler.get_chain(discard=nsteps // 4, thin=15, flat=True)
-    log_probs = sampler.get_log_prob(discard=nsteps // 4, thin=15, flat=True)
+    samples, log_probs = flat_chain(sampler, discard=nsteps // 4)
     best = samples[np.argmax(log_probs)]
     binary_best = TwoL1SParams(*best[:N_PHYS])  # drop scale -- chi2()/residuals()/plot_fit() take only the physical params
 

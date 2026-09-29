@@ -7,6 +7,7 @@ need them.
 """
 
 import numpy as np
+import numpy.typing as npt
 import torch
 from astropy.coordinates import get_body_barycentric_posvel
 from astropy.time import Time
@@ -62,7 +63,7 @@ def plain_magnitude(t, t0, u0, tE, f_source, f_blend):
     return ZERO_POINT_MAG - 2.5 * np.log10(plain_flux(t, t0, u0, tE, f_source, f_blend))
 
 
-def binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE):
+def binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE) -> npt.NDArray[np.complex128]:
     """Source-lens separation for binary lenses on the lens plane, given in
     complex form ζ(t), in units of the Einstein radius."""
     delta_tau = piE_N * delta_sN + piE_E * delta_sE
@@ -81,7 +82,7 @@ def lens_position(s, q):
     return m1, m2, z1, z2
 
 
-def caustic_curve(s, q, n_phi=1000, tol=1e-5):
+def caustic_curve(s, q, n_phi=1000, tol=1e-5) -> list[npt.NDArray[np.complex128]]:
     """Caustic curve(s) in the source plane: the image, under the lens
     equation, of the critical curve where the lens map's Jacobian vanishes.
 
@@ -129,7 +130,7 @@ def caustic_curve(s, q, n_phi=1000, tol=1e-5):
 
 
 
-def equidistant_caustic(caustic):
+def equidistant_caustic(caustic: npt.NDArray[np.complex128]) -> npt.NDArray[np.complex128]:
     """Resample one closed caustic (an element of caustic_curve()'s list) to
     points evenly spaced in arc length, including the closing segment."""
     closed = np.append(caustic, caustic[0])
@@ -365,9 +366,10 @@ def sun_earth_projection(t, coords, t0_par):
     earth_t0pos, earth_t0vel = get_body_barycentric_posvel("earth", t0)
     sun_t0pos, sun_t0vel = get_body_barycentric_posvel("sun", t0)
 
-    s = earth_pos - sun_pos
-    s0 = earth_t0pos - sun_t0pos
-    v0 = earth_t0vel - sun_t0vel
+    # astropy is unannotated, so pyright infers these as Optional -- they never are here
+    s = earth_pos - sun_pos  # pyright: ignore[reportOptionalOperand]
+    s0 = earth_t0pos - sun_t0pos  # pyright: ignore[reportOptionalOperand]
+    v0 = earth_t0vel - sun_t0vel  # pyright: ignore[reportOptionalOperand]
 
     s_N, s_E = _project(s, coords)
     s0_N, s0_E = _project(s0, coords)

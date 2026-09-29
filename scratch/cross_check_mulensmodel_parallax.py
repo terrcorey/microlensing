@@ -148,7 +148,7 @@ for label, curve in candidates.items():
 for label, max_rel in sorted(worst.items(), key=lambda kv: kv[1]):
     print(f"max rel_diff, {label:35s}: {max_rel:.2e}")
 
-best_label = min(worst, key=worst.get)
+best_label = min(worst, key=lambda label: worst[label])
 print(f"\n=> best match: {best_label} (max rel_diff {worst[best_label]:.2e})")
 if worst[best_label] > 1e-3:
     print("   Still far short of the 2L1S cross-check's ~1e-9 -- do not treat this as locked "
