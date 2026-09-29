@@ -1675,3 +1675,76 @@ long `/grill-me` rounds add little once results are in hand):
 ### Next session
 Not yet set -- to be confirmed at "save state". Session 14's plan still
 stands: the finite-source Cassan MCMC first, then error-bar rescaling.
+
+## 2026-09-29 — session 16
+
+### Built
+- **`slurm/`**: one `.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`,
+  `cassan`, `cross_checks`, and `2l1s_mcmc [chi2|huber]` -- one file for all
+  three likelihoods via `run_mcmc${1:+_$1}`), plus `submit_all.sh`, which
+  submits all of them with the 2L1S jobs `afterok` on `pspl_235`
+  (`fit_2l1s.py` reads its `fit_summary.dat` at import) and `cross_checks`
+  also on `cassan` (its `_fs` check reads the chain). Parallel jobs export
+  `PYTHON_CPU_COUNT=$SLURM_CPUS_PER_TASK` (Python 3.13+), since
+  `ProcessPoolExecutor()`/`Pool()` otherwise size to the node's 96 cores, not
+  the 24 allocated. User added `PYTHONUNBUFFERED`, a torch CUDA-warning
+  filter, and a separate `slurm/errors/` for stderr.
+- MulensModel installed into `.venv` (it had gone into conda's Python).
+- **Error-bar rescaling** (roadmap item 2): `fit_2l1s.error_rescaling()`,
+  written by the user; `K_OGLE`=1.189 / `K_MOA`=1.001 applied at load time in
+  `fit_2l1s.py`. Derivation in `scratch/scratchpad.ipynb`.
+- `LOG_RHO_RANGE` replaces `RHO_RANGE` in `mcmc_fit_2l1s.py` (upper bound
+  0.1 -> 0.01) and `cassan_caustic.py`; `_physical_log_prior` guards
+  `rho <= 0` before the log (source of the "invalid value in log" warning spam
+  in the MCMC logs).
+
+### Learned & open questions
+- **Full regeneration run** (`submit_all.sh`, original errors): both PSPL
+  pipelines ~1 min each; all four cross-checks pass unchanged (2L1S 1.7e-9,
+  finite source vs VBBL <=1.5% straddling a fold at n=4000, parallax 2.7e-7);
+  the three 2L1S MCMCs were cancelled after ~1.5 h (user). `2l1s_fit`
+  (96-seed finite-source Nelder-Mead, joint + MOA-only) was still running at
+  4 h: its final refine per mode is a single serial Nelder-Mead, leaving 23
+  of 24 cores idle. Joint result: chi2=1987.64 with `rho`->0 -- the known
+  wrong-basin search problem, not a competitor to Cassan's 1650.
+- **First finite-source Cassan MCMC** (original errors): best sample
+  chi2=1643.22, `rho`=0.00097(+11/-12) (Bond: 0.00096(11)), `s`=1.1197(5),
+  **`q`=0.0058(+18/-22)** -- spans both of Bond's solutions (best q=0.0039,
+  early-caustic 0.0070), so session 14's worry that Nelder-Mead never moved
+  `q` was justified: `q` is weakly constrained, `rho` is not. `t_in` loose
+  (+1.4/-0.9 d; the entry is sparsely sampled), `t_out` tight (+/-0.006 d).
+- **Error rescaling**: k from chi2/dof=1 per instrument at the Cassan
+  finite-source best fit, `n_params` = own flux params (2 OGLE, 1 MOA).
+  OGLE k=1.19, MOA k=1.00 -- nothing like MOA-2019-BLG-008's 16-49x. `e_min`
+  chosen by cumulative chi2 vs brightness rank: the brightest ~50 OGLE points
+  already sit *under* the y=x line, and floors up to 0.01 mag change nothing
+  (0.02 only pushes the bright end further under), so **no floor**. The
+  excess chi2 comes in steps at intermediate brightness (ranks ~55-130) and
+  the faint end -- single |z|~3-4 points or local misfit, not an error floor
+  (a floor can't fix it; Student-t would be the tool for isolated outliers).
+  A magnitude floor is undefined for MOA's zero-point-free DIA flux, hence k
+  only there.
+- Units trap: a magnitude floor in flux space is 0.4 ln10 F e_min, not a
+  constant -- avoided by rescaling `ogle_mag_err` before `mag_to_flux`.
+- Cluster: `tqdm` is in `requirements.txt` but not installed in `.venv`, so
+  emcee runs silently in SLURM logs. The notebook kernel runs on the login
+  node (fine for single chi2 calls, not for grids/pools).
+- A Cassan rerun on the rescaled errors (job 4872304) was in flight at
+  session end; it overwrites the chain summarised above.
+
+### Next session
+Confirmed with the user (quick question round):
+1. **PSPL vs 2L1S verdict**: session 2's BIC comparison, blocked until now for
+   lack of a validated 2L1S fit. Needs both models' chi2 on the *same*
+   rescaled errors and the same raw-flux data (the PSPL pipeline fits the
+   frozen `data/processed` magnification, so it can't be compared as it stands).
+2. **Early-caustic `q` degeneracy**: seed a finite-source Cassan fit from
+   Bond's early-caustic solution (q=0.0070, rho=0.00104, s=1.121, alpha=218.9
+   deg) and check whether the broad `q` posterior is really two modes, and
+   whether Bond's Delta chi2 = +7.4 is reproduced.
+3. **Rescaled Cassan posterior**: read job 4872304's chain (rescaled
+   errors), compare with this session's `q`/`rho` posterior. Feeds 1 and 2.
+- Not scheduled: MOA-2019-BLG-008 rescaling (data still not downloaded);
+  `pip install tqdm` in `.venv`; parallelising `fit_2l1s`'s serial final
+  refine; `caustic_curve()`'s stale docstring and `cassan_caustic.py:89`'s
+  `RHO_RANGE` mention.

@@ -43,7 +43,10 @@ SHORT_NAME = "O-03-BLG235"
 # Raw flux, not the old data/processed/*_magnification.dat -- those froze fs/fb from a
 # one-time PSPL point estimate that's since been shown biased for a real caustic-crossing
 # trajectory (see CHANGELOG session 5). chi2() below re-solves fs/fb per trial instead.
+K_OGLE, K_MOA = 1.1894704390708772, 1.0014620074784661
 ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err = load_raw()
+ogle_mag_err = K_OGLE * ogle_mag_err
+moa_flux_err = K_MOA * moa_flux_err
 ogle_flux, ogle_flux_err = mag_to_flux(ogle_mag, ogle_mag_err)
 
 zeros_ogle, zeros_moa = np.zeros_like(ogle_time), np.zeros_like(moa_time)
@@ -90,7 +93,7 @@ def profile_flux(A_ogle, A_moa):
     fs_ogle, fb_ogle = np.linalg.solve((X * w[:, None]).T @ X, (X * w[:, None]).T @ ogle_flux)
     return fs_ogle, fb_ogle, _profile_fs_moa(A_moa)
 
-def residuals(theta, use_ogle=True):
+def residuals(theta, use_ogle=True) -> np.ndarray:
     """Per-point standardized residuals of the 2L1S model against raw flux.
     Always returns an array shaped like the data -- an unphysical/degenerate
     trial fills it with np.inf rather than returning a bare scalar, so callers
@@ -120,12 +123,18 @@ def residuals(theta, use_ogle=True):
     resid_moa = (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
     return np.concatenate([resid_ogle, resid_moa])
 
+def error_rescaling(raw_resid, err, e_min, n_params):
+    """Rescales the error bars per instrument by settings chi2/dof ~ 1. raw_resid, err
+    and e_min must be in the same units."""
+    k2 = np.sum(raw_resid ** 2 / (err ** 2 + e_min ** 2)) / (len(raw_resid) - n_params)
+    return np.sqrt(k2)
+
 def chi2(theta, use_ogle=True):
     """Chi2 of the 2L1S model against raw flux, with each instrument's flux calibration
     (fs/fb) profiled analytically for this specific trial trajectory. `use_ogle=False`
     fits MOA alone (only fs_moa profiled) -- a calibration-ambiguity-free control on the
     joint fit, since there's no cross-instrument scale to get wrong (see CHANGELOG)."""
-    return np.sum(residuals(theta, use_ogle)**2)
+    return np.sum(residuals(theta, use_ogle) ** 2)
 
 def huber(residual, delta):
     loss = np.where(np.abs(residual) <= delta, 0.5 * residual ** 2, delta * (np.abs(residual) - 0.5 * delta))

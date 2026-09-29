@@ -38,7 +38,7 @@ LOG_Q_RANGE = (np.log(1e-5), np.log(1.0))
 PIE_RANGE = (-2.0, 2.0)
 LOG_SCALE_RANGE = (np.log(0.1), np.log(10.0))
 LOG_DOF_RANGE = (np.log(0.5), np.log(50.0))
-RHO_RANGE = (1e-5, 1e-1)
+LOG_RHO_RANGE = (np.log(1e-5), np.log(1e-2))
 DELTA = 1.345
 
 
@@ -56,7 +56,7 @@ def _physical_log_prior(params):
         return -np.inf
     if not (0 <= alpha < 2 * np.pi):
         return -np.inf
-    if s <= 0 or q <= 0:
+    if s <= 0 or q <= 0 or rho <= 0:
         return -np.inf
     if not (S_RANGE[0] < s < S_RANGE[1]):
         return -np.inf
@@ -66,7 +66,7 @@ def _physical_log_prior(params):
         return -np.inf
     if not (PIE_RANGE[0] < piE_E < PIE_RANGE[1]):
         return -np.inf
-    if not (RHO_RANGE[0] < rho < RHO_RANGE[1]):
+    if not (LOG_RHO_RANGE[0] < np.log(rho) < LOG_RHO_RANGE[1]):
         return -np.inf
     return 0.0
 
@@ -116,7 +116,7 @@ def _sample_physical_prior(rng, n):
     piE_E = rng.uniform(*PIE_RANGE, n)
     s = rng.uniform(*S_RANGE, n)
     q = np.exp(rng.uniform(*LOG_Q_RANGE, n))
-    rho = np.exp(rng.uniform(*np.log(RHO_RANGE), n))
+    rho = np.exp(rng.uniform(*LOG_RHO_RANGE, n))
     return [t0, u0, tE, alpha, piE_N, piE_E, s, q, rho]
 
 

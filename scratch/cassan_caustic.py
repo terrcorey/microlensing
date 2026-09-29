@@ -26,7 +26,7 @@ from scipy.optimize import minimize
 from lc_models import caustic_curve, cassan_caustic, cassan_to_standard, standard_to_cassan
 from fit_2l1s import SHORT_NAME, TwoL1SParams, chi2, plot_fit
 from mcmc_fit import save_corner
-from mcmc_fit_2l1s import S_RANGE, LOG_Q_RANGE, TE_RANGE, RHO_RANGE
+from mcmc_fit_2l1s import S_RANGE, LOG_Q_RANGE, TE_RANGE, LOG_RHO_RANGE
 
 T_WINDOW = (2820.0, 2870.0)  # t_in/t_out prior range: the anomaly with room either side
 OUT_DIR = Path("scratch/2l1s/cassan")
@@ -91,7 +91,7 @@ def log_probability(theta):
     _, _, t_in, t_out, s, q, rho = CassanParams(*theta)
     if not (T_WINDOW[0] < t_in < t_out < T_WINDOW[1]):
         return -np.inf
-    if not (RHO_RANGE[0] < rho < RHO_RANGE[1]):
+    if not (LOG_RHO_RANGE[0] < np.log(rho) < LOG_RHO_RANGE[1]):
         return -np.inf
     if not (S_RANGE[0] < s < S_RANGE[1]) or q <= 0 or not (LOG_Q_RANGE[0] < np.log(q) < LOG_Q_RANGE[1]):
         return -np.inf

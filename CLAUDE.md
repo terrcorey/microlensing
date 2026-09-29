@@ -39,6 +39,10 @@ notebook-style exploration.
    (`scratch/`, see "Output layout" below), and fold single-caller files
    into their one caller instead of leaving them as separate scripts.
 6. Your main role in this repository is to act as a guiding role. Give an overview rundown of what needs to be done, give suitable hints and direction to the user but allow the user to write their own code. After they finish, you can simplify using ponytail and tidy up.
+7. If you are working on a remote cluster (hypatia), be mindful of what
+   processes you run on the command line, since you will be taking up 
+   login node resources and potentially affect the user experience of
+   other users.
 
 
 ## Instructions
@@ -101,14 +105,23 @@ give a fast/no-MCMC path without a second script to keep in sync.
 `cross_check_mulensmodel_parallax.py`, `cross_check_mulensmodel_fs.py`,
 `derive_binary_quintic.py`, `fit_2l1s_moa19008.py`, `cassan_caustic.py` (Cassan-parametrised 2L1S fit,
 see "PSPL-vs-2L1S" below), `scratchpad.ipynb` (interactive exploration:
-caustic explorer, finite-source sample-point plots -- not a pipeline step),
-`submit_mcmc_2l1s.sbatch` (session 10, SLURM job
-script for running `mcmc_fit_2l1s.py` on a CPU partition -- see its own
-header comment for cluster-side directory-layout assumptions and why CPU
-not GPU: the parallelism is per-walker OS processes, not one large batched
-GPU call, so many processes sharing one GPU context would serialize rather
-than speed up; **not currently on disk or in git history** -- presumably
-cluster-side only). None are covered by the pip line above --
+caustic explorer, finite-source sample-point plots -- not a pipeline step).
+SLURM job scripts live in `slurm/` (session 16), not `scratch/`: one
+`.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`, `cassan`,
+`cross_checks` (also `afterok` on `cassan`, whose chain `_fs` reads), and
+`2l1s_mcmc [chi2|huber]` -- one file for all three likelihoods), and
+`bash slurm/submit_all.sh` submits all of them to regenerate every output,
+the 2L1S jobs chained `afterok` on `pspl_235` (`fit_2l1s.py` reads its
+`fit_summary.dat` at import). Logs go to `slurm/output/` (stdout) and
+`slurm/errors/` (stderr), both gitignored; every job sets
+`PYTHONUNBUFFERED=1` (else `.out` fills in chunks) and silences torch's
+CUDA-probe `UserWarning` via `PYTHONWARNINGS`. CPU
+not GPU: the parallelism is per-walker OS processes, so many processes
+sharing one GPU context would serialize. Jobs whose pools size themselves
+from the core count export `PYTHON_CPU_COUNT=$SLURM_CPUS_PER_TASK`, since
+Python otherwise sees the whole node. Not submitted: `fit_2l1s_moa19008.py`
+(data not downloaded). None of the
+`scratch/` scripts are covered by the pip line above --
 `derive_binary_quintic.py` needs `sympy`, the four `cross_check_mulensmodel*.py`
 need `MulensModel`. All are self-documented in their own docstrings and run
 manually as `python3 scratch/<name>.py` from the project root (each has its
@@ -510,8 +523,9 @@ decays slowly (~0.3% at 4 rho, ~0.05% at 8 rho). `TwoL1SParams` now has 9
 fields (`rho` last, no default); `fit_2l1s.residuals()`/`plot_fit()` use
 `binary_magnification_fs` everywhere and reject `rho <= 0`.
 `mcmc_fit_2l1s.py` slices theta by `N_PHYS = len(TwoL1SParams._fields)`
-rather than hardcoded indices, and bounds/draws `rho` in `RHO_RANGE`
-(1e-5..0.1, log-uniform draws). A finite-source chi2 costs ~0.8 s (vs.
+rather than hardcoded indices, and bounds/draws `rho` in `LOG_RHO_RANGE`
+(1e-5..1e-2 since session 16, log-uniform; `cassan_caustic.py` imports the
+same constant). A finite-source chi2 costs ~0.8 s (vs.
 ~0.06 s point-source), which is why `cassan_caustic.fit()` grids at
 `GRID_RHO`.
 
@@ -521,8 +535,27 @@ rather than hardcoded indices, and bounds/draws `rho` in `RHO_RANGE`
 (Bond: 1.120, 0.0039, 0.00096, 223.8 deg, 61.5 d). The earlier point-source
 Cassan fit (chi2=1766) had instead landed near Bond's *"early caustic"*
 alternative. The fit from session 11's Student-t `(s, q)` stays in a wrong
-basin (chi2=3305). Not yet run: the finite-source Cassan MCMC, so `rho`/`q`
-have no posterior yet.
+basin (chi2=3305).
+
+**Status (session 16)**: the finite-source Cassan MCMC has run (SLURM,
+original error bars): best sample chi2=1643.22 (below the Nelder-Mead
+1650.06), `rho`=0.00097(+11/-12) -- Bond's 0.00096(11) almost exactly --
+`s`=1.1197(5), but `q`=0.0058(+18/-22), broad enough to span both Bond's best
+(0.0039) and early-caustic (0.0070) solutions; `t_in` is loose (+1.4/-0.9 d),
+`t_out` tight (+/-0.006 d). A rerun on the rescaled errors (below) was in
+flight at session end.
+
+**Error-bar rescaling (session 16)**: `fit_2l1s.py` multiplies the raw errors
+by per-instrument constants at load time, `K_OGLE`=1.189 (applied to
+`ogle_mag_err`, before `mag_to_flux`) and `K_MOA`=1.001, so every chi2/MCMC/
+Cassan caller picks them up. Derived once in `scratch/scratchpad.ipynb` with
+`fit_2l1s.error_rescaling(raw_resid, err, e_min, n_params)` (k^2 = sum r^2 /
+(sigma^2 + e_min^2) / (N - n_params), all in one unit system: magnitudes for
+OGLE, flux for MOA) at the Cassan finite-source best fit. No error floor:
+OGLE's cumulative chi2 sorted by brightness showed the bright end already
+*under*-contributing, and `e_min` up to 0.01 mag changed nothing. To
+re-derive, zero the constants first -- the notebook imports `fit_2l1s`, so
+measuring on already-rescaled errors gives k~1.
 
 
 ## Output layout

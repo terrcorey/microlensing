@@ -13,3 +13,7 @@ hist_plots/
 corner_plots/
 # scratch/ mixes one-time scripts with their own plot output -- only ignore the plots
 *.png
+
+# SLURM job logs (slurm/submit_all.sh)
+slurm/output/
+slurm/errors/
