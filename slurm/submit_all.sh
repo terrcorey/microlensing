@@ -14,6 +14,7 @@ after="--dependency=afterok:$pspl_235"
 sbatch "$after" 2l1s_fit.sbatch
 cassan=$(sbatch --parsable "$after" cassan.sbatch)
 sbatch "$after,afterok:$cassan" cross_checks.sbatch
+sbatch "$after,afterok:$cassan" compare.sbatch
 sbatch "$after" 2l1s_mcmc.sbatch
 sbatch "$after" --job-name=2l1s-mcmc-chi2 2l1s_mcmc.sbatch chi2
 sbatch "$after" --job-name=2l1s-mcmc-huber 2l1s_mcmc.sbatch huber

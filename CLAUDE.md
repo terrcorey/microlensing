@@ -38,11 +38,20 @@ notebook-style exploration.
    dev-script code and output separated from the regular pipeline
    (`scratch/`, see "Output layout" below), and fold single-caller files
    into their one caller instead of leaving them as separate scripts.
-6. Your main role in this repository is to act as a guiding role. Give an overview rundown of what needs to be done, give suitable hints and direction to the user but allow the user to write their own code. After they finish, you can simplify using ponytail and tidy up.
-7. If you are working on a remote cluster (hypatia), be mindful of what
-   processes you run on the command line, since you will be taking up 
-   login node resources and potentially affect the user experience of
-   other users.
+6. Your main role in this repository is to act as a guiding role, unless 
+   the user specifies otherwise. Give an overview rundown of what needs 
+   to be done, give suitable hints and direction to the user but allow 
+   the user to write their own code. After they finish, you can simplify 
+   using ponytail and tidy up.
+7. If you are working on a remote cluster (hypatia), never run anything
+   heavier than editing, git, log reading, job status queries or a syntax
+   check on the login node -- it is shared, and a stray fit or process
+   pool degrades it for every other user. That includes importing any
+   module that fits at import time (scratch/fit_2l1s.py and everything
+   importing it). Use `srun --partition=...` for short interactive runs
+   and `sbatch` for anything long or parallel; see "Login node vs compute
+   nodes" under Setup and commands. If unsure, ask before running.
+
 
 
 ## Instructions
@@ -104,11 +113,13 @@ give a fast/no-MCMC path without a second script to keep in sync.
 `cross_check_mulensmodel.py`, `cross_check_mulensmodel_fit.py`,
 `cross_check_mulensmodel_parallax.py`, `cross_check_mulensmodel_fs.py`,
 `derive_binary_quintic.py`, `fit_2l1s_moa19008.py`, `cassan_caustic.py` (Cassan-parametrised 2L1S fit,
-see "PSPL-vs-2L1S" below), `scratchpad.ipynb` (interactive exploration:
+see "PSPL-vs-2L1S" below), `compare_pspl_2l1s.py` (PSPL-vs-2L1S BIC, same
+section), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots -- not a pipeline step).
 SLURM job scripts live in `slurm/` (session 16), not `scratch/`: one
 `.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`, `cassan`,
-`cross_checks` (also `afterok` on `cassan`, whose chain `_fs` reads), and
+`cross_checks` and `compare` (both also `afterok` on `cassan`, whose chain
+they read), and
 `2l1s_mcmc [chi2|huber]` -- one file for all three likelihoods), and
 `bash slurm/submit_all.sh` submits all of them to regenerate every output,
 the 2L1S jobs chained `afterok` on `pspl_235` (`fit_2l1s.py` reads its
@@ -137,6 +148,33 @@ underestimates the true photometric scatter (confirmed model-independently,
 ~16-49x); needs an error-bar rescaling step before its output means
 anything.** See CHANGELOG.md.
 
+
+### Login node vs compute nodes (hypatia)
+
+The login node is shared; see rule 7. What's fine to run on it:
+editing, git, reading logs/outputs, `squeue`/`sacct`, `python -m py_compile`,
+installing a single package, `np.load`-ing a saved chain.
+
+Everything else goes to a compute node, including things that don't look
+heavy:
+- **Importing `scratch/fit_2l1s.py`** runs a full `fit_joint_pspl()`
+  Nelder-Mead at import time. So does anything that imports it:
+  `cassan_caustic.py`, `mcmc_fit_2l1s.py`, `compare_pspl_2l1s.py`,
+  `compare_2l1s_fits.py`, and the notebook.
+- Any fit, MCMC, grid or multi-start, and anything using a
+  `Pool`/`ProcessPoolExecutor`. Those default to all the node's cores.
+- A finite-source chi2 costs ~0.8 s, so even "just a few" evaluations add up.
+- The notebook kernel runs on the login node. Keep its cells to single chi2
+  calls and plotting of saved results; no grids or pools.
+
+How to run it:
+- **Short (under ~15 min), watched live:**
+  `srun --partition=small-short --cpus-per-task=1 --mem=4G --time=00:15:00 .venv/bin/python scratch/<name>.py`.
+  `--partition` is required; plain `srun` fails with "No partition specified".
+- **Anything longer, or parallel:** an `.sbatch` in `slurm/`, copied from
+  `cassan.sbatch` (parallel) or `compare.sbatch` (serial). Parallel jobs
+  must export `PYTHON_CPU_COUNT=$SLURM_CPUS_PER_TASK`. Submit from `slurm/`,
+  then check progress with `squeue -u $USER` and `slurm/output/`.
 
 There is no test suite or lint step; each script is run directly and its
 correctness is judged by inspecting the plot/printed fit it produces.
@@ -489,8 +527,7 @@ answer to the near-miss-cusp search problem above. `lc_models.py`:
 `caustic_curve(s, q)` returns a *list* of closed caustics (1 resonant, 2
 wide, 3 close) in `binary_trajectory()`'s frame, stitched from per-`phi`
 root branches via `linear_sum_assignment`, raising `ValueError` if the
-pieces don't join (its docstring still describes an older formulation --
-stale). `equidistant_caustic()` resamples one closed caustic evenly in arc
+pieces don't join. `equidistant_caustic()` resamples one closed caustic evenly in arc
 length; `cassan_caustic(s, q, idx=0)` orders it (rightmost point,
 counter-clockwise) so `sigma` in [0, 1) is Cassan's curvilinear abscissa;
 `caustic_point()`, `cassan_to_standard()` / `standard_to_cassan()` map
@@ -542,8 +579,28 @@ original error bars): best sample chi2=1643.22 (below the Nelder-Mead
 1650.06), `rho`=0.00097(+11/-12) -- Bond's 0.00096(11) almost exactly --
 `s`=1.1197(5), but `q`=0.0058(+18/-22), broad enough to span both Bond's best
 (0.0039) and early-caustic (0.0070) solutions; `t_in` is loose (+1.4/-0.9 d),
-`t_out` tight (+/-0.006 d). A rerun on the rescaled errors (below) was in
-flight at session end.
+`t_out` tight (+/-0.006 d). Rerun on the rescaled errors (below, job
+4872304, only ~200 steps kept): best sample chi2=1521.45, `q`=0.0069(+12/-20)
+-- median now at Bond's early-caustic value -- `rho`=0.00098(+12/-11),
+`s`=1.1196(55) (10x wider than the first run's, unexplained).
+
+**PSPL vs 2L1S BIC (session 17)**: `scratch/compare_pspl_2l1s.py` scores both
+models on the identical footing -- raw flux, rescaled errors, profiled flux
+calibration, no parallax. `fit_2l1s.flux_residuals(A_ogle, A_moa)` (split out
+of `residuals()`) is the shared, model-agnostic half: any model's
+magnifications in, standardized residuals out. `run_pspl()` Nelder-Meads
+`(t0, u0, tE)` from `fit_2l1s.plain_fit` (the import-time `fit_joint_pspl`
+result, whose chi2 function is `plain_chi2_fn`); `run_2l1s()` polishes the
+Cassan chain's best sample with `chi2_cassan`, initial simplex from the
+chain's per-parameter std (scipy's default 5%-of-value step would be ~140 d
+on `t_in`/`t_out`). k = 6 (PSPL) / 10 (2L1S), flux params counted.
+`slurm/compare.sbatch` runs it (1 CPU, serial).
+Result: **Delta BIC = 571.6 in favour of 2L1S** (N=1535, chi2 2121.61 vs
+1520.70); the polish lands on Bond's best `q`=0.00386, not the chain median's
+early-caustic 0.0069. `plot_comparison()` writes
+`scratch/2l1s/compare/O-03-BLG235_pspl_vs_2l1s.png`: data in A via the 2L1S
+fs/fb, PSPL's predicted flux re-expressed on that scale (one curve per
+instrument), one residual row per model.
 
 **Error-bar rescaling (session 16)**: `fit_2l1s.py` multiplies the raw errors
 by per-instrument constants at load time, `K_OGLE`=1.189 (applied to
@@ -567,7 +624,7 @@ measuring on already-rescaled errors gives k~1.
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
-  scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
+  compare_pspl_2l1s.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in the four dirs above -- when a script graduates into
   the pipeline, move both its code and its output path out at the same

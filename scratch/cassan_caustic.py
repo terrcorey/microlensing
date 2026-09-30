@@ -86,7 +86,7 @@ def fit(s, q, rho, t_in, t_out_list, n_sigma=20):
 def log_probability(theta):
     """Gaussian likelihood (-0.5*chi2) under flat priors: sigma_in/sigma_out uniform on the
     (periodic) caustic, t_in < t_out uniform in T_WINDOW, s uniform and log(q) uniform in
-    mcmc_fit_2l1s's ranges, rho inside its RHO_RANGE, derived tE inside its TE_RANGE, and resonant topology only (one
+    mcmc_fit_2l1s's ranges, log(rho) uniform in LOG_RHO_RANGE, derived tE inside its TE_RANGE, and resonant topology only (one
     caustic -- Bond et al.'s is, and it keeps cassan_caustic()'s idx=0 unambiguous)."""
     _, _, t_in, t_out, s, q, rho = CassanParams(*theta)
     if not (T_WINDOW[0] < t_in < t_out < T_WINDOW[1]):

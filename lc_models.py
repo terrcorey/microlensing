@@ -86,11 +86,13 @@ def caustic_curve(s, q, n_phi=1000, tol=1e-5) -> list[npt.NDArray[np.complex128]
     """Caustic curve(s) in the source plane: the image, under the lens
     equation, of the critical curve where the lens map's Jacobian vanishes.
 
-    The critical curve is m1/(z-z1)^2 + m2/(z-z2)^2 = e^(i*phi) for
-    phi in [0, 2pi) -- a quartic in z for each phi, with no conjugate to
-    clear (unlike the quintic lens equation), so its coefficients are built
-    directly via polynomial multiplication (np.convolve) rather than a
-    symbolic derivation.
+    Works in Cassan's frame (m1 at 0, m2 at -s), where the critical curve
+    m1/z^2 + m2/(z+s)^2 = e^(-i*phi) is a quartic in z with hardcoded
+    coefficients. For each phi in [0, 2pi] its 4 roots are mapped through
+    the lens equation, and linear_sum_assignment matches them to the
+    previous phi's to give 4 continuous pieces. Each piece's phi=2pi end is
+    another piece's phi=0 start, so the pieces are chained into closed
+    caustics (ValueError if an end misses by more than tol).
 
     Returns a list of closed caustics (1-D complex arrays, one per caustic:
     1 resonant, 2 wide, 3 close), in binary_trajectory()'s frame.

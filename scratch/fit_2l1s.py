@@ -17,7 +17,7 @@ from scipy.optimize import minimize
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from itertools import product
-from multiprocessing import get_context
+from multiprocessing import get_context, parent_process
 
 from lc_models import binary_magnification_fs, binary_trajectory, caustic_curve, mag_to_flux, sun_earth_projection
 from preprocess_binary_data import load_raw, moa_to_magnification, ogle_to_magnification, fit_joint_pspl, COORDS
@@ -50,10 +50,11 @@ moa_flux_err = K_MOA * moa_flux_err
 ogle_flux, ogle_flux_err = mag_to_flux(ogle_mag, ogle_mag_err)
 
 zeros_ogle, zeros_moa = np.zeros_like(ogle_time), np.zeros_like(moa_time)
-plain_fit, _ = fit_joint_pspl(ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err,
+plain_fit, plain_chi2_fn = fit_joint_pspl(ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err,
                                 zeros_ogle, zeros_ogle, zeros_moa, zeros_moa)
 t0_par = plain_fit[0]
-print(f"t0_par (parallax reference epoch, from plain pre-parallax fit) = {t0_par:.5f}")
+if parent_process() is None:  # spawned pool workers re-import this module; print once
+    print(f"t0_par (parallax reference epoch, from plain pre-parallax fit) = {t0_par:.5f}")
 
 delta_sN_ogle, delta_sE_ogle = sun_earth_projection(ogle_time, COORDS, t0_par)
 delta_sN_moa, delta_sE_moa = sun_earth_projection(moa_time, COORDS, t0_par)
@@ -93,6 +94,19 @@ def profile_flux(A_ogle, A_moa):
     fs_ogle, fb_ogle = np.linalg.solve((X * w[:, None]).T @ X, (X * w[:, None]).T @ ogle_flux)
     return fs_ogle, fb_ogle, _profile_fs_moa(A_moa)
 
+def flux_residuals(A_ogle, A_moa):
+    """Standardized residuals (OGLE then MOA) for any model magnification, fs/fb profiled."""
+    invalid = np.full(len(moa_time) + len(ogle_time), np.inf)
+    try:
+        fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle, A_moa)
+    except np.linalg.LinAlgError:
+        return invalid  # degenerate trial (e.g. flat A_ogle) -- singular normal equations
+    if fs_ogle <= 0 or fs_moa <= 0:
+        return invalid
+    resid_ogle = (ogle_flux - (fs_ogle * A_ogle + fb_ogle)) / ogle_flux_err
+    resid_moa = (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
+    return np.concatenate([resid_ogle, resid_moa])
+
 def residuals(theta, use_ogle=True) -> np.ndarray:
     """Per-point standardized residuals of the 2L1S model against raw flux.
     Always returns an array shaped like the data -- an unphysical/degenerate
@@ -100,7 +114,6 @@ def residuals(theta, use_ogle=True) -> np.ndarray:
     check np.isfinite() alone instead of also guarding for np.isscalar()."""
     t0, u0, tE, alpha, piE_N, piE_E, s, q, rho = TwoL1SParams(*theta)
     invalid = np.full(len(moa_time) + (len(ogle_time) if use_ogle else 0), np.inf)
-
     if tE <= 0 or s <= 0 or q <= 0 or rho <= 0:
         return invalid  # unphysical
     if np.abs(piE_N) > 2 or np.abs(piE_E) > 2:
@@ -111,17 +124,8 @@ def residuals(theta, use_ogle=True) -> np.ndarray:
         if fs_moa <= 0:
             return invalid
         return (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
-
     A_ogle = binary_magnification_fs(binary_trajectory(ogle_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_ogle, delta_sE_ogle), s, q, rho)
-    try:
-        fs_ogle, fb_ogle, fs_moa = profile_flux(A_ogle, A_moa)
-    except np.linalg.LinAlgError:
-        return invalid  # degenerate trial (e.g. flat A_ogle) -- singular normal equations
-    if fs_ogle <= 0 or fs_moa <= 0:
-        return invalid
-    resid_ogle = (ogle_flux - (fs_ogle * A_ogle + fb_ogle)) / ogle_flux_err
-    resid_moa = (moa_flux - fs_moa * (A_moa - 1.0)) / moa_flux_err
-    return np.concatenate([resid_ogle, resid_moa])
+    return flux_residuals(A_ogle, A_moa)
 
 def error_rescaling(raw_resid, err, e_min, n_params):
     """Rescales the error bars per instrument by settings chi2/dof ~ 1. raw_resid, err
@@ -148,7 +152,6 @@ def _fit_one_seed(seed, use_ogle=True):
                        options={"xatol": 1e-2, "fatol": 1e-2, "maxiter": 2000})
     print(f"[{tag}] seed s={s:.2f} q={q:.3f} alpha={alpha:.2f} -> chi2={result.fun:.2f}")
     return result
-
 
 def run_fit(use_ogle=True):
     """Parallel multi-start search, then a tight-tolerance refit of the best seed."""

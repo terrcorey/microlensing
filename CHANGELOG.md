@@ -1748,3 +1748,95 @@ Confirmed with the user (quick question round):
   `pip install tqdm` in `.venv`; parallelising `fit_2l1s`'s serial final
   refine; `caustic_curve()`'s stale docstring and `cassan_caustic.py:89`'s
   `RHO_RANGE` mention.
+
+## 2026-09-30 — session 17
+
+### Built
+- **Housekeeping** (session 16's "not scheduled" list): `tqdm==4.70.1`
+  installed into `.venv`; `caustic_curve()`'s docstring rewritten to match the
+  code (hardcoded quartic in Cassan's frame, `linear_sum_assignment` branch
+  matching, piece-chaining), and CLAUDE.md's "stale" note dropped;
+  `cassan_caustic.log_probability`'s docstring now says `LOG_RHO_RANGE`;
+  `fit_2l1s.py`'s import-time `t0_par` print guarded by
+  `multiprocessing.parent_process() is None`, so spawned pool workers don't
+  repeat it (they still re-run the setup `fit_joint_pspl`, a few s each).
+- **`fit_2l1s.flux_residuals(A_ogle, A_moa)`** (user): the model-agnostic half
+  of `residuals()` -- profile fs/fb, standardized residuals -- split out so a
+  PSPL chi2 goes through the same code. `plain_fit`'s chi2 function kept as
+  `plain_chi2_fn` (was discarded as `_`).
+- **`scratch/compare_pspl_2l1s.py`** (user, with fixes): `run_pspl()` (3-param
+  Nelder-Mead from `plain_fit`), `run_2l1s()` (Nelder-Mead polish of the
+  rescaled Cassan chain's best sample, initial simplex = chain std per
+  parameter), BIC with k=6/10. `slurm/compare.sbatch` (1 CPU, 4 h), added to
+  `submit_all.sh` `afterok` on `pspl_235` and `cassan`.
+- **`compare_pspl_2l1s.plot_comparison()`** (written by Claude, layout agreed in
+  a quick question round): event season + zoomed peak with both fits overlaid,
+  then one raw-residual row per model (shared y-limits) ->
+  `scratch/2l1s/compare/O-03-BLG235_pspl_vs_2l1s.png`. Data converted to A
+  with the 2L1S fit's profiled fs/fb; PSPL's predicted *flux* re-expressed on
+  that scale, one curve per instrument (OGLE: `(fs_p A_p + fb_p - fb_2)/fs_2`,
+  MOA: `1 + (fs_p/fs_2)(A_p - 1)`) -- each model calibrates the data
+  differently, so "the data in A" is model-dependent.
+- CLAUDE.md: new "Login node vs compute nodes (hypatia)" subsection under
+  Setup and commands (what's safe on the login node, which imports secretly
+  fit, the `srun --partition` line, which `.sbatch` to copy). A matching rule 7
+  rewrite was drafted for the user, not applied (rules are user-only).
+
+### Learned & open questions
+- **Rescaled Cassan MCMC** (job 4872304, session 16's): best sample
+  chi2=1521.45 (not comparable to 1643 -- different errors), `q`=0.0069
+  (+12/-20), `rho`=0.00098(+12/-11), `s`=1.1196(+56/-54), `t_out` still
+  +/-0.006 d. The `q` median moved onto Bond's early-caustic value (0.0070);
+  `s`'s width grew ~10x, far more than a 1.19 error rescale explains. Only
+  4800 samples (~200 steps x 32 walkers kept, not the 3000-step default) and
+  no autocorrelation check -- the posterior shape is weak evidence so far.
+- **PSPL on the 2L1S footing** (srun, rescaled errors, no parallax):
+  chi2=2121.61, t0=2847.815, u0=0.2145, tE=46.45 d. `fit_joint_pspl`'s own
+  chi2 (OGLE in mag space, fs/fb free) at `plain_fit` = 2121.76 -- the
+  flux-vs-mag-space linearization in `profile_flux()` costs 0.15 in chi2,
+  negligible. Against the unpolished 2L1S best sample, Delta chi2 ~600 vs a
+  BIC penalty difference of 4 ln N ~30: PSPL should lose decisively.
+- The BIC is only as honest as its shared footing: same N points, same
+  (rescaled) errors, same profiled flux, same (no) parallax. The existing
+  PSPL pipeline's `fit_summary.dat` fails all but the last, which is why a
+  new PSPL fit was needed. Caveat: K_OGLE/K_MOA were set at the 2L1S best fit
+  (chi2/dof=1 there), so they scale Delta chi2 by ~1/k^2 but can't flip it.
+- scipy's default Nelder-Mead initial simplex steps 5% of each value -- ~140 d
+  for `t_in`/`t_out` ~2840. Fine from a grid, wasteful (0.8 s/eval) and
+  basin-hopping-prone from an MCMC sample; use the chain's std instead.
+- Cluster: plain `srun` fails ("No partition specified") -- pass
+  `--partition=small-short`.
+- **Verdict: 2L1S, decisively** (job 4883427): N=1535, chi2 PSPL 2121.61 vs
+  2L1S 1520.70 (polished), BIC 2165.63 vs 1594.06, **Delta BIC = 571.6** in
+  favour of 2L1S -- far past the ~10 "very strong" threshold. The penalty
+  difference is only 4 ln N = 29.4. Still parallax-free on both sides.
+- **The polish moved `q` onto Bond's best solution**: from the chain's best
+  sample (chi2 1521.45) to `q`=0.00386, `rho`=0.00094, `s`=1.1195, `t_in`
+  2833.3 -> 2835.19, for only 0.75 in chi2 -- Bond's 0.0039, not the
+  chain median's early-caustic 0.0069. The likelihood is nearly flat along
+  `q` here, consistent with the broad `q` posterior and the short chain not
+  having converged.
+- **The plot localises the Delta chi2**: PSPL's misfit sits almost entirely in
+  HJD ~2835-2843 -- the caustic exit spike at 2842 (MOA to A~13, PSPL
+  residuals up to ~+7) and the raised plateau between the two crossings (OGLE
+  points above the PSPL curve). Outside it the two models' residual rows are
+  near-identical. The two PSPL calibration curves nearly overlap, so PSPL's
+  fs/fb end up close to 2L1S's.
+- Housekeeping bug caught in review: `np.abs(bic_pspl - bic_2l1s)` would have
+  thrown away the sign, i.e. the verdict itself; and `{a:.2f - b:.2f}` is a
+  runtime format-spec error, not a subtraction.
+
+### Next session
+Confirmed with the user (quick question round):
+1. ~~**Finish the PSPL vs 2L1S BIC verdict**~~ -- done later in session 17
+   (Delta BIC = 571.6, see Learned). Original plan: read job 4883407's two chi2
+   values, add the missing BIC / Delta BIC print to `compare_pspl_2l1s.py`,
+   check the polished 2L1S params didn't drift from the chain's best sample,
+   and write up the verdict with its caveats (the circularity in the error
+   rescaling, no parallax in either model).
+2. **Parallax in both models** (secondary): redo the BIC with parallax on for
+   both, the strongest PSPL null. Blocked on the Cassan fit gaining parallax
+   (`to_standard()` hardcodes `piE_N=piE_E=0`).
+- Not scheduled: early-caustic `q` degeneracy (session 16's item 2); a full
+  3000-step rescaled Cassan MCMC with an autocorrelation check; moving
+  `fit_2l1s.py`'s setup `fit_joint_pspl` out of import time.
