@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes as make_square_inset_axes
 from scipy.optimize import minimize
 from concurrent.futures import ProcessPoolExecutor
-from functools import partial
+from functools import cache, partial
 from itertools import product
 from multiprocessing import get_context, parent_process
 
@@ -50,14 +50,28 @@ moa_flux_err = K_MOA * moa_flux_err
 ogle_flux, ogle_flux_err = mag_to_flux(ogle_mag, ogle_mag_err)
 
 zeros_ogle, zeros_moa = np.zeros_like(ogle_time), np.zeros_like(moa_time)
-plain_fit, plain_chi2_fn = fit_joint_pspl(ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err,
-                                zeros_ogle, zeros_ogle, zeros_moa, zeros_moa)
-t0_par = plain_fit[0]
-if parent_process() is None:  # spawned pool workers re-import this module; print once
-    print(f"t0_par (parallax reference epoch, from plain pre-parallax fit) = {t0_par:.5f}")
 
-delta_sN_ogle, delta_sE_ogle = sun_earth_projection(ogle_time, COORDS, t0_par)
-delta_sN_moa, delta_sE_moa = sun_earth_projection(moa_time, COORDS, t0_par)
+@cache
+def plain_pspl():
+    """Parallax-free joint PSPL fit -> (theta, chi2_fn); its t0 is t0_par. Run on first
+    call, not at import -- it's a full Nelder-Mead (see CLAUDE.md, login node)."""
+    fit, chi2_fn = fit_joint_pspl(ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err,
+                                  zeros_ogle, zeros_ogle, zeros_moa, zeros_moa)
+    if parent_process() is None:  # spawned pool workers each run this too; print once
+        print(f"t0_par (parallax reference epoch, from plain pre-parallax fit) = {fit[0]:.5f}")
+    return fit, chi2_fn
+
+def delta_s(t, piE_N, piE_E):
+    """(delta_sN, delta_sE) at t. Zeros when parallax is off -- exact, since delta_s only
+    enters multiplied by piE -- so parallax-free callers never trigger plain_pspl()."""
+    if piE_N == 0 and piE_E == 0:
+        return np.zeros_like(t), np.zeros_like(t)
+    return sun_earth_projection(t, COORDS, plain_pspl()[0][0])
+
+@cache
+def _data_delta_s():
+    """delta_s at the data epochs, computed once -- an astropy ephemeris query, too slow per chi2."""
+    return delta_s(ogle_time, 1, 1), delta_s(moa_time, 1, 1)
 
 # t0/u0/tE seeded from the existing PSPL joint fit's posterior median.
 param, val = np.loadtxt(f"data/processed/{SHORT_NAME}_fit_summary.dat", unpack=True, usecols=(0, 2), dtype=str)
@@ -118,6 +132,10 @@ def residuals(theta, use_ogle=True) -> np.ndarray:
         return invalid  # unphysical
     if np.abs(piE_N) > 2 or np.abs(piE_E) > 2:
         return invalid
+    if piE_N == 0 and piE_E == 0:
+        (delta_sN_ogle, delta_sE_ogle), (delta_sN_moa, delta_sE_moa) = (zeros_ogle, zeros_ogle), (zeros_moa, zeros_moa)
+    else:
+        (delta_sN_ogle, delta_sE_ogle), (delta_sN_moa, delta_sE_moa) = _data_delta_s()
     A_moa = binary_magnification_fs(binary_trajectory(moa_time, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_moa, delta_sE_moa), s, q, rho)
     if not use_ogle:
         fs_moa = _profile_fs_moa(A_moa)
@@ -196,7 +214,7 @@ def plot_fit(theta, use_ogle=True, *, tag):
     t0, u0, tE, alpha, piE_N, piE_E, s, q, rho = TwoL1SParams(*theta)
 
     def model_fn(t):
-        delta_sN, delta_sE = sun_earth_projection(t, COORDS, t0_par)
+        delta_sN, delta_sE = delta_s(t, piE_N, piE_E)
         return binary_magnification_fs(binary_trajectory(t, t0, u0, tE, alpha, piE_N, piE_E, delta_sN, delta_sE), s, q, rho)
 
     # OGLE's calibration is computed even for MOA-only (just not plotted) -- keeps every
@@ -255,7 +273,7 @@ def plot_fit(theta, use_ogle=True, *, tag):
     # caustic geometry as an inset in the zoomed panel's corner, rather than its own subplot
     caustic = np.concatenate(caustic_curve(s, q))
     t_traj = np.linspace(zoom_start, zoom_end, 3000)
-    delta_sN_traj, delta_sE_traj = sun_earth_projection(t_traj, COORDS, t0_par)
+    delta_sN_traj, delta_sE_traj = delta_s(t_traj, piE_N, piE_E)
     traj = binary_trajectory(t_traj, t0, u0, tE, alpha, piE_N, piE_E, delta_sN_traj, delta_sE_traj)
     ax_caustic = make_square_inset_axes(ax_zoom, width=1.8, height=1.8, loc="upper right", borderpad=2.0)
     ax_caustic.scatter(caustic.real, caustic.imag, s=0.5, color="crimson")

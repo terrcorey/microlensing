@@ -157,10 +157,11 @@ installing a single package, `np.load`-ing a saved chain.
 
 Everything else goes to a compute node, including things that don't look
 heavy:
-- **Importing `scratch/fit_2l1s.py`** runs a full `fit_joint_pspl()`
-  Nelder-Mead at import time. So does anything that imports it:
-  `cassan_caustic.py`, `mcmc_fit_2l1s.py`, `compare_pspl_2l1s.py`,
-  `compare_2l1s_fits.py`, and the notebook.
+- **The first parallax-on 2L1S chi2/plot** runs a full `fit_joint_pspl()`
+  Nelder-Mead (`fit_2l1s.plain_pspl()`, cached, gives `t0_par`). Importing
+  `fit_2l1s.py` is safe since session 18, and parallax-free calls (`piE_N
+  = piE_E = 0`, e.g. everything Cassan) never trigger it: `delta_s()`
+  returns zeros, which is exact since `delta_s` only enters times `piE`.
 - Any fit, MCMC, grid or multi-start, and anything using a
   `Pool`/`ProcessPoolExecutor`. Those default to all the node's cores.
 - A finite-source chi2 costs ~0.8 s, so even "just a few" evaluations add up.
@@ -589,8 +590,8 @@ models on the identical footing -- raw flux, rescaled errors, profiled flux
 calibration, no parallax. `fit_2l1s.flux_residuals(A_ogle, A_moa)` (split out
 of `residuals()`) is the shared, model-agnostic half: any model's
 magnifications in, standardized residuals out. `run_pspl()` Nelder-Meads
-`(t0, u0, tE)` from `fit_2l1s.plain_fit` (the import-time `fit_joint_pspl`
-result, whose chi2 function is `plain_chi2_fn`); `run_2l1s()` polishes the
+`(t0, u0, tE)` from `fit_2l1s.plain_pspl()`'s fit (the cached
+`fit_joint_pspl` result, which also returns its chi2 function); `run_2l1s()` polishes the
 Cassan chain's best sample with `chi2_cassan`, initial simplex from the
 chain's per-parameter std (scipy's default 5%-of-value step would be ~140 d
 on `t_in`/`t_out`). k = 6 (PSPL) / 10 (2L1S), flux params counted.

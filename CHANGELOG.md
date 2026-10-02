@@ -1840,3 +1840,101 @@ Confirmed with the user (quick question round):
 - Not scheduled: early-caustic `q` degeneracy (session 16's item 2); a full
   3000-step rescaled Cassan MCMC with an autocorrelation check; moving
   `fit_2l1s.py`'s setup `fit_joint_pspl` out of import time.
+
+## 2026-10-02 — session 18
+
+### Built
+- `compare_pspl_2l1s.plot_comparison()` saves at `dpi=300` (was 150); rerun as
+  job 4894776 (5:22). Fit results identical to job 4883449 (Delta BIC 571.57),
+  so the pipeline is deterministic end to end.
+- **`fit_2l1s.py` no longer fits at import** (Claude, user-approved):
+  `plain_pspl()` (`@cache`) runs the `fit_joint_pspl` bootstrap on first call,
+  and `delta_s(t, piE_N, piE_E)` returns zeros when parallax is off. That's
+  exact, because `delta_s` only enters multiplied by `piE`, so parallax-free
+  callers (all of Cassan, the compare script) never trigger the fit.
+  `_data_delta_s()` caches the data-epoch ephemeris. The `plain_fit`,
+  `plain_chi2_fn`, `t0_par` and `delta_s*_{ogle,moa}` globals are gone, and
+  `compare_pspl_2l1s.run_pspl(x0)` takes `plain_pspl()`'s fit.
+- `plot_comparison()` prints both models' `(fs_ogle, fb_ogle, fs_moa)`.
+  Verified by job 4895118: every chi2/BIC unchanged.
+
+### Learned & open questions
+- **Why the compare plot has two PSPL curves but one 2L1S curve**: the data
+  are put into A with the 2L1S calibration, and PSPL's predicted *flux* is
+  mapped back through it. The mapping differs by instrument. For OGLE it's
+  affine, `(fs_p/fs_2) A_p + (fb_p - fb_2)/fs_2`: a scale plus an offset. For
+  MOA it's a pure scaling about A=1, `1 + (fs_p/fs_2)(A_p - 1)`, so MOA is
+  pinned at baseline because DIA flux has no blend term. If PSPL described
+  both instruments with one consistent A(t), the two dashed curves would
+  overlap, so the gap between them measures that inconsistency. Two sources:
+  the blend-tE degeneracy (PSPL tE=46.5 d vs 2L1S ~65 d splits OGLE's
+  baseline flux between fs and fb differently), and the per-instrument fs
+  being free, since MOA samples the caustic spike and OGLE mostly doesn't. The
+  gap is a few percent at the peak, so calibration isn't where Delta BIC comes
+  from. The residual rows are a fair comparison: both models' display
+  residuals are (flux residual)/fs_2, one shared denominator.
+- **Calibrations, quantified**: PSPL `fs_ogle`=0.380, `fb_ogle`=-0.079,
+  `fs_moa`=1019.8; 2L1S 0.225, +0.074, 616.3. PSPL's source is ~1.7x
+  brighter in *both* instruments (fs ratio 1.685 OGLE, 1.655 MOA), the
+  blend-tE degeneracy (shorter tE, less blending). Because the ratio is
+  nearly the same for both, the two dashed curves overlap. PSPL's OGLE blend
+  is *negative*, a mildly unphysical sign of the wrong model.
+
+### Next session
+Confirmed with the user (grilling rounds, 2026-10-02). The user writes the code,
+and Claude guides and tidies up with ponytail afterwards.
+
+1. **Rescaled Cassan MCMC on the cluster**: the full 3000-step run on rescaled
+   errors (the current chain is only ~200 steps). Submit it first, then work
+   on 2 while it runs.
+2. **Generic config-driven pipeline** (the main goal; it absorbs "parallax in
+   both models"):
+   - **Config**: one TOML per event (`configs/<short>.toml`, stdlib
+     `tomllib`) giving data paths, coordinates, instruments, limb darkening and
+     grid ranges. *No literature initial guesses.*
+   - **Instruments**: a list. Each has a `kind` (`mag` -> fs+fb profiled; `dia`
+     -> fs only), its own error rescale `K`, and a fixed linear limb-darkening
+     coefficient. `profile_flux()`/`flux_residuals()` loop over the list
+     instead of hardcoding OGLE/MOA.
+   - **Models**: FSPL (`t0, u0, tE, rho, piE_N, piE_E`) vs 2L1S (those plus
+     `s, q, alpha`), finite source + parallax + LD in both, fs/fb profiled.
+     **Finite source via VBBinaryLensing** (new dependency); our own
+     `binary_magnification_fs` stays as a cross-check. No lens orbital motion
+     and no xallarap for now.
+   - **Search, fully blind**: (i) an automatic FSPL fit; (ii) a 2L1S grid over
+     `log s` in [-1, 1] step 0.05 x `log q` in [-6, 0] step 0.25 (1025 cells,
+     these defaults overridable in the config). Both families run in each
+     cell: Cassan (inner grid over sigma_in/sigma_out/t_in/t_out, times
+     spanning the FSPL t0 +/- a few tE, looping over *every* caustic rather
+     than a hardcoded index) and standard (16 alphas, t0/u0/tE/rho seeded from
+     FSPL, local Nelder-Mead). Grid stage uses rho fixed at FSPL's rho, not
+     point source. (iii) Distinct local minima of the Delta chi2(s, q) map ->
+     full refinement with everything free. (iv) MCMC on every refined minimum
+     within Delta chi2 <~ 10 of the best, so degeneracies show as separate
+     modes. (v) Plot the Delta chi2(s, q) map.
+   - **Likelihood**: Gaussian chi2 on rescaled errors throughout (O-03-BLG235
+     convention), `K` derived at the best 2L1S fit; also report Delta BIC with
+     `K` derived at the FSPL fit (the circularity matters for a ~2% signal).
+   - Generalised code **graduates out of `scratch/`** (code and outputs
+     together). Old O-03-BLG235-only scripts (multi-start,
+     `compare_2l1s_fits.py`) stay in `scratch/` as history. The old PSPL
+     pipeline (`mcmc_fit*.py`, `preprocess_binary_data.py`) is left alone,
+     to be retired once O-05-BLG086 also runs as a config.
+   - **Regression test**: O-03-BLG235 as a config must recover Bond's
+     solution and a large Delta BIC (571.6 under the old point-source-PSPL
+     footing; expect it to shrink somewhat against FSPL).
+3. **OGLE-2005-BLG-169** (`O-05-BLG169`) through the generic pipeline:
+   - Gould et al. 2006 data: 4 NASA Exoplanet Archive tables (Clear 74, I 341,
+     I 137, R 31 points) for 5 telescopes, so one is missing or merged. Check
+     this on download.
+   - Bennett et al. 2015 data (Stanek MDM + SoDoPHOT CTIO V/I/H): the user is
+     requesting it from the authors. It becomes a second config when it
+     arrives.
+   - Analyse both. Done = full FSPL and 2L1S fits plus the BIC verdict. The
+     user is sceptical of the planet.
+   - Literature (validation only, *not* seeds): s~1.02, q~6-8e-5, tE~42 d,
+     t*~0.020 d (rho~5e-4), A_max~800, three near-degenerate alpha minima
+     (~118, 88, 103 deg), and only the caustic exit is covered, by MDM's
+     10-s cadence, with a ~2% signal.
+- On the back burner: MOA-2019-BLG-008. Dropped for now: the early-caustic
+  `q` degeneracy.

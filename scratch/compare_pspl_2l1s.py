@@ -17,20 +17,20 @@ from scipy.optimize import minimize
 
 plt.rcParams.update({"font.size": 14})
 
-from fit_2l1s import (flux_residuals, plain_fit, plain_chi2_fn, profile_flux,
+from fit_2l1s import (flux_residuals, plain_pspl, profile_flux,
                       ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err)
 from lc_models import binary_magnification_fs, binary_trajectory, magnification, trajectory
 from preprocess_binary_data import moa_to_magnification, ogle_to_magnification
 from zoom_utils import find_zoom_window
 from cassan_caustic import OUT_DIR, SHORT_NAME, CassanParams, chi2_cassan, to_standard
 
-def run_pspl():
+def run_pspl(x0):
     def chi2(theta):
         t0, u0, tE = theta
         A_ogle = magnification(trajectory(ogle_time, t0, u0, tE, 0, 0, 0, 0))
         A_moa = magnification(trajectory(moa_time, t0, u0, tE, 0, 0, 0, 0))
         return np.sum(flux_residuals(A_ogle, A_moa) ** 2)
-    result = minimize(chi2, x0=plain_fit[:3], method="Nelder-Mead",
+    result = minimize(chi2, x0=x0[:3], method="Nelder-Mead",
                     options={"xatol": 1e-6, "fatol": 1e-6, "maxiter": 20000})
     return result.x, result.fun
 
@@ -56,6 +56,8 @@ def plot_comparison(pspl_theta, cassan_theta):
         "2L1S": lambda t: binary_magnification_fs(binary_trajectory(t, *std[:4], 0, 0, 0, 0), std.s, std.q, std.rho),
     }
     cal = {name: profile_flux(A(ogle_time), A(moa_time)) for name, A in models.items()}
+    for name, (fs_o, fb_o, fs_m) in cal.items():
+        print(f"{name} calibration: fs_ogle = {fs_o:.5g}, fb_ogle = {fb_o:.5g}, fs_moa = {fs_m:.5g}")
     fs_ogle, fb_ogle, fs_moa = cal["2L1S"]
     ogle_A, ogle_A_err = ogle_to_magnification(ogle_mag, ogle_mag_err, fs_ogle, fb_ogle)
     moa_A, moa_A_err = moa_to_magnification(moa_flux, moa_flux_err, fs_moa)
@@ -109,12 +111,13 @@ def plot_comparison(pspl_theta, cassan_theta):
     out_dir = OUT_DIR.parent / "compare"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{SHORT_NAME}_pspl_vs_2l1s.png"
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     print(f"saved {out_path}")
 
 if __name__ == "__main__":
-    best_fit, chi2 = run_pspl()
+    plain_fit, plain_chi2_fn = plain_pspl()
+    best_fit, chi2 = run_pspl(plain_fit)
     t0, u0, tE = best_fit
     best_fit_2l1s, cassan_chi2 = run_2l1s()
     print(f"PSPL chi2 (flux space) = {chi2:.2f} | t0 = {t0:.5f}, u0 = {u0:.5f}, tE = {tE:.5f}")
