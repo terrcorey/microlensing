@@ -1,0 +1,29 @@
+# Metadata
+full_name = "OGLE-2003-BLG-235"
+short_name = "O-03-BLG235"
+ra = "18h01m16.35s"
+dec = "-28d53m42.00s"
+
+[grid]
+n_alpha = 16
+#[l_bound, u_bound, step_size]
+log_s = [-1.0, 1.0, 0.05]
+log_q = [-6.0, 0.0, 0.25]
+
+[[instruments]]
+name = "OGLE"
+path = "data/OGLE-2003-BLG-235_OGLE.tbl.txt"
+kind = "mag"
+band = "I"
+K = 1.0
+ld = 0.5
+time_fmt = "Geocentric JD"
+
+[[instruments]]
+name = "MOA"
+path = "data/OGLE-2003-BLG-235_MOA.tbl.txt"
+kind = "dia"
+band = "I"
+K = 1.0
+ld = 0.5
+time_fmt = "HJD"

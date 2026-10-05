@@ -51,7 +51,9 @@ notebook-style exploration.
    importing it). Use `srun --partition=...` for short interactive runs
    and `sbatch` for anything long or parallel; see "Login node vs compute
    nodes" under Setup and commands. If unsure, ask before running.
-
+8. When you submit a job to be run on the cluster, don't stop working and
+   wait for the job to finish. Just move on and continue with the rest of
+   the work.
 
 
 ## Instructions
@@ -95,7 +97,50 @@ python3 mcmc_fit_binary.py --stage=quicklook
 python3 mcmc_fit_binary.py             # default --stage=mcmc: runs both fits below, in order:
                                         #   run_ogle_only_diagnostic() -> fit_lc/corner_plots *_ogle_only.png
                                         #   run_joint_fit()            -> fit_lc/O-03-BLG235.png + corner_plots/O-03-BLG235.png (canonical)
+
+python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
+                                        # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
 ```
+
+## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
+
+The long-term direction above has started. Three pieces, independent of the
+old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
+
+- `input/<short>.toml`: one config per event (stdlib `tomllib`): `short_name`,
+  `ra`/`dec`, a `[grid]` table (`log_s`/`log_q` as `[lo, hi, step]`,
+  `n_alpha`), and one `[[instruments]]` entry per telescope: `name`, `path`,
+  `kind` (`"mag"` -> flux = fs*A + fb; `"dia"` -> flux = fs*(A - 1)), `band`,
+  `K` (manual error multiplier, applied to the raw error before mag->flux),
+  `ld` (VBBL's linear `a1`, u convention), `time_fmt` (`"HJD"`,
+  `"HJD-2450000"`, or `"Geocentric JD"` -> astropy heliocentric light-travel
+  correction, up to ~8 min). No literature initial guesses.
+- `event.py` (library): `load_event()` -> `Event(short_name, coords, grid,
+  instruments)`, each an `Instrument` NamedTuple holding (time, flux,
+  flux_err) plus `dsN`/`dsE` parallax offsets (zero until
+  `with_t0_par()`). `flux_residuals(event, A)` takes one magnification array
+  per instrument and profiles fs/fb with one weighted `lstsq` (kind only picks
+  the design matrix); `error_scale()`/`rescale()` derive/apply per-instrument
+  k. Nothing loads at import time; spawned Pool workers get the Event via
+  `initializer`.
+- `search.py` (CLI): (i) blind FSPL fit (t0 from the median-smoothed peak,
+  u0 x tE grid, no parallax -> `t0_par`, then parallax from both u0 signs,
+  k derived here); (ii) (s, q) grid, every cell runs Cassan over every
+  caustic (t_in/t_out candidates = largest FSPL residuals + t0 +/- tE) and
+  `n_alpha` standard starts, rho fixed at FSPL's, parallax off, cached as
+  `results/<short>/grid.npz`; (iii) `minimum_filter` local minima;
+  (iv) refinement with everything free from (u0, alpha) and (-u0, -alpha),
+  emcee (12000 steps, tau printed) on modes within delta-chi2 10; (v)
+  delta-chi2 map + BIC with k from 2L1S and from FSPL.
+- Magnification is all VBBinaryLensing (`lc_models.fspl_magnification`,
+  `binary_magnification_vbbl`, one module-level `_VBBL`, `RelTol=1e-3`):
+  its frame matches `binary_trajectory()`'s exactly, ~9 ms per O-03-BLG235
+  light curve vs ~1 s for `binary_magnification_fs` (kept as a cross-check;
+  the ~100x is contour integration vs 2-D disk averaging, plus cheaper root
+  solves -- session 19).
+- Outputs: `results/<short>/` (grid.npz, delta_chi2_map.png, refined.npz,
+  mcmc_mode*_corner.png/_chain.npz). `slurm/search.sbatch` takes the config
+  path as `$1`, 24 CPUs (32 hits `QOSMaxCpuPerJobLimit` on small-short).
 
 `mcmc_fit_binary.py` also takes `--dataset` (default `O-03-BLG235`), backed by a
 `DATASETS` dict keyed by short name (raw OGLE filename + dataset-specific
@@ -581,9 +626,11 @@ original error bars): best sample chi2=1643.22 (below the Nelder-Mead
 `s`=1.1197(5), but `q`=0.0058(+18/-22), broad enough to span both Bond's best
 (0.0039) and early-caustic (0.0070) solutions; `t_in` is loose (+1.4/-0.9 d),
 `t_out` tight (+/-0.006 d). Rerun on the rescaled errors (below, job
-4872304, only ~200 steps kept): best sample chi2=1521.45, `q`=0.0069(+12/-20)
+4872304, full 3000 steps, no autocorrelation check yet): best sample chi2=1521.45, `q`=0.0069(+12/-20)
 -- median now at Bond's early-caustic value -- `rho`=0.00098(+12/-11),
-`s`=1.1196(55) (10x wider than the first run's, unexplained).
+`s`=1.1196(55) (10x wider than the first run's, unexplained). Rerun with the autocorrelation check (session 19, job 4912132, unflattened
+`chain` now saved in the `.npz`): tau ~110-230 steps, so 3000 steps is only
+~13 tau -- **not converged**; the `q` posterior isn't quotable.
 
 **PSPL vs 2L1S BIC (session 17)**: `scratch/compare_pspl_2l1s.py` scores both
 models on the identical footing -- raw flux, rescaled errors, profiled flux
@@ -620,6 +667,7 @@ measuring on already-rescaled errors gives k~1.
 
 - `raw_lc/`, `fit_lc/`, `hist_plots/`, `corner_plots/` hold ONLY the regular
   pipeline's canonical outputs (the ones documented in "Setup and commands").
+- `results/<short>/` holds the config-driven pipeline's outputs (`search.py`).
 - `scratch/` holds both the code and the output of every one-time/
   diagnostic/not-yet-graduated script (currently: fit_2l1s.py,
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,

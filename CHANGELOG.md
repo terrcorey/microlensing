@@ -1788,8 +1788,9 @@ Confirmed with the user (quick question round):
   (+12/-20), `rho`=0.00098(+12/-11), `s`=1.1196(+56/-54), `t_out` still
   +/-0.006 d. The `q` median moved onto Bond's early-caustic value (0.0070);
   `s`'s width grew ~10x, far more than a 1.19 error rescale explains. Only
-  4800 samples (~200 steps x 32 walkers kept, not the 3000-step default) and
-  no autocorrelation check -- the posterior shape is weak evidence so far.
+  4800 samples (the full 3000 steps: 32 walkers x 2250 post-burn-in / thin 15 --
+  corrected session 19, was misread as ~200 steps) but no autocorrelation
+  check -- the posterior shape is weak evidence so far.
 - **PSPL on the 2L1S footing** (srun, rescaled errors, no parallax):
   chi2=2121.61, t0=2847.815, u0=0.2145, tE=46.45 d. `fit_joint_pspl`'s own
   chi2 (OGLE in mag space, fs/fb free) at `plain_fit` = 2121.76 -- the
@@ -1837,8 +1838,8 @@ Confirmed with the user (quick question round):
 2. **Parallax in both models** (secondary): redo the BIC with parallax on for
    both, the strongest PSPL null. Blocked on the Cassan fit gaining parallax
    (`to_standard()` hardcodes `piE_N=piE_E=0`).
-- Not scheduled: early-caustic `q` degeneracy (session 16's item 2); a full
-  3000-step rescaled Cassan MCMC with an autocorrelation check; moving
+- Not scheduled: early-caustic `q` degeneracy (session 16's item 2); an
+  autocorrelation check on the rescaled Cassan MCMC; moving
   `fit_2l1s.py`'s setup `fit_joint_pspl` out of import time.
 
 ## 2026-10-02 — session 18
@@ -1885,7 +1886,8 @@ Confirmed with the user (grilling rounds, 2026-10-02). The user writes the code,
 and Claude guides and tidies up with ponytail afterwards.
 
 1. **Rescaled Cassan MCMC on the cluster**: the full 3000-step run on rescaled
-   errors (the current chain is only ~200 steps). Submit it first, then work
+   errors (session 19: job 4872304 already was one -- see session 17's
+   corrected note; only the autocorrelation check is missing). Submit it first, then work
    on 2 while it runs.
 2. **Generic config-driven pipeline** (the main goal; it absorbs "parallax in
    both models"):
@@ -1938,3 +1940,74 @@ and Claude guides and tidies up with ponytail afterwards.
      10-s cadence, with a ~2% signal.
 - On the back burner: MOA-2019-BLG-008. Dropped for now: the early-caustic
   `q` degeneracy.
+
+## 2026-10-05 — session 19
+
+### Built
+- **Autocorrelation check** in `scratch/cassan_caustic.run_mcmc()` (prints tau
+  per parameter and nsteps/max(tau); saves the unflattened `chain` too). Rerun
+  as job 4912132.
+- **Config-driven pipeline, M1-M5 written** (see CLAUDE.md's new section):
+  `input/O-03-BLG235.toml` (user), `event.py` (loader + per-instrument flux
+  calibration: user-written, Claude-fixed; parallax offsets + error rescaling:
+  Claude), `search.py` stages (i)-(v) (Claude, at the user's request),
+  `slurm/search.sbatch`.
+- **VBBinaryLensing 3.7.0** wrappers in `lc_models.py`
+  (`fspl_magnification`, `binary_magnification_vbbl`), pinned in
+  `requirements.txt`.
+- `.vscode/settings.json`: default interpreter `.venv/bin/python` (Pylance had
+  been on RHEL's system Python 3.9: no `tomllib`, no astropy).
+
+### Learned & open questions
+- **Session 17's "only ~200 steps" was a misreading**: 4800 samples = 32
+  walkers x 2250 post-burn-in / thin 15, so job 4872304 was a full 3000-step
+  run. Corrected in place (sessions 17/18 entries, CLAUDE.md).
+- **The Cassan chain isn't converged**: tau ~110-230 steps (job 4912132), so
+  3000 steps ~ 13 tau (want > 50). Same q median as before (0.0071), so the
+  early-caustic-q posterior is still unquotable. search.py's MCMC defaults to
+  12000 steps because of this.
+- **M1 passed**: point-source PSPL at session 17's (t0, u0, tE) through the new
+  loader gives chi2 = 2121.61 exactly. Treating OGLE's times as "Geocentric
+  JD" (+light-travel correction, +7.4 min on the caustic-exit night) gives
+  2121.53 -- PSPL can't tell; the 2L1S caustic exit (t_out +/- 8.6 min) can.
+  The config now uses "Geocentric JD", as the archive header says.
+- **VBBL conventions (M2)**: `BinaryMag2`'s frame = `binary_trajectory()`'s
+  (COM origin, heavier mass left; 1e-13 vs `binary_magnification()`, no
+  shift). `a1` is the u convention, I = I0 (1 - a1 (1 - sqrt(1 - r^2/rho^2))).
+  `ESPLMag2` needs `LoadESPLTable(<pkg>/data/ESPL.tbl)` or returns 0 near the
+  lens. Limb darkening does change `BinaryMag2` (MOA peak 12.09 -> 12.34 at
+  a1 = 0.5). vs `binary_magnification_fs`: median 2e-15, max 5.4%.
+- **Why VBBL is ~107x faster** (subagent, measured): ours spends ~90% on 20
+  near-caustic points x 4000-point disk average x 14.5 us torch eigvals
+  (~50 ms/point); VBBL contour-integrates the image boundary adaptively
+  (~40 us/point, tens of root solves, polished roots in C++). Our caustic +
+  gate overhead alone (80 ms) is ~9x VBBL's whole light curve. No cheap fix;
+  ours stays a cross-check only.
+- **M3 works** (1 s, 2123 FSPL chi2 calls): no parallax chi2 = 2296.81
+  (t0 2847.79, u0 0.209, tE 47.6 d, rho 1.5e-4); parallax chi2 = 2289.21
+  (piE_N 0.48, piE_E -0.37, u0 0.239, tE 43.5 d). k_FSPL = 1.42 (OGLE),
+  1.17 (MOA). Cassan time candidates included 2835.7, 2840.8, 2842.0 --
+  the anomaly-residual trick finds Bond's entry/exit blind.
+- **M4 cost unknown**: one grid cell ran > 4 min single-core (Cassan inner grid
+  ~3000 caustic-crossing trajectories per caustic is the suspect). Test job
+  4913305 prints calls and ms/call per cell. The full run went out anyway:
+  1025 cells / 24 cores is hours, not days.
+- Cluster: `small-short` rejects 32 CPUs per job (`QOSMaxCpuPerJobLimit`);
+  24 works. `/tmp` isn't visible from compute nodes (pipe scripts via stdin or
+  keep them in the repo). `srun` output is block-buffered unless `python -u`.
+- `time_fmt` typo traps caught in review: `"data\raw"` in a TOML basic string
+  is a carriage return, and Windows backslash paths don't exist on Linux.
+
+### Next session
+Confirmed with the user (quick question round):
+1. **Validate M3-M5 on O-03-BLG235** from job 4913330's output
+   (`slurm/output/slurm-search-4913330.out`, `results/O-03-BLG235/`): map
+   minimum near Bond's (s, q) ~ (1.12, 0.004)? refinement recovers his
+   solution? MCMC converged (nsteps/tau > 50)? Delta BIC vs FSPL (expect
+   below 571.6)? Fix what it surfaces; if cells were too slow (test job
+   4913305 prints calls and ms/call), trim the Cassan inner grid first.
+2. **Then M6: OGLE-2005-BLG-169 through the pipeline** to a 2L1S vs FSPL
+   verdict: download the 4 NASA Exoplanet Archive tables (check the 5
+   telescopes vs 4 tables), write `input/O-05-BLG169.toml`, submit
+   `slurm/search.sbatch`. Literature (s~1.02, q~6-8e-5, ~2% signal on the
+   caustic exit) is for validation only.

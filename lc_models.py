@@ -1,20 +1,28 @@
 """Functional forms used to model a microlensing light curve.
 
-Point-source point-lens (PSPL / Paczynski 1986), plus a point-source
-binary-lens (2L1S) extension. Further extensions (finite source, annual
-parallax) can be added here later as their own functions once we actually
-need them.
+Point-source point-lens (PSPL / Paczynski 1986), a binary-lens (2L1S)
+extension (point and finite source), annual parallax, and VBBinaryLensing
+wrappers (finite source + limb darkening) for the config-driven pipeline.
 """
+
+from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
 import torch
+import VBBinaryLensing
 from astropy.coordinates import get_body_barycentric_posvel
 from astropy.time import Time
 from scipy.optimize import linear_sum_assignment
 import astropy.units as u
 
 ZERO_POINT_MAG = 18.0  # arbitrary; cancels out of every fitted flux ratio
+
+# One VBBL instance per process (spawned Pool workers get their own on import).
+# RelTol: VBBL's default is only an absolute Tol, too loose at A ~ 1000.
+_VBBL = VBBinaryLensing.VBBinaryLensing()
+_VBBL.LoadESPLTable(str(Path(VBBinaryLensing.__file__).parent / "data" / "ESPL.tbl"))
+_VBBL.RelTol = 1e-3
 
 
 def mag_to_flux(mag, mag_err):
@@ -394,3 +402,20 @@ def sun_earth_projection(t, coords, t0_par):
     delta_sE = s0_E - s_E + dt_days * v0_E
 
     return delta_sN, delta_sE
+
+
+def fspl_magnification(u, rho, ld):
+    """Finite-source point-lens A(u) via VBBL's ESPLMag2. `rho` is the source radius
+    in Einstein radii; `ld` is VBBL's linear limb-darkening a1, i.e. the u convention
+    I(r) = I(0) (1 - ld (1 - sqrt(1 - r^2/rho^2)))."""
+    _VBBL.a1 = ld
+    return np.array([_VBBL.ESPLMag2(x, rho) for x in u])
+
+
+def binary_magnification_vbbl(zeta, s, q, rho, ld):
+    """Finite-source 2L1S A(zeta) via VBBL's BinaryMag2 -- `zeta` in binary_trajectory()'s
+    frame, which is VBBL's own (COM origin, heavier mass on the left: matches
+    binary_magnification() to 1e-13 with no shift). `ld` as in fspl_magnification().
+    binary_magnification_fs() stays as an independent cross-check, ~80x slower."""
+    _VBBL.a1 = ld
+    return np.array([_VBBL.BinaryMag2(s, q, z.real, z.imag, rho) for z in zeta])

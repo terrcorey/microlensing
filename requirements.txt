@@ -22,4 +22,5 @@ setuptools==78.1.0
 six==1.17.0
 torch==2.14.0
 tqdm==4.70.1
+VBBinaryLensing==3.7.0
 typing_extensions==4.16.0

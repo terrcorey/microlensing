@@ -118,6 +118,10 @@ def run_mcmc(best, nwalkers=32, nsteps=3000, seed=42):
         sampler = emcee.EnsembleSampler(nwalkers, len(best), log_probability, pool=pool)
         sampler.run_mcmc(p0, nsteps, progress=True)
 
+    # quiet=True: warn instead of raising when nsteps < 50 tau -- that warning is the verdict
+    tau = sampler.get_autocorr_time(quiet=True)
+    print(f"[mcmc-cassan] tau = {dict(zip(CassanParams._fields, np.round(tau, 1)))}, "
+          f"nsteps/max(tau) = {nsteps / np.max(tau):.1f} (want > 50)")
     samples, log_probs = flat_chain(sampler, discard=nsteps // 4)
     samples[:, :2] %= 1  # sigma is periodic
     top = CassanParams(*samples[np.argmax(log_probs)])
@@ -129,8 +133,9 @@ def run_mcmc(best, nwalkers=32, nsteps=3000, seed=42):
 
     plot_fit(to_standard(top), tag="_cassan_mcmc")
     save_corner(samples, list(CassanParams._fields), top, str(OUT_DIR / f"{SHORT_NAME}_2l1s_cassan_mcmc_corner.png"))
+    # chain: unflattened (nsteps, nwalkers, ndim), so tau can be recomputed without a rerun
     np.savez(OUT_DIR / f"{SHORT_NAME}_2l1s_cassan_mcmc_chain.npz", samples=samples, log_probs=log_probs,
-             labels=CassanParams._fields)
+             labels=CassanParams._fields, chain=sampler.get_chain())
     return sampler, samples
 
 

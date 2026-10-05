@@ -37,7 +37,6 @@ class TwoL1SParams(NamedTuple):
     q: float
     rho: float
 
-
 SHORT_NAME = "O-03-BLG235"
 
 # Raw flux, not the old data/processed/*_magnification.dat -- those froze fs/fb from a
