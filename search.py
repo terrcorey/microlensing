@@ -29,9 +29,10 @@ from scipy.ndimage import median_filter, minimum_filter
 from scipy.optimize import minimize
 
 from event import Event, chi2, error_scale, flux_residuals, load_event, rescale, with_t0_par
-from lc_models import (binary_magnification_vbbl, binary_trajectory, cassan_caustic, cassan_to_standard,
+from lc_models import (ZERO_POINT_MAG, binary_magnification_vbbl, binary_trajectory, cassan_caustic, cassan_to_standard,
                        caustic_curve, fspl_magnification, trajectory)
 from mcmc_fit import flat_chain, save_corner
+from zoom_utils import find_zoom_window
 
 N_SIGMA = 8          # Cassan inner grid: entry/exit abscissae per caustic
 N_REFINE = 10        # lowest local minima of the (s, q) map that get refined
@@ -152,12 +153,12 @@ def _init(event, *ctx):
     EVENT, CTX = event, ctx
 
 
-def grid_cell(sq):
+def grid_cell(k_sq):
     """Best parallax-free 2L1S at fixed (s, q) and rho = FSPL's, over both families:
     Cassan (inner grid over entry/exit abscissa x candidate times, every caustic, Nelder-Mead
     the best 2) and standard (n_alpha alphas from FSPL's t0/u0/tE, short Nelder-Mead each).
-    Returns (chi2, Binary)."""
-    s, q = sq
+    Takes (cell index, (s, q)), returns (cell index, chi2, Binary) for imap_unordered."""
+    k, (s, q) = k_sq
     plain, times, n_alpha = CTX
     rho = plain.rho
 
@@ -172,9 +173,14 @@ def grid_cell(sq):
     sigmas = np.arange(N_SIGMA) / N_SIGMA
     for caustic in caustics:
         def cassan(x, caustic=caustic):
-            return c2(*cassan_to_standard(caustic, *x)) if x[3] > x[2] else np.inf
+            if x[3] <= x[2]:
+                return np.inf
+            t0, u0, tE, alpha = cassan_to_standard(caustic, *x)
+            # a tiny caustic crossed between candidate times days apart implies tE ~ 1e4-1e6 d: the
+            # source then sits on the caustic at every epoch and one VBBL chi2 takes minutes (session 20)
+            return c2(t0, u0, tE, alpha) if 0.1 < tE / plain.tE < 10 else np.inf
         grid = [(si, so, ti, to) for si, so in product(sigmas, sigmas) if si != so for ti, to in combinations(times, 2)]
-        for x0 in sorted(grid, key=cassan)[:2]:
+        for x0 in [x for x in sorted(grid, key=cassan)[:2] if np.isfinite(cassan(x))]:
             x, _ = nelder_mead(cassan, x0, (0.02, 0.02, 0.01 * plain.tE, 0.01 * plain.tE), maxfev=600)
             t0, u0, tE, alpha = cassan_to_standard(caustic, *x)
             results.append((c2(t0, u0, tE, alpha), Binary(t0, u0, tE, rho, 0, 0, s, q, alpha)))
@@ -184,7 +190,7 @@ def grid_cell(sq):
         x, c = nelder_mead(lambda x: c2(*x), x0, (0.01 * plain.tE, 0.05 * abs(plain.u0) + 1e-3, 0.05 * plain.tE, 0.05),
                            maxfev=300)
         results.append((c, Binary(x[0], x[1], x[2], rho, 0, 0, s, q, x[3])))
-    return min(results, key=lambda r: r[0])
+    return (k, *min(results, key=lambda r: r[0]))
 
 
 def axis(spec):
@@ -204,10 +210,10 @@ def run_grid(event: Event, plain: FSPL, path: Path):
     cells = [(10 ** a, 10 ** b) for a, b in product(log_s, log_q)]
     chi2_map, theta = np.empty(len(cells)), np.empty((len(cells), len(Binary._fields)))
     with get_context("spawn").Pool(initializer=_init, initargs=(event, plain, times, event.grid["n_alpha"])) as pool:
-        for k, (c, p) in enumerate(pool.imap(grid_cell, cells)):
+        for n, (k, c, p) in enumerate(pool.imap_unordered(grid_cell, enumerate(cells)), 1):
             chi2_map[k], theta[k] = c, p
-            if k % 50 == 0:
-                print(f"[grid] {k}/{len(cells)}")
+            if n % 50 == 0:
+                print(f"[grid] {n}/{len(cells)}")
     chi2_map, theta = chi2_map.reshape(log_s.size, log_q.size), theta.reshape(log_s.size, log_q.size, -1)
     np.savez(path, log_s=log_s, log_q=log_q, chi2=chi2_map, theta=theta)
     return dict(log_s=log_s, log_q=log_q, chi2=chi2_map, theta=theta)
@@ -260,6 +266,37 @@ def run_mcmc(event: Event, best: Binary, out: Path, tag: str, nwalkers=32, nstep
              labels=Binary._fields)
 
 
+# ---- plots -----------------------------------------------------------------------------------
+
+def plot_raw(event: Event, path: Path):
+    """Raw data, no model: full baseline + peak zoom. kind="mag" instruments in their own
+    (relative) magnitudes -- zero points differ, so offsets between them are expected;
+    kind="dia" on a twin flux axis. Zoom window from the longest-baseline instrument."""
+    longest = max(event.instruments, key=lambda i: np.ptp(i.time))
+    zoom = find_zoom_window(longest.time, longest.flux, longest.flux_err)
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    for ax, xlim in zip(axes, (None, zoom)):
+        twin = None
+        for i in event.instruments:
+            if i.kind == "mag":
+                ax.errorbar(i.time, ZERO_POINT_MAG - 2.5 * np.log10(i.flux), 2.5 / np.log(10) * i.flux_err / i.flux,
+                            fmt=".", ms=3, elinewidth=0.5, label=f"{i.name} ({i.band})")
+            else:
+                twin = twin or ax.twinx()
+                twin.errorbar(i.time, i.flux, i.flux_err, fmt=".", ms=3, elinewidth=0.5, color="gray",
+                              label=f"{i.name} ({i.band}, DIA flux)")
+                twin.set_ylabel("DIA flux")
+        ax.invert_yaxis()
+        ax.set(xlabel="HJD - 2450000", ylabel="magnitude (per-instrument zero point)", xlim=xlim)
+    axes[0].legend(fontsize=8)
+    axes[0].set_title(f"{event.short_name}: full baseline")
+    axes[1].set_title("peak")
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+    print(f"saved {path}")
+
+
 # ---- (v) map + BIC ----------------------------------------------------------------------------
 
 def plot_map(grid, minima, path: Path):
@@ -292,8 +329,14 @@ def out_dir(event: Event) -> Path:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Config-driven FSPL vs 2L1S search.")
     parser.add_argument("--config", required=True, help="path to the event's TOML")
-    base = load_event(parser.parse_args().config)
+    parser.add_argument("--stage", choices=["raw", "search"], default="search",
+                        help="raw: raw light-curve plot only (no fitting, login-node safe)")
+    args = parser.parse_args()
+    base = load_event(args.config)
     out = out_dir(base)
+    plot_raw(base, out / "raw_lc.png")
+    if args.stage == "raw":
+        raise SystemExit
 
     plain, fspl, base = fit_fspl(base)  # base now carries the parallax offsets at t0_par
     k_fspl = error_scale(base, fspl_A(base, fspl))

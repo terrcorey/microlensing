@@ -2011,3 +2011,73 @@ Confirmed with the user (quick question round):
    telescopes vs 4 tables), write `input/O-05-BLG169.toml`, submit
    `slurm/search.sbatch`. Literature (s~1.02, q~6-8e-5, ~2% signal on the
    caustic exit) is for validation only.
+
+## 2026-10-06 — session 20
+
+### Built
+- **`search.py` grid fixed** (Claude): job 4913330 ran 16.5 h without finishing
+  one cell and was cancelled. Cassan trials whose tE is outside 0.1-10x FSPL's
+  now score inf before any chi2, and the Nelder-Mead polish skips all-inf starts.
+  `run_grid()` uses `imap_unordered` (cell index passed through), so progress
+  prints count finished cells, not the first-in-order one.
+- **`search.py --stage=raw`** (Claude): `plot_raw()` -> `results/<short>/raw_lc.png`
+  (full baseline + OGLE-derived zoom; `"mag"` instruments in their own relative
+  mags, `"dia"` on a twin flux axis), then exit -- no fitting, login-node safe.
+  The full run writes it first too.
+- **OGLE-2005-BLG-169 data** (`O-05-BLG169`): `download_data.py` gains 4 NASA
+  Exoplanet Archive tables (UID 0300030, Gould et al. 2006; user, Claude
+  tidied -- files named by telescope, `NASA_BASE` double slash fixed);
+  `dataset_names.txt` mapping (user); `input/O-05-BLG169.toml` (Claude).
+- Submitted: O-03-BLG235 search (job 4922475) and O-05-BLG169 search (job 4922480).
+
+### Learned & open questions
+- **Why the grid hung** (srun timing, jobs 4922439/4922466): chi2 cost scales
+  with the tE a Cassan start implies. Bond's cell: tE 4-527 d, 10-79 ms/call.
+  Wide (0.8, -3)'s 1e-4 caustic: tE 1.6e4-1.6e6 d, 9.5-256 **s**/call (the
+  source disk sits on the caustic at every epoch). (-1, -6)'s 1e-6-1e-8
+  caustics: not one call in 20 min. Standard starts: 3 ms everywhere. With the
+  guard, whole cells take 111 s (Bond), 340 s (wide), 171 s (corner); ~2.5 h
+  for 1025 cells on 24 cores, and the first 250 cells came back in 5 min.
+- At the extreme cells, best chi2 = 1536.0, i.e. N under FSPL-rescaled errors:
+  those (s, q) are FSPL-equivalent, as they should be. Bond's cell is 1456.9
+  before refinement (rho still FSPL's 1.5e-4, parallax off).
+- **O-05-BLG169 data**: Auckland 0.35 m unfiltered (74 pts, one night), FTN
+  2.0 m R (31, HJD 3491-3497), MDM 2.4 m I (137, ~one night), OGLE I (341,
+  2001-2005 baseline at I ~ 19.4). Gould's 5th telescope (SMARTS, 22 pts) isn't
+  on the archive; MDM's 137 vs the paper's 1025 images is probably binning
+  (unverified) -- which matters, MDM carries the ~2% caustic-exit signal.
+  Bennett 2015's re-reduction (requested from the authors) would help.
+- **FTN's mags aren't total-flux magnitudes**: it fades 2.8 mag over HJD
+  3493.1-3497.1 where OGLE fades 1.45 and PSPL allows <= ~1.6 (blending only
+  shallows a fade). F_FTN ~ 8.6 F_OGLE - 6.9 (negative implied baseline flux):
+  difference-imaging-like, reference frame taken while magnified. `kind="mag"`
+  absorbs it via a free-sign fb (`flux_residuals` only rejects fs <= 0);
+  `"dia"` would wrongly force A_ref = 1. Expect FTN's fitted fb < 0.
+- `ld` for O-05-BLG169 is rough (0.53 I, 0.62 R, 0.60 clear, ~G-dwarf), not
+  from the source colour.
+- Cluster: piping srun output through `grep` block-buffers it (nothing showed
+  for 25 min); don't. `scancel` is blocked for Claude by the auto-mode
+  classifier -- the user cancels jobs.
+
+### Next session
+Confirmed with the user (grilling rounds, 2026-10-06). Claude writes the new code
+directly this time.
+1. **Read O-03-BLG235 first** (job 4922475, `slurm/output/slurm-search-4922475.out`,
+   `results/O-03-BLG235/`). Done = a correctly converged minimum passing every
+   diagnostic below, plus a light-curve fit that looks passable by the user's eye.
+   Literature values are *not* a criterion.
+2. **New diagnostics in `search.py`**: `plot_fit()` (each instrument's data in A via
+   its own profiled fs/fb, best FSPL and best 2L1S overlaid, peak zoom, one residual
+   row per model -- `compare_pspl_2l1s.plot_comparison()`'s layout, generalised to any
+   instrument list); per-parameter chain trace plots; nsteps/tau > 50 and acceptance
+   0.2-0.5 (already printed); corner plots (already written); each refined mode's
+   Nelder-Mead chi2 agrees with its MCMC best sample to within ~1; per-instrument
+   fs/fb printed with an fb-sign check.
+3. **Then O-05-BLG169** (job 4922480) against the same done-check, including FTN's
+   fitted fb < 0.
+4. **Sensitivity test**: if the full O-05-BLG169 run completes with no bug, submit
+   four drop-one runs in parallel (no OGLE / no MDM / no Auckland / no FTN), each as
+   its own TOML with its own `short_name`.
+5. **Follow-up**: check whether MDM's 137 archive points are binned from Gould's
+   1025 images; keep chasing Bennett 2015's data.
+- Not scheduled: `ld` from the source colour; a peak-night panel in `plot_raw()`.

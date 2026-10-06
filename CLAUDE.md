@@ -98,11 +98,20 @@ python3 mcmc_fit_binary.py             # default --stage=mcmc: runs both fits be
                                         #   run_ogle_only_diagnostic() -> fit_lc/corner_plots *_ogle_only.png
                                         #   run_joint_fit()            -> fit_lc/O-03-BLG235.png + corner_plots/O-03-BLG235.png (canonical)
 
+python3 search.py --config input/O-05-BLG169.toml --stage=raw   # results/<short>/raw_lc.png only, login-node safe
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
 ```
 
 ## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
+
+Configs so far: `input/O-03-BLG235.toml` (regression test vs Bond) and
+`input/O-05-BLG169.toml` (session 20: 4 NASA Exoplanet Archive tables --
+OGLE I, MDM I, Auckland unfiltered, FTN R -- all `"mag"`, HJD; the 22 SMARTS
+points aren't on the archive, MDM's 137 points vs the paper's 1025 images
+look binned; FTN's "mags" are a negative-offset flux scale, absorbed by a
+free-sign fb -- see the TOML comment; `ld` values rough, not from the source
+colour).
 
 The long-term direction above has started. Three pieces, independent of the
 old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
@@ -128,7 +137,11 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   k derived here); (ii) (s, q) grid, every cell runs Cassan over every
   caustic (t_in/t_out candidates = largest FSPL residuals + t0 +/- tE) and
   `n_alpha` standard starts, rho fixed at FSPL's, parallax off, cached as
-  `results/<short>/grid.npz`; (iii) `minimum_filter` local minima;
+  `results/<short>/grid.npz` (cells via `imap_unordered`, so one slow cell
+  can't stall the progress print). Cassan trials with tE outside 0.1-10x
+  FSPL's are rejected before any chi2: a tiny caustic crossed between
+  candidate times days apart implies tE ~ 1e4-1e6 d, and such a VBBL chi2
+  took up to minutes (session 20; cells now ~2-6 min single-core); (iii) `minimum_filter` local minima;
   (iv) refinement with everything free from (u0, alpha) and (-u0, -alpha),
   emcee (12000 steps, tau printed) on modes within delta-chi2 10; (v)
   delta-chi2 map + BIC with k from 2L1S and from FSPL.
@@ -138,7 +151,7 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   light curve vs ~1 s for `binary_magnification_fs` (kept as a cross-check;
   the ~100x is contour integration vs 2-D disk averaging, plus cheaper root
   solves -- session 19).
-- Outputs: `results/<short>/` (grid.npz, delta_chi2_map.png, refined.npz,
+- Outputs: `results/<short>/` (raw_lc.png -- also `--stage=raw` alone --, grid.npz, delta_chi2_map.png, refined.npz,
   mcmc_mode*_corner.png/_chain.npz). `slurm/search.sbatch` takes the config
   path as `$1`, 24 CPUs (32 hits `QOSMaxCpuPerJobLimit` on small-short).
 
