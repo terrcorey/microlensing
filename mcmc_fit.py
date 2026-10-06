@@ -358,8 +358,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--stage", choices=["raw", "quicklook", "mcmc"], default="mcmc",
-                         help="raw: raw_lc/ only. quicklook: + fit_lc/ (curve_fit, no MCMC). "
-                              "mcmc (default): full run, + corner_plots/, hist_plots/, fit_summary.dat.")
+                         help="raw: results/<short>/pspl/raw_lc.png only. quicklook: + pspl/fit_lc (curve_fit, no MCMC). "
+                              "mcmc (default): full run, + pspl/corner, pspl/hist, fit_summary.dat.")
     args = parser.parse_args()
 
     SHORT_NAME = "O-05-BLG086"  # see dataset_names.txt
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     time, mag, mag_err = np.loadtxt("data/OGLE-2005-BLG-086.dat", unpack=True)
 
     if args.stage == "raw":
-        plot_raw(time, mag, mag_err, "OGLE-2005-BLG-086 (raw)", f"raw_lc/{SHORT_NAME}.png")
+        plot_raw(time, mag, mag_err, "OGLE-2005-BLG-086 (raw)", f"results/{SHORT_NAME}/pspl/raw_lc.png")
     else:
         t0_par = get_t0_par(time, mag, mag_err, f"data/processed/{SHORT_NAME}_plain_fit_summary.dat",
                              u0_guess=0.5, tE_guess=50.0)
@@ -379,7 +379,7 @@ if __name__ == "__main__":
         print(f"chi2/dof = {chi2 / (len(time) - len(fit_result.best_fit)):.3f}")
         for label, value in zip(fit_result.labels, fit_result.best_fit):
             print(f"{label} = {value:.5f}")
-        plot_fit_lc(time, mag, mag_err, fit_result.best_fit, coords, t0_par, "OGLE-2005-BLG-086", f"fit_lc/{SHORT_NAME}.png")
+        plot_fit_lc(time, mag, mag_err, fit_result.best_fit, coords, t0_par, "OGLE-2005-BLG-086", f"results/{SHORT_NAME}/pspl/fit_lc.png")
 
         if args.stage == "mcmc":
             assert fit_result.samples is not None  # run_mcmc=True above
@@ -394,11 +394,11 @@ if __name__ == "__main__":
             }
             results = {label: fit_result.column(label) for label in fit_result.labels} | derived
             save_summary(results, f"data/processed/{SHORT_NAME}_fit_summary.dat")
-            plot_histograms(results, f"hist_plots/{SHORT_NAME}.png")
+            plot_histograms(results, f"results/{SHORT_NAME}/pspl/hist.png")
 
             # fit_result.best_fit is curve_fit's 7-param point estimate --
             # scale/dof have no curve_fit analog (least-squares has no
             # robust-likelihood concept), so pad with None to skip their
             # truth line in the plot.
             truths = list(fit_result.best_fit) + [None, None]
-            save_corner(fit_result.samples, fit_result.labels, truths, f"corner_plots/{SHORT_NAME}.png")
+            save_corner(fit_result.samples, fit_result.labels, truths, f"results/{SHORT_NAME}/pspl/corner.png")

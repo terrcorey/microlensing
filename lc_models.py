@@ -416,6 +416,10 @@ def binary_magnification_vbbl(zeta, s, q, rho, ld):
     """Finite-source 2L1S A(zeta) via VBBL's BinaryMag2 -- `zeta` in binary_trajectory()'s
     frame, which is VBBL's own (COM origin, heavier mass on the left: matches
     binary_magnification() to 1e-13 with no shift). `ld` as in fspl_magnification().
-    binary_magnification_fs() stays as an independent cross-check, ~80x slower."""
+    binary_magnification_fs() stays as an independent cross-check, ~80x slower.
+    rho = 0: point source (BinaryMag0), constant cost per point -- finite source near a
+    cusp at tiny rho can take seconds per point (session 21)."""
+    if rho == 0:
+        return np.array([_VBBL.BinaryMag0(s, q, z.real, z.imag) for z in zeta])
     _VBBL.a1 = ld
     return np.array([_VBBL.BinaryMag2(s, q, z.real, z.imag, rho) for z in zeta])

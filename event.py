@@ -80,13 +80,27 @@ def flux_residuals(event: Event, A: list[np.ndarray]) -> np.ndarray:
     for inst, A_i in zip(event.instruments, A, strict=True):
         if not np.all(np.isfinite(A_i)):
             return np.full(sum(i.time.size for i in event.instruments), np.inf)
-        X = np.column_stack([A_i, np.ones_like(A_i)]) if inst.kind == "mag" else (A_i - 1.0)[:, None]
-        Xw, Fw = X / inst.flux_err[:, None], inst.flux / inst.flux_err  # rows / sigma -> weighted LSQ
-        coeffs = np.linalg.lstsq(Xw, Fw)[0]  # (fs, fb) or (fs,)
+        coeffs, Xw, Fw = profile_flux(inst, A_i)
         if coeffs[0] <= 0:  # negative source flux: unphysical trial
             return np.full(sum(i.time.size for i in event.instruments), np.inf)
         residuals.append(Fw - Xw @ coeffs)
     return np.concatenate(residuals)
+
+
+def profile_flux(inst: Instrument, A_i: np.ndarray):
+    """Weighted least-squares (fs, fb) ("mag": flux = fs*A + fb) or (fs,) ("dia": flux =
+    fs*(A - 1)) at this magnification, plus the weighted design matrix and data."""
+    X = np.column_stack([A_i, np.ones_like(A_i)]) if inst.kind == "mag" else (A_i - 1.0)[:, None]
+    Xw, Fw = X / inst.flux_err[:, None], inst.flux / inst.flux_err  # rows / sigma -> weighted LSQ
+    return np.linalg.lstsq(Xw, Fw)[0], Xw, Fw
+
+
+def to_magnification(inst: Instrument, A_i: np.ndarray):
+    """Invert an instrument's flux onto magnification via its fs/fb profiled at model A_i:
+    (A, A_err), the common scale every instrument can share in one plot."""
+    fs, *fb = profile_flux(inst, A_i)[0]
+    A = (inst.flux - fb[0]) / fs if inst.kind == "mag" else 1 + inst.flux / fs
+    return A, inst.flux_err / fs
 
 
 def chi2(event: Event, A: list[np.ndarray]) -> float:

@@ -22,15 +22,15 @@ pip install -r requirements.txt
 ## Running it
 
 Both fit scripts below take `--stage`, so you can go as far as you want:
-`raw` (just the raw_lc/ plot), `quicklook` (+ fit_lc/, point-estimate only,
-no MCMC), or `mcmc` (default: the full run, + corner_plots/, hist_plots/,
-a fit_summary.dat).
+`raw` (just the raw light-curve plot), `quicklook` (+ the fit plot, point-estimate
+only, no MCMC), or `mcmc` (default: the full run, + corner and histogram plots,
+a fit_summary.dat). Plots go to `results/<name>/pspl/`.
 
 ```
 python3 download_data.py             # fetch raw photometry into data/
 
-python3 mcmc_fit.py --stage=raw        # raw_lc/O-05-BLG086.png
-python3 mcmc_fit.py --stage=quicklook  # + fit_lc/O-05-BLG086.png
+python3 mcmc_fit.py --stage=raw        # results/O-05-BLG086/pspl/raw_lc.png
+python3 mcmc_fit.py --stage=quicklook  # + pspl/fit_lc.png
 python3 mcmc_fit.py                    # full run (default)
 
 python3 preprocess_binary_data.py      # required before the O-03-BLG235 commands below
@@ -120,17 +120,16 @@ python3 mcmc_fit_binary.py             # full run (default) -- see "Known limita
 
 ### Plots
 
-| Directory | Contents |
+| File (under `results/{name}/pspl/`) | Contents |
 |---|---|
-| `raw_lc/{name}.png` | light curve as observed, no fit overlay. |
-| `fit_lc/{name}.png` | data + PSPL fit, full baseline and auto-zoomed peak panels. |
-| `corner_plots/{name}.png` | pairwise posterior correlations + 1D marginals, raw MCMC parameters only. |
-| `hist_plots/{name}.png` | 1D histogram per raw *and* derived quantity (including `M_lens`), log-x-axis auto-applied to heavy-tailed positive quantities. Exists to catch bimodality/skew that a `p16/p50/p84` triplet alone could hide. |
+| `raw_lc.png` | light curve as observed, no fit overlay. |
+| `fit_lc.png` | data + PSPL fit, full baseline and auto-zoomed peak panels. |
+| `corner.png` | pairwise posterior correlations + 1D marginals, raw MCMC parameters only. |
+| `hist.png` | 1D histogram per raw *and* derived quantity (including `M_lens`), log-x-axis auto-applied to heavy-tailed positive quantities. Exists to catch bimodality/skew that a `p16/p50/p84` triplet alone could hide. |
 
-`raw_lc/`, `fit_lc/`, `hist_plots/`, `corner_plots/` hold only these regular
-pipeline outputs. Everything from the one-time/dev scripts in `scratch/`
-(2L1S fit, MulensModel cross-check) writes there instead, not into the
-four directories above.
+`results/` holds only regular pipeline outputs (`search.py`'s at
+`results/{name}/` top level). Everything from the one-time/dev scripts in `scratch/`
+(2L1S fit, MulensModel cross-check) writes there instead, never into `results/`.
 
 ### `dataset_names.txt`
 

@@ -13,9 +13,9 @@ planet found) -- see the caustic bump in the joint fit's zoomed panel.
   by preprocess_binary_data.py -- run that first. This is the canonical
   fit for this event.
 
-Staged via --stage: raw (raw_lc/ only, both fits skipped), quicklook (both
-fits' point-estimate + fit_lc/, no MCMC), mcmc (default: full run, both
-fits' corner_plots/, hist_plots/, fit_summary.dat too).
+Staged via --stage: raw (results/<short>/pspl/raw_lc.png only, both fits skipped),
+quicklook (both fits' point-estimate + pspl/fit_lc*.png, no MCMC), mcmc (default:
+full run, both fits' pspl/corner*.png, pspl/hist*.png, fit_summary.dat too).
 """
 
 from pathlib import Path
@@ -59,8 +59,8 @@ def plot_raw():
     ax.legend()
     fig.tight_layout()
 
-    Path("raw_lc").mkdir(exist_ok=True)
-    out_path = f"raw_lc/{SHORT_NAME}.png"
+    out_path = f"results/{SHORT_NAME}/pspl/raw_lc.png"
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=600)
     plt.close(fig)
     print(f"saved {out_path}")
@@ -85,7 +85,7 @@ def run_ogle_only_diagnostic(stage="mcmc"):
     print(f"[ogle_only] PSPL curve_fit chi2/dof = {chi2 / (len(time) - len(fit_result.best_fit)):.1f}  (bad fit expected)")
 
     plot_fit_lc(time, mag, mag_err, fit_result.best_fit, COORDS, t0_par,
-                "OGLE-2003-BLG-235 (OGLE only)", f"fit_lc/{SHORT_NAME}_ogle_only.png")
+                "OGLE-2003-BLG-235 (OGLE only)", f"results/{SHORT_NAME}/pspl/fit_lc_ogle_only.png")
 
     if stage != "mcmc":
         return
@@ -102,11 +102,11 @@ def run_ogle_only_diagnostic(stage="mcmc"):
     }
     results = {label: fit_result.column(label) for label in fit_result.labels} | derived
     save_summary(results, f"data/processed/{SHORT_NAME}_ogle_only_fit_summary.dat", prefix="[ogle_only] ")
-    plot_histograms(results, f"hist_plots/{SHORT_NAME}_ogle_only.png")
+    plot_histograms(results, f"results/{SHORT_NAME}/pspl/hist_ogle_only.png")
 
     # scale/dof have no curve_fit analog -- pad with None to skip their truth line.
     truths = list(fit_result.best_fit) + [None, None]
-    save_corner(fit_result.samples, fit_result.labels, truths, f"corner_plots/{SHORT_NAME}_ogle_only.png")
+    save_corner(fit_result.samples, fit_result.labels, truths, f"results/{SHORT_NAME}/pspl/corner_ogle_only.png")
 
 
 def run_joint_fit(stage="mcmc"):
@@ -155,7 +155,7 @@ def run_joint_fit(stage="mcmc"):
     plot_fit_panels(
         (ogle_time, ogle_A, ogle_A_err), (moa_time, moa_A, moa_A_err),
         model_fn=lambda t: magnification(trajectory(t, t0, u0, tE, piE_N, piE_E, *sun_earth_projection(t, COORDS, t0_par))),
-        fit_label="PSPL fit", out_path=f"fit_lc/{SHORT_NAME}.png",
+        fit_label="PSPL fit", out_path=f"results/{SHORT_NAME}/pspl/fit_lc.png",
     )
 
     if stage != "mcmc":
@@ -206,12 +206,12 @@ def run_joint_fit(stage="mcmc"):
     derived = {"A_max": magnification(u0_s), "t_eff": u0_s * tE_s, "M_lens": estimate_mass(tE_s)}
     results = {label: samples[:, i] for i, label in enumerate(labels)} | derived
     save_summary(results, f"data/processed/{SHORT_NAME}_fit_summary.dat", prefix="[joint] ")
-    plot_histograms(results, f"hist_plots/{SHORT_NAME}.png")
+    plot_histograms(results, f"results/{SHORT_NAME}/pspl/hist.png")
 
     # point_fit is the 5-param Nelder-Mead estimate -- scale/dof have no
     # point-estimate analog here, pad with None to skip their truth line.
     truths = list(point_fit) + [None, None]
-    save_corner(samples, labels, truths, f"corner_plots/{SHORT_NAME}.png")
+    save_corner(samples, labels, truths, f"results/{SHORT_NAME}/pspl/corner.png")
 
 
 if __name__ == "__main__":
@@ -222,8 +222,8 @@ if __name__ == "__main__":
                          help="short name from dataset_names.txt. Must already have processed "
                               "magnification files from preprocess_binary_data.py.")
     parser.add_argument("--stage", choices=["raw", "quicklook", "mcmc"], default="mcmc",
-                         help="raw: raw_lc/ only. quicklook: + fit_lc/ for both fits (no MCMC). "
-                              "mcmc (default): full run, + corner_plots/, hist_plots/, fit_summary.dat.")
+                         help="raw: results/<short>/pspl/raw_lc.png only. quicklook: + pspl/fit_lc for both fits (no MCMC). "
+                              "mcmc (default): full run, + pspl/corner, pspl/hist, fit_summary.dat.")
     args = parser.parse_args()
 
     SHORT_NAME = args.dataset

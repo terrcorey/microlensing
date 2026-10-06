@@ -1,18 +1,1 @@
-{
-  "0": "CHANGELOG (session log)",
-  "1": "fit_2l1s.py",
-  "2": "mcmc_fit.py",
-  "3": "mcmc_fit_2l1s.py",
-  "4": "cross_check_mulensmodel.py",
-  "5": "search.py",
-  "6": "binary_trajectory",
-  "7": "derive_binary_quintic.py",
-  "8": "dataset_names.txt",
-  "9": "M-19-BLG008 (MOA-2019-BLG-008, KMT I-band subset)",
-  "10": "fit_parallax_pspl_mcmc",
-  "11": "lc_models.py",
-  "12": "caustic_curve",
-  "13": "_binary_images_batch",
-  "14": "cross_check_mulensmodel_fs.py",
-  "15": "submit_all.sh"
-}
+{"0": "Event Loading & Flux Calibration", "1": "Binary-Lens Magnification", "2": "2L1S Scratch Fits", "3": "Data, Parallax & PSPL Model", "4": "Docs, Papers & Concepts", "5": "Cassan & Binary Preprocessing", "6": "Parallax PSPL MCMC", "7": "PSPL Core & Joint Fit", "8": "Quintic Derivation", "9": "SLURM Submission"}

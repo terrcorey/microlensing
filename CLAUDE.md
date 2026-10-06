@@ -86,19 +86,20 @@ pip install -r requirements.txt
 python3 download_data.py               # fetch raw photometry into data/ (skips files that already exist)
 python3 preprocess_binary_data.py      # required before mcmc_fit_binary.py (see below); absorbs the old joint_fit.py
 
-python3 mcmc_fit.py --stage=raw        # raw_lc/O-05-BLG086.png
-python3 mcmc_fit.py --stage=quicklook  # + fit_lc/O-05-BLG086.png (curve_fit point estimate, no MCMC)
-python3 mcmc_fit.py                    # default --stage=mcmc: + corner_plots/O-05-BLG086.png
-                                        #                        hist_plots/O-05-BLG086.png
+python3 mcmc_fit.py --stage=raw        # results/O-05-BLG086/pspl/raw_lc.png
+python3 mcmc_fit.py --stage=quicklook  # + pspl/fit_lc.png (curve_fit point estimate, no MCMC)
+python3 mcmc_fit.py                    # default --stage=mcmc: + pspl/corner.png
+                                        #                        pspl/hist.png
                                         #                        data/processed/O-05-BLG086_fit_summary.dat
 
 python3 mcmc_fit_binary.py --stage=raw
 python3 mcmc_fit_binary.py --stage=quicklook
 python3 mcmc_fit_binary.py             # default --stage=mcmc: runs both fits below, in order:
-                                        #   run_ogle_only_diagnostic() -> fit_lc/corner_plots *_ogle_only.png
-                                        #   run_joint_fit()            -> fit_lc/O-03-BLG235.png + corner_plots/O-03-BLG235.png (canonical)
+                                        #   run_ogle_only_diagnostic() -> pspl/{fit_lc,hist,corner}_ogle_only.png
+                                        #   run_joint_fit()            -> pspl/{fit_lc,hist,corner}.png (canonical)
 
-python3 search.py --config input/O-05-BLG169.toml --stage=raw   # results/<short>/raw_lc.png only, login-node safe
+python3 search.py --config input/O-05-BLG169.toml --stage=raw   # FSPL fit + results/<short>/raw_lc.png only (~1 min: srun, not login node)
+python3 search.py --config input/O-05-BLG169.toml --stage=diagnose   # (vi) on saved outputs, ~1 min, srun
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
 ```
@@ -136,23 +137,32 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   u0 x tE grid, no parallax -> `t0_par`, then parallax from both u0 signs,
   k derived here); (ii) (s, q) grid, every cell runs Cassan over every
   caustic (t_in/t_out candidates = largest FSPL residuals + t0 +/- tE) and
-  `n_alpha` standard starts, rho fixed at FSPL's, parallax off, cached as
-  `results/<short>/grid.npz` (cells via `imap_unordered`, so one slow cell
-  can't stall the progress print). Cassan trials with tE outside 0.1-10x
-  FSPL's are rejected before any chi2: a tiny caustic crossed between
-  candidate times days apart implies tE ~ 1e4-1e6 d, and such a VBBL chi2
-  took up to minutes (session 20; cells now ~2-6 min single-core); (iii) `minimum_filter` local minima;
+  `n_alpha` standard starts, point source (`rho = 0` -> VBBL `BinaryMag0`,
+  constant cost; refinement starts from FSPL's rho), parallax off, Cassan
+  abscissae offset half a step off the on-axis cusps (sigma = 0, 0.5), cached
+  as `results/<short>/grid.npz`, every finished cell checkpointed to
+  `grid_partial.npz` (a killed run resumes). Finite source in the grid was
+  heavy-tailed: <1% of calls (trajectories along the axis through cusps,
+  tiny rho) took ~half a cell's time, up to 109 s per call, and cells ran
+  50-800 s; point source: ~11 s (session 21). (iii) `minimum_filter` local minima;
   (iv) refinement with everything free from (u0, alpha) and (-u0, -alpha),
   emcee (12000 steps, tau printed) on modes within delta-chi2 10; (v)
-  delta-chi2 map + BIC with k from 2L1S and from FSPL.
+  delta-chi2 map + BIC with k from 2L1S and from FSPL; (vi) `diagnose()`
+  (also `--stage=diagnose`, reads refined.npz + chains, refits only FSPL):
+  per mode nsteps/tau > 50, acceptance 0.2-0.5 (fraction of steps a walker
+  moved), MCMC best sample vs its Nelder-Mead chi2 within 1, trace plot;
+  per-instrument fs/fb at FSPL and best 2L1S, fb < 0 flagged; `plot_fit()`
+  -> fit_lc.png (data in A at 2L1S's fs/fb, both curves, residual row per
+  model; right column zooms on the points where 2L1S gains most chi2).
 - Magnification is all VBBinaryLensing (`lc_models.fspl_magnification`,
   `binary_magnification_vbbl`, one module-level `_VBBL`, `RelTol=1e-3`):
   its frame matches `binary_trajectory()`'s exactly, ~9 ms per O-03-BLG235
   light curve vs ~1 s for `binary_magnification_fs` (kept as a cross-check;
   the ~100x is contour integration vs 2-D disk averaging, plus cheaper root
   solves -- session 19).
-- Outputs: `results/<short>/` (raw_lc.png -- also `--stage=raw` alone --, grid.npz, delta_chi2_map.png, refined.npz,
-  mcmc_mode*_corner.png/_chain.npz). `slurm/search.sbatch` takes the config
+- Outputs: `results/<short>/` (raw_lc.png -- every instrument in magnification via its fs/fb
+  profiled at the parallax-free FSPL, `event.to_magnification()`; also `--stage=raw` alone --, grid.npz, delta_chi2_map.png, refined.npz,
+  mcmc_mode*_corner.png/_chain.npz/_trace.png, fit_lc.png). `slurm/search.sbatch` takes the config
   path as `$1`, 24 CPUs (32 hits `QOSMaxCpuPerJobLimit` on small-short).
 
 `mcmc_fit_binary.py` also takes `--dataset` (default `O-03-BLG235`), backed by a
@@ -678,9 +688,12 @@ measuring on already-rescaled errors gives k~1.
 
 ## Output layout
 
-- `raw_lc/`, `fit_lc/`, `hist_plots/`, `corner_plots/` hold ONLY the regular
-  pipeline's canonical outputs (the ones documented in "Setup and commands").
-- `results/<short>/` holds the config-driven pipeline's outputs (`search.py`).
+- `results/<short>/` holds every pipeline output for one event (gitignored):
+  `search.py`'s at the top level, the old PSPL pipeline's (`mcmc_fit.py`,
+  `mcmc_fit_binary.py`) under `results/<short>/pspl/` (`raw_lc`, `fit_lc`,
+  `hist`, `corner`, `_ogle_only` suffix for the OGLE-only diagnostic) --
+  session 21 merged the old top-level `raw_lc/`, `fit_lc/`, `hist_plots/`,
+  `corner_plots/` dirs into it.
 - `scratch/` holds both the code and the output of every one-time/
   diagnostic/not-yet-graduated script (currently: fit_2l1s.py,
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,
@@ -688,7 +701,7 @@ measuring on already-rescaled errors gives k~1.
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
   compare_pspl_2l1s.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
-  scratch/, never in the four dirs above -- when a script graduates into
+  scratch/, never in results/ -- when a script graduates into
   the pipeline, move both its code and its output path out at the same
   time.
 
