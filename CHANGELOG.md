@@ -2139,6 +2139,15 @@ directly this time.
 - Optimization agent: per-call time is all inside VBBL `BinaryMag2` (nothing to gain in
   Python); loosening RelTol shifts chi2 by 1.5-8 (rejected); concurrent modes 1.97x (2), 3.29x
   (4 modes) on O-05-BLG169, 2.49x on O-03-BLG235.
+- **Pipeline vs Bond-seeded O-03-BLG235, same footing** (search.py chi2, FSPL-rescaled errors,
+  VBBL with ld; plots `scratch/2l1s/compare/O-03-BLG235_{bond_seeded,pipeline_best}_fit.png`):
+  session 17's Cassan polish converted and NM-polished = chi2 1102.3 (no parallax) / 1099.9
+  (parallax, piE (0.45, -0.23)); pipeline MCMC best polished = 1119.7 (u0 0.051, tE 123 d,
+  piE_N -1.23, alpha 211.6 deg), 1172.1 with parallax off. Same (s, q) (1.115 vs 1.118, 4.3e-3
+  vs 3.9e-3), same caustic times (in ~2835.2, out ~2842.1), but a blended, long-tE trajectory
+  propped up by large parallax -- ~20 chi2 worse. results/.../fit_lc.png shows refined[0]
+  (q = 0.0196), which has no caustic entry at all. Acceptance test for goal 1: the unseeded
+  pipeline reaches chi2 ~ 1100 on O-03-BLG235.
 
 ### Next session
 Confirmed with the user (2026-10-06), in priority order:
