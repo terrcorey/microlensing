@@ -18,3 +18,8 @@ OGLE-2005-BLG-086  ->  O-05-BLG086
 OGLE-2003-BLG-235 / MOA-2003-BLG-53 (same event, two surveys)  ->  O-03-BLG235
 MOA-2019-BLG-008 (KMT I-band subset only, so far)  ->  M-19-BLG008
 OGLE-2005-BLG-169  ->  O-05-BLG169
+
+Variant suffixes (same event, modified config -- input/<short>.toml)
+-------------------------------------------------------------------
+
+O-05-BLG169-no<Instrument>  ->  O-05-BLG169 with that one instrument dropped (session 21 drop-one sensitivity runs)

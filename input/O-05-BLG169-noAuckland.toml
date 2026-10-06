@@ -1,0 +1,45 @@
+# Metadata -- drop-one sensitivity run (session 21): input/O-05-BLG169.toml without Auckland
+full_name = "OGLE-2005-BLG-169"
+short_name = "O-05-BLG169-noAuckland"
+ra = "18h06m05.32s"
+dec = "-30d43m57.50s"
+
+[grid]
+n_alpha = 16
+#[l_bound, u_bound, step_size]
+log_s = [-1.0, 1.0, 0.05]
+log_q = [-6.0, 0.0, 0.25]
+
+# NASA Exoplanet Archive UID 0300030 (Gould et al. 2006); all relative mags, all HJD.
+# ld: rough linear (u) coefficients for a ~G-dwarf bulge source (Claret-like), not fitted --
+# refine once the source colour is known.
+
+[[instruments]]
+name = "OGLE"
+path = "data/OGLE-2005-BLG-169_OGLE.tbl"
+kind = "mag"
+band = "I"
+K = 1.0
+ld = 0.53
+time_fmt = "HJD"
+
+[[instruments]]
+name = "MDM"
+path = "data/OGLE-2005-BLG-169_MDM.tbl"
+kind = "mag"
+band = "I"
+K = 1.0
+ld = 0.53
+time_fmt = "HJD"
+
+# FTN's "mags" aren't total-flux magnitudes: its flux is linear in OGLE's with a large
+# negative offset (difference-imaging-like, reference frame taken while magnified). kind="mag"
+# already absorbs that via a free-sign fb -- not "dia", which would force A_ref = 1.
+[[instruments]]
+name = "FTN"
+path = "data/OGLE-2005-BLG-169_FTN.tbl"
+kind = "mag"
+band = "R"
+K = 1.0
+ld = 0.62
+time_fmt = "HJD"

@@ -112,7 +112,8 @@ OGLE I, MDM I, Auckland unfiltered, FTN R -- all `"mag"`, HJD; the 22 SMARTS
 points aren't on the archive, MDM's 137 points vs the paper's 1025 images
 look binned; FTN's "mags" are a negative-offset flux scale, absorbed by a
 free-sign fb -- see the TOML comment; `ld` values rough, not from the source
-colour).
+colour). `input/O-05-BLG169-no{OGLE,MDM,Auckland,FTN}.toml` (session 21):
+drop-one sensitivity copies, each its own `short_name` (see dataset_names.txt).
 
 The long-term direction above has started. Three pieces, independent of the
 old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
@@ -145,8 +146,17 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   heavy-tailed: <1% of calls (trajectories along the axis through cusps,
   tiny rho) took ~half a cell's time, up to 109 s per call, and cells ran
   50-800 s; point source: ~11 s (session 21). (iii) `minimum_filter` local minima;
-  (iv) refinement with everything free from (u0, alpha) and (-u0, -alpha),
-  emcee (12000 steps, tau printed) on modes within delta-chi2 10; (v)
+  (iv) refinement with everything free from (u0, alpha) and (-u0, -alpha)
+  (each start its own Pool task), emcee (12000 steps, tau printed) on the
+  `distinct_modes()` within delta-chi2 10 (same u0 sign and within 0.02 in
+  log s / 0.1 in log q = duplicate; rounding-based dedup split one mode in
+  two, session 21), all modes' samplers concurrently on one shared Pool, one
+  thread each (emcee maps only nwalkers/2 at a time and waits for the slowest
+  chi2: 4 modes ran 3.3x faster than serially on O-05-BLG169; `save_mcmc()`
+  plots afterwards in the main thread, pyplot isn't thread-safe). Per-call
+  cost is all inside VBBL `BinaryMag2` (O-03-BLG235 ~10 ms, O-05-BLG169
+  100-270 ms, ~4 ms per MDM point at A ~ 800); `RelTol` 1e-3 -> 2e-3 already
+  moves chi2 by > 1, so it stays; (v)
   delta-chi2 map + BIC with k from 2L1S and from FSPL; (vi) `diagnose()`
   (also `--stage=diagnose`, reads refined.npz + chains, refits only FSPL):
   per mode nsteps/tau > 50, acceptance 0.2-0.5 (fraction of steps a walker

@@ -20,6 +20,7 @@ Outputs go to results/<short_name>/. The grid is cached there as grid.npz
 login node.
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from itertools import combinations, product
 from multiprocessing import get_context
 from pathlib import Path
@@ -244,12 +245,31 @@ def local_minima(chi2_map, n=N_REFINE):
     return np.argwhere(is_min)[np.argsort(chi2_map[is_min])][:n]
 
 
-def refine(theta):
+def distinct_modes(refined, tol=(0.02, 0.1)):
+    """Refined (x, chi2) pairs, sorted by chi2 -> the Binary modes within MODE_DCHI2 of the best,
+    one per (log s, log q, sign u0) cluster: a fit within `tol` in (log s, log q) of a kept mode
+    with the same u0 sign is a duplicate. A tolerance, not rounding: rounding split s = 0.751
+    and 0.748 into two "modes" across a bin edge (session 21)."""
+    modes = []
+    for x, c2 in refined:
+        p = Binary(*x)
+        near = lambda m: (np.sign(m.u0) == np.sign(p.u0) and abs(np.log10(m.s / p.s)) < tol[0]
+                          and abs(np.log10(m.q / p.q)) < tol[1])
+        if c2 - refined[0][1] <= MODE_DCHI2 and not any(near(m) for m in modes):
+            modes.append(p)
+    return modes
+
+
+def refine_starts(theta):
     """Everything free, parallax on (from zero), from both (u0, alpha) and its mirror (-u0, -alpha):
     identical without parallax, distinct with it (ecliptic degeneracy)."""
     p = Binary(*theta)._replace(piE_N=0.0, piE_E=0.0)
-    return [nelder_mead(lambda x: chi2_binary(x, EVENT), x0, binary_steps(x0), maxfev=5000)
-            for x0 in (p, p._replace(u0=-p.u0, alpha=-p.alpha))]
+    return [p, p._replace(u0=-p.u0, alpha=-p.alpha)]
+
+
+def refine(x0: Binary):
+    """One Nelder-Mead per Pool task, so both starts of a minimum run on separate cores."""
+    return nelder_mead(lambda x: chi2_binary(x, EVENT), x0, binary_steps(x0), maxfev=5000)
 
 
 def log_prob(theta):
@@ -260,14 +280,19 @@ def log_prob(theta):
     return -0.5 * c2 if np.isfinite(c2) else -np.inf
 
 
-def run_mcmc(event: Event, best: Binary, out: Path, tag: str, nwalkers=32, nsteps=12000, seed=42):
+def run_mcmc(pool, best: Binary, tag: str, nwalkers=32, nsteps=12000, seed=42):
     """emcee around a refined minimum. nsteps: the Cassan chain had tau ~ 230 steps (session 19),
-    so 3000 was only ~13 tau; 12000 aims at the ~50 tau emcee recommends."""
+    so 3000 was only ~13 tau; 12000 aims at the ~50 tau emcee recommends. `pool` is shared
+    by every mode at once (see __main__); save_mcmc() does the rest, in the main thread."""
     rng = np.random.default_rng(seed)
     p0 = np.array(best) + 0.01 * np.array(binary_steps(best)) * rng.standard_normal((nwalkers, len(best)))
-    with get_context("spawn").Pool(initializer=_init, initargs=(event,)) as pool:
-        sampler = emcee.EnsembleSampler(nwalkers, len(best), log_prob, pool=pool)
-        sampler.run_mcmc(p0, nsteps, progress=True)
+    sampler = emcee.EnsembleSampler(nwalkers, len(best), log_prob, pool=pool)
+    sampler.run_mcmc(p0, nsteps, progress=True, progress_kwargs={"desc": tag})
+    return sampler
+
+
+def save_mcmc(sampler, out: Path, tag: str):
+    nsteps = sampler.iteration
     tau = sampler.get_autocorr_time(quiet=True)  # warns (not raises) when nsteps < 50 tau
     print(f"[mcmc {tag}] acceptance={np.mean(sampler.acceptance_fraction):.2f}, "
           f"nsteps/max(tau)={nsteps / np.max(tau):.1f} (want > 50), tau={np.round(tau, 1)}")
@@ -462,18 +487,18 @@ if __name__ == "__main__":
     plot_map(grid, minima, out / "delta_chi2_map.png")
 
     with get_context("spawn").Pool(initializer=_init, initargs=(event,)) as pool:
-        refined = sorted((r for rs in pool.map(refine, [grid["theta"][i, j] for i, j in minima]) for r in rs),
+        refined = sorted(pool.map(refine, [x0 for i, j in minima for x0 in refine_starts(grid["theta"][i, j])]),
                          key=lambda r: r[1])
-    modes = []  # dedupe refinements that converged to the same solution
-    for x, c2 in refined:
-        p = Binary(*x)
-        key = (round(np.log10(p.s), 2), round(np.log10(p.q), 1), np.sign(p.u0))
-        print(f"[refine] chi2={c2:.2f} {p}")
-        if c2 - refined[0][1] <= MODE_DCHI2 and key not in [m[0] for m in modes]:
-            modes.append((key, p))
-    np.savez(out / "refined.npz", theta=[x for x, _ in refined], chi2=[c for _, c in refined])
-    for k, (_, p) in enumerate(modes):
-        run_mcmc(event, p, out, f"mode{k}")
+        for x, c2 in refined:
+            print(f"[refine] chi2={c2:.2f} {Binary(*x)}")
+        np.savez(out / "refined.npz", theta=[x for x, _ in refined], chi2=[c for _, c in refined])
+        # every mode at once, one thread each, on the one pool: emcee maps only nwalkers/2 walkers at
+        # a time and each step waits for its slowest chi2, so a lone mode leaves most cores idle
+        modes = distinct_modes(refined)
+        with ThreadPoolExecutor(len(modes)) as threads:
+            samplers = list(threads.map(lambda kp: run_mcmc(pool, kp[1], f"mode{kp[0]}"), enumerate(modes)))
+    for k, sampler in enumerate(samplers):  # plotting stays in the main thread: pyplot isn't thread-safe
+        save_mcmc(sampler, out, f"mode{k}")
 
     best = Binary(*refined[0][0])
     k_2l1s = error_scale(base, binary_A(base, best))

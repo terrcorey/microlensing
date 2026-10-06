@@ -2081,3 +2081,76 @@ directly this time.
 5. **Follow-up**: check whether MDM's 137 archive points are binned from Gould's
    1025 images; keep chasing Bennett 2015's data.
 - Not scheduled: `ld` from the source colour; a peak-night panel in `plot_raw()`.
+
+## 2026-10-06 — session 21
+
+### Built
+- **Grid made constant-cost** (Claude, ponytail): `binary_magnification_vbbl(..., rho=0)` ->
+  VBBL `BinaryMag0` point source; `chi2_binary` accepts rho = 0; `grid_cell()` scores point
+  source (Binary still carries FSPL's rho to start refinement); Cassan abscissae offset half a
+  step off the on-axis cusps; tE guard (session 20) removed; every finished cell checkpointed to
+  `grid_partial.npz` (write-then-rename), resumed on restart, dropped when grid.npz is written.
+- **Calibrated raw light curve**: `plot_raw()` now runs after the FSPL fit and shows every
+  instrument in magnification via its own fs/fb (`event.profile_flux()` split out of
+  `flux_residuals()`, new `event.to_magnification()`); log A only when max A > 50.
+  `--stage=raw` therefore needs srun now (~1 min).
+- **Output layout unified**: old `raw_lc/`, `fit_lc/`, `hist_plots/`, `corner_plots/` ->
+  `results/<short>/pspl/{raw_lc,fit_lc,hist,corner}[_ogle_only].png`; `results/` gitignored;
+  existing PNGs moved; README/CLAUDE.md/pspl_086.sbatch updated.
+- **Diagnostics `(vi)`**: `diagnose()` / `--stage=diagnose` (reads refined.npz + chains, refits
+  only FSPL): per mode nsteps/tau, acceptance (from the saved chain), Nelder-Mead vs MCMC-best
+  chi2, `mcmc_mode*_trace.png`; per-instrument fs/fb with fb < 0 flagged; `plot_fit()` ->
+  `fit_lc.png` (peak + anomaly zoom centred on the largest per-point chi2 gain). Also called at
+  the end of every full search.
+- **`distinct_modes()`**: tolerance-based mode dedup (0.02 dex s, 0.1 dex q, same u0 sign).
+- **Concurrent MCMC modes** (optimization subagent, worktree, merged by Claude): refinement
+  starts as separate Pool tasks; all modes' samplers on one shared Pool, one thread each;
+  `save_mcmc()` split out.
+- **Drop-one configs**: `input/O-05-BLG169-no{OGLE,MDM,Auckland,FTN}.toml`; variant-suffix note
+  in dataset_names.txt. Submitted as jobs 4923976-79 (`search-no<X>`).
+- graphify rebuilt (full, not incremental: `.graphify_python` pointed at a Mac path; now the
+  conda install).
+- Jobs: O-03-BLG235 search 4923458 + diagnose 4923690 done; O-05-BLG169 search 4923340 (old
+  code, 5 serial modes, one a duplicate) still running, diagnose 4923689 queued afterok.
+
+### Learned & open questions
+- **Why the grid was slow (again)**: finite-source VBBL cost is heavy-tailed. On O-05-BLG169
+  (FSPL rho = 1.8e-6, A ~ 800) < 1% of calls -- Cassan trials straight down the binary axis
+  through the on-axis cusps (sigma = 0 / 0.5 pairs), tE 150-420 d, chi2 ~ 4e5 -- took 0.5-109 s
+  each, ~half of every cell's time; cells 50-800 s vs 84-106 s on O-03-BLG235. Point source:
+  ~11 s/cell, whole grid ~14 min. Per-event cutoffs like the tE guard are whack-a-mole; the
+  fix is a bounded-cost model in every search stage. Proposed for automation: a `--stage=probe`
+  that times ~20 random cells before any sbatch (not built).
+- py-spy can't attach on the compute nodes (ptrace denied); it's still in .venv, unused.
+- Bigger partitions don't help: emcee parallelism is nwalkers/2 = 16; large-short was full.
+- **O-03-BLG235 search (new code) fails every done-check**: nsteps/tau 7-12 (tau ~ 600-1600),
+  acceptance 0.08-0.21, and each mode's MCMC best is 30-155 below its Nelder-Mead chi2 --
+  refinement stalls far from the minimum and the chains haven't converged (trace: drift in
+  tE/alpha, alpha split into two walker groups, stuck walkers). Best sample chi2 = 1123.9 at
+  s = 1.118, q = 0.0043, rho = 4.4e-4, tE = 123 d with piE_N = -0.94 (parallax-tE trade).
+  Delta BIC (FSPL - 2L1S) = 281 / 231 even at the poor Nelder-Mead best. `fit_lc.png` draws
+  refined[0] (Nelder-Mead), which misplaces the caustic peak -- should draw the overall best.
+- **O-05-BLG169 refinement**: best family q ~ 1.0e-5, close/wide pair s = 1.34 / 0.75 (both u0
+  signs), chi2 ~ 433.5 vs FSPL ~ 570; rho (1e-10..1e-5) and piE unconstrained. Anomaly panel:
+  MDM's FSPL residuals bump at HJD 3491.93-3491.95 (the caustic exit), flattened by 2L1S.
+- **Not only FTN is offset-scaled**: at the best 2L1S, MDM (fs 0.14, fb -0.93) and Auckland
+  (fs 0.055, fb -0.25) also have fs + fb < 0, i.e. their archive mags aren't total-flux mags
+  either. The free-sign fb absorbs it; their fs can't be read as source flux.
+- Optimization agent: per-call time is all inside VBBL `BinaryMag2` (nothing to gain in
+  Python); loosening RelTol shifts chi2 by 1.5-8 (rejected); concurrent modes 1.97x (2), 3.29x
+  (4 modes) on O-05-BLG169, 2.49x on O-03-BLG235.
+
+### Next session
+Confirmed with the user (2026-10-06), in priority order:
+1. **Fix refinement + MCMC convergence** in `search.py`: polish each mode from its MCMC best
+   sample (Nelder-Mead stalls 30-155 chi2 short); `fit_lc.png` and the BIC use the overall best
+   (refined or MCMC); emcee move mix (e.g. `DEMove` + stretch) and/or longer chains (concurrent
+   modes make ~50k steps affordable). Rerun O-03-BLG235 until every done-check passes.
+2. **Read the O-05-BLG169 runs**: full run 4923340 (old code; diagnose 4923689) and drop-one
+   runs 4923976-79 (`results/O-05-BLG169-no*/`, logs `slurm/output/slurm-search-no*-*.out`):
+   which instruments carry the q ~ 1e-5 signal; done-checks (expected to fail until 1 lands).
+3. **`--stage=probe`**: time ~20 random grid cells / chi2 calls on one core before any sbatch,
+   warn on a heavy tail or long projected wall-clock.
+4. **Data follow-ups**: MDM binning (137 archive points vs 1025 images), Bennett 2015's data,
+   and note in `input/O-05-BLG169.toml` that MDM/Auckland are offset-scaled like FTN.
+- Housekeeping: py-spy in .venv is unused (uninstall); none of session 21 is committed.
