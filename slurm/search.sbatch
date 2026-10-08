@@ -1,6 +1,8 @@
 #!/bin/bash
 # search.py: the config-driven FSPL vs 2L1S pipeline for one event.
 #   sbatch search.sbatch ../input/<short>.toml   (submit from slurm/; path relative to the project root works too)
+#   optional $2 = --stage (e.g. diagnose); override resources on the command line for light stages:
+#   sbatch --cpus-per-task=1 --time=00:30:00 --dependency=afterok:<search job> search.sbatch ../input/<short>.toml diagnose
 # Pool() sizing: see 2l1s_fit.sbatch's PYTHON_CPU_COUNT note.
 
 #SBATCH --job-name=search
@@ -24,4 +26,6 @@ export PYTHONWARNINGS="ignore::UserWarning:torch.cuda"
 # stdout to a file is block-buffered -- without this, prints only reach .out in chunks.
 export PYTHONUNBUFFERED=1
 export PYTHON_CPU_COUNT=$SLURM_CPUS_PER_TASK
-python3 search.py --config "$config"
+# one BLAS thread per worker: 24 workers x a BLAS pool each would oversubscribe the 24 cores
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+python3 search.py --config "$config" ${2:+--stage=$2}

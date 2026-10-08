@@ -23,11 +23,10 @@ from pathlib import Path
 import emcee
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import minimize
 from scipy.stats import t as student_t
 
 from lc_models import ZERO_POINT_MAG, magnification, magnitude, sun_earth_projection, trajectory
-from mcmc_fit import estimate_mass, fit_parallax_pspl_mcmc, flat_chain, get_t0_par, plot_fit_lc, plot_histograms, save_corner, save_summary
+from mcmc_fit import nelder_mead, estimate_mass, fit_parallax_pspl_mcmc, flat_chain, get_t0_par, plot_fit_lc, plot_histograms, save_corner, save_summary
 from preprocess_binary_data import COORDS
 from zoom_utils import plot_fit_panels
 
@@ -94,8 +93,8 @@ def run_ogle_only_diagnostic(stage="mcmc"):
     print(f"[ogle_only] {fit_result.samples.shape[0]} posterior samples after burn-in/thinning")
     u0_s, tE_s, fs_s, fb_s = (fit_result.column(name) for name in ("u0", "tE", "f_source", "f_blend"))
     derived = {
-        "A_max": magnification(u0_s),
-        "t_eff": u0_s * tE_s,
+        "A_max": magnification(np.abs(u0_s)),
+        "t_eff": np.abs(u0_s) * tE_s,
         "blend_fraction": fb_s / (fs_s + fb_s),
         "m_source": ZERO_POINT_MAG - 2.5 * np.log10(fs_s),
         "M_lens": estimate_mass(tE_s),
@@ -127,8 +126,7 @@ def run_joint_fit(stage="mcmc"):
         return np.sum(((A_obs - A_model) / A_err) ** 2)
 
     t0_guess = time[np.argmax(A_obs)]
-    plain_fit = minimize(plain_chi2, x0=[t0_guess, 0.2, 30.0], method="Nelder-Mead",
-                          options={"xatol": 1e-8, "fatol": 1e-8, "maxiter": 20000}).x
+    plain_fit, _ = nelder_mead(plain_chi2, [t0_guess, 0.2, 30.0], (1.0, 0.05, 5.0))
     t0_par = plain_fit[0]
     print(f"[joint] t0_par (parallax reference epoch, from plain pre-parallax fit) = {t0_par:.5f}")
     delta_sN, delta_sE = sun_earth_projection(time, COORDS, t0_par)
@@ -140,11 +138,9 @@ def run_joint_fit(stage="mcmc"):
         A_model = magnification(trajectory(time, t0, u0, tE, piE_N, piE_E, delta_sN, delta_sE))
         return np.sum(((A_obs - A_model) / A_err) ** 2)
 
-    p0_guess = [t0_par, abs(plain_fit[1]), abs(plain_fit[2]), 0.0, 0.0]
-    result = minimize(chi2, x0=p0_guess, method="Nelder-Mead",
-                       options={"xatol": 1e-8, "fatol": 1e-8, "maxiter": 20000})
-    point_fit = result.x
-    point_fit[1], point_fit[2] = abs(point_fit[1]), abs(point_fit[2])  # u0, tE sign is arbitrary
+    # plain fit: u0 only enters squared, so its sign is free; the parallax fit's isn't (no abs after it)
+    p0_guess = [t0_par, abs(plain_fit[1]), plain_fit[2], 0.0, 0.0]
+    point_fit, _ = nelder_mead(chi2, p0_guess, (1.0, 0.05, 5.0, 0.1, 0.1))
     t0, u0, tE, piE_N, piE_E = point_fit
 
     n_dof = len(time) - 5
@@ -165,7 +161,7 @@ def run_joint_fit(stage="mcmc"):
         t0, u0, tE, piE_N, piE_E, scale, dof = theta
         if not (time.min() < t0 < time.max()):
             return -np.inf
-        if not (0 < u0 < 5):
+        if not (-5 < u0 < 5):  # with parallax, -u0 is a distinct solution, not a mirror
             return -np.inf
         if not (0.1 < tE < 1000):
             return -np.inf
@@ -203,7 +199,7 @@ def run_joint_fit(stage="mcmc"):
     samples, _ = flat_chain(sampler, discard=1000)
     print(f"[joint] {samples.shape[0]} posterior samples after burn-in/thinning")
     u0_s, tE_s = samples[:, 1], samples[:, 2]
-    derived = {"A_max": magnification(u0_s), "t_eff": u0_s * tE_s, "M_lens": estimate_mass(tE_s)}
+    derived = {"A_max": magnification(np.abs(u0_s)), "t_eff": np.abs(u0_s) * tE_s, "M_lens": estimate_mass(tE_s)}
     results = {label: samples[:, i] for i, label in enumerate(labels)} | derived
     save_summary(results, f"data/processed/{SHORT_NAME}_fit_summary.dat", prefix="[joint] ")
     plot_histograms(results, f"results/{SHORT_NAME}/pspl/hist.png")

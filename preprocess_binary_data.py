@@ -20,9 +20,9 @@ from pathlib import Path
 
 import numpy as np
 from astropy.coordinates import SkyCoord
-from scipy.optimize import minimize
 
 from lc_models import ZERO_POINT_MAG, mag_to_flux, magnification, sun_earth_projection, trajectory
+from mcmc_fit import nelder_mead
 
 SHORT_NAME = "O-03-BLG235"  # see dataset_names.txt
 OGLE_PATH = "data/OGLE-2003-BLG-235_OGLE.tbl.txt"
@@ -109,10 +109,9 @@ def fit_joint_pspl(ogle_time, ogle_mag, ogle_err, moa_time, moa_flux, moa_err,
     fs_moa_guess = moa_flux.max() / 4.0
     p0_guess = [t0_guess, 0.2, 30.0, fs_ogle_guess, 0.0, fs_moa_guess, 0.0, 0.0]
 
-    result = minimize(total_chi2, x0=p0_guess, method="Nelder-Mead",
-                       options={"xatol": 1e-6, "fatol": 1e-6, "maxiter": 20000})
-    best_fit = result.x
-    best_fit[1], best_fit[2] = abs(best_fit[1]), abs(best_fit[2])  # u0, tE sign is arbitrary
+    # no abs(u0) afterwards: with parallax (u0, piE) -> (-u0, piE) is a different model
+    best_fit, _ = nelder_mead(total_chi2, p0_guess,
+                              (1.0, 0.05, 5.0, 0.1 * fs_ogle_guess, 0.1 * fs_ogle_guess, 0.1 * fs_moa_guess, 0.1, 0.1))
     return best_fit, total_chi2
 
 

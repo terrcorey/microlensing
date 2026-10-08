@@ -13,6 +13,8 @@ def find_zoom_window(time, brightness, error, sigma_threshold=5.0, padding_fract
     excess = brightness - baseline
     in_event = excess >= sigma_threshold * error
     event_times = time[in_event]
+    if not event_times.size:  # nothing significant: show everything rather than crash a long job
+        return time.min(), time.max()
     start, end = event_times.min(), event_times.max()
     pad = padding_fraction * (end - start)
     return start - pad, end + pad

@@ -5,11 +5,11 @@ extension (point and finite source), annual parallax, and VBBinaryLensing
 wrappers (finite source + limb darkening) for the config-driven pipeline.
 """
 
+from functools import cache
 from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
-import torch
 import VBBinaryLensing
 from astropy.coordinates import get_body_barycentric_posvel
 from astropy.time import Time
@@ -259,15 +259,22 @@ def _quintic_coefficients(zeta, zetab, m1, z1, z2):
     ]
 
 
-_TORCH_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-torch.set_num_threads(1)
+@cache
+def _torch():
+    """(torch, device), imported on first use: only the hand-rolled solver needs it, and the
+    VBBL pipeline's Pool workers were each paying its import + CUDA probe for nothing."""
+    import torch
+    torch.set_num_threads(1)
+    return torch, "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def _companion_eigvals(coeffs):
     """Roots of a batch of degree-5 polynomials via a batched companion-matrix
-    eigensolve on `_TORCH_DEVICE` (GPU if available) -- same construction
+    eigensolve on `_torch()`'s device (GPU if available) -- same construction
     numpy.roots uses per-polynomial, done here for the whole batch at once.
     `coeffs`: (N, 6) complex128 tensor, highest degree first.
     """
+    torch, _ = _torch()
     n = coeffs.shape[-1] - 1
     normalized = coeffs / coeffs[:, :1]
     companion = torch.zeros(coeffs.shape[0], n, n, dtype=coeffs.dtype, device=coeffs.device)
@@ -293,7 +300,8 @@ def _binary_images_batch(zeta, s, q, tol=1e-6):
     zetab = np.conj(zeta)
     coeffs = np.stack(_quintic_coefficients(zeta, zetab, m1, z1, z2), axis=-1)
 
-    coeffs_t = torch.as_tensor(coeffs, dtype=torch.complex128, device=_TORCH_DEVICE)
+    torch, device = _torch()
+    coeffs_t = torch.as_tensor(coeffs, dtype=torch.complex128, device=device)
     roots = _companion_eigvals(coeffs_t).cpu().numpy()
 
     residual = roots - m1 / (np.conj(roots) - z1) - m2 / (np.conj(roots) - z2) - zeta[:, None]
@@ -408,6 +416,8 @@ def fspl_magnification(u, rho, ld):
     """Finite-source point-lens A(u) via VBBL's ESPLMag2. `rho` is the source radius
     in Einstein radii; `ld` is VBBL's linear limb-darkening a1, i.e. the u convention
     I(r) = I(0) (1 - ld (1 - sqrt(1 - r^2/rho^2)))."""
+    if not (np.all(np.isfinite(u)) and np.isfinite(rho)):  # VBBL loops forever on NaN/inf (session 22)
+        return np.full(np.shape(u), np.nan)
     _VBBL.a1 = ld
     return np.array([_VBBL.ESPLMag2(x, rho) for x in u])
 
@@ -419,6 +429,8 @@ def binary_magnification_vbbl(zeta, s, q, rho, ld):
     binary_magnification_fs() stays as an independent cross-check, ~80x slower.
     rho = 0: point source (BinaryMag0), constant cost per point -- finite source near a
     cusp at tiny rho can take seconds per point (session 21)."""
+    if not (np.all(np.isfinite(zeta)) and np.isfinite([s, q, rho]).all()):  # VBBL loops forever on NaN/inf
+        return np.full(np.shape(zeta), np.nan)
     if rho == 0:
         return np.array([_VBBL.BinaryMag0(s, q, z.real, z.imag) for z in zeta])
     _VBBL.a1 = ld

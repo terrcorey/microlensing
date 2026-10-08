@@ -47,6 +47,11 @@ def load_instrument(cfg: dict, coords: SkyCoord) -> Instrument:
     if cfg["kind"] not in ("mag", "dia"):
         raise ValueError(f"unknown kind {cfg['kind']!r}")
     time, val, err = np.loadtxt(cfg["path"], comments=("\\", "|"), unpack=True)
+    good = np.isfinite(time) & np.isfinite(val) & np.isfinite(err) & (err > 0)  # err = 0 / NaN -> NaN chi2
+    if not good.all():
+        print(f"[load] {cfg['name']}: dropped {np.sum(~good)} non-finite / zero-error rows")
+    order = np.argsort(time[good])  # fit_fspl's median-filtered t0 guess assumes time order
+    time, val, err = time[good][order], val[good][order], err[good][order]
     if cfg["time_fmt"] == "HJD":
         t = time - 2450000
     elif cfg["time_fmt"] == "HJD-2450000":
@@ -58,6 +63,8 @@ def load_instrument(cfg: dict, coords: SkyCoord) -> Instrument:
         t = hjd - 2450000
     else:
         raise ValueError(f"unknown time_fmt {cfg['time_fmt']!r}")
+    if not 0 < t.min() <= t.max() < 20000:  # HJD - 2450000 spans ~1995-2050
+        raise ValueError(f"{cfg['name']}: times {t.min():.1f}..{t.max():.1f} after the shift -- check time_fmt")
     flux, flux_err = mag_to_flux(val, cfg["K"] * err) if cfg["kind"] == "mag" else (val, cfg["K"] * err)
     return Instrument(cfg["name"], cfg["kind"], cfg["band"], cfg["ld"], t, flux, flux_err)
 

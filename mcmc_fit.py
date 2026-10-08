@@ -5,7 +5,7 @@ import corner
 import emcee
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 from scipy.stats import t as student_t
 from astropy.coordinates import SkyCoord
 
@@ -26,6 +26,16 @@ class FitResult(NamedTuple):
     def column(self, name):
         assert self.samples is not None, "quicklook FitResult has no samples"
         return self.samples[:, self.labels.index(name)]
+
+
+def nelder_mead(f, x0, step, maxfev=20000):
+    """Nelder-Mead from an explicit initial simplex: scipy's default steps 5% of each
+    value, ~140 d on t0 ~ 2848 and ~0 on a zero-initialised piE/fb (see CHANGELOG session 17).
+    Returns (x, f(x))."""
+    x0 = np.asarray(x0, float)
+    r = minimize(f, x0, method="Nelder-Mead", options={
+        "initial_simplex": np.vstack([x0, x0 + np.diag(step)]), "xatol": 1e-6, "fatol": 1e-3, "maxfev": maxfev})
+    return r.x, float(r.fun)
 
 
 def flat_chain(sampler: emcee.EnsembleSampler, discard: int, thin: int = 15) -> tuple[np.ndarray, np.ndarray]:
@@ -122,7 +132,7 @@ def fit_parallax_pspl_mcmc(time, mag, mag_err, delta_sN, delta_sE, u0_guess=0.5,
         t0, u0, tE, f_source, f_blend, piE_N, piE_E, scale, dof = theta
         if not (time.min() < t0 < time.max()):
             return -np.inf
-        if not (0 < u0 < 5):
+        if not (-5 < u0 < 5):  # with parallax, -u0 is a distinct solution, not a mirror
             return -np.inf
         if not (0.1 < tE < 1000):
             return -np.inf
@@ -215,8 +225,8 @@ def get_t0_par(time, mag, mag_err, cache_path, u0_guess, tE_guess):
     fit_result = fit_pspl_mcmc(time, mag, mag_err, u0_guess=u0_guess, tE_guess=tE_guess, run_mcmc=True)
     u0_s, tE_s, fs_s, fb_s = (fit_result.column(name) for name in ("u0", "tE", "f_source", "f_blend"))
     derived = {
-        "A_max": magnification(u0_s),
-        "t_eff": u0_s * tE_s,
+        "A_max": magnification(np.abs(u0_s)),
+        "t_eff": np.abs(u0_s) * tE_s,
         "blend_fraction": fb_s / (fs_s + fb_s),
         "m_source": ZERO_POINT_MAG - 2.5 * np.log10(fs_s),
         "M_lens": estimate_mass(tE_s),
@@ -386,8 +396,8 @@ if __name__ == "__main__":
             print(f"{fit_result.samples.shape[0]} posterior samples after burn-in/thinning")
             u0_s, tE_s, fs_s, fb_s = (fit_result.column(name) for name in ("u0", "tE", "f_source", "f_blend"))
             derived = {
-                "A_max": magnification(u0_s),
-                "t_eff": u0_s * tE_s,
+                "A_max": magnification(np.abs(u0_s)),
+                "t_eff": np.abs(u0_s) * tE_s,
                 "blend_fraction": fb_s / (fs_s + fb_s),
                 "m_source": ZERO_POINT_MAG - 2.5 * np.log10(fs_s),
                 "M_lens": estimate_mass(tE_s),
