@@ -23,3 +23,5 @@ Variant suffixes (same event, modified config -- input/<short>.toml)
 -------------------------------------------------------------------
 
 O-05-BLG169-no<Instrument>  ->  O-05-BLG169 with that one instrument dropped (session 21 drop-one sensitivity runs)
+O-03-BLG235-fineq  ->  O-03-BLG235 with log q step 0.1 instead of 0.25 (session 22: the coarse grid missed Bond's basin)
+O-05-BLG169-fineq  ->  O-05-BLG169 with log q step 0.1 instead of 0.25 (session 22: does a finer grid find the published resonant caustic?)
