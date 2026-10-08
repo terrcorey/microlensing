@@ -2163,3 +2163,109 @@ Confirmed with the user (2026-10-06), in priority order:
 4. **Data follow-ups**: MDM binning (137 archive points vs 1025 images), Bennett 2015's data,
    and note in `input/O-05-BLG169.toml` that MDM/Auckland are offset-scaled like FTN.
 - Housekeeping: py-spy in .venv is unused (uninstall); none of session 21 is committed.
+
+## 2026-10-08 — session 22
+
+### Built
+- **Why the session-21 jobs hung, and the fixes** (Claude, ponytail): VBBL segfaulted in pool
+  workers; `multiprocessing.Pool` respawned them and lost their tasks, so `map` waited forever
+  (full O-05-BLG169 and noOGLE idle ~40 h). Fuzzing VBBL in subprocesses: NaN/inf inputs **hang**
+  it forever (no segfault reproduced in isolation); noOGLE's FSPL rho had collapsed to 4e-15.
+  Fixes: `search.pool()` = `ProcessPoolExecutor` (raises `BrokenProcessPool`); every chi2 rejects
+  non-finite theta, rho < `RHO_MIN` = 1e-5 (rho = 0 allowed in 2L1S), |piE| > 5 (was MCMC-only),
+  (s, q) outside the config grid box; VBBL wrappers return NaN on non-finite input; MCMC chains
+  checkpointed every 200 steps and resumed (same mode only, `start` stored); grid/refined caches
+  keyed on a config hash + `plain` + inner-search settings + K, stale chains deleted; grid errors
+  cancel queued cells; asserts on empty minima/modes, finite FSPL chi2 and K.
+- **Two review agents** (optimizer + architect, read-only), 4 rounds until both reported no
+  remaining bugs: also fixed `event.load_instrument` validation (drop bad rows, sort, time sanity),
+  `find_zoom_window` on no significant points, lazy torch import, BLAS threads = 1 in
+  search.sbatch, `mcmc_fit.nelder_mead` (moved from search.py) now used by the old pipeline too,
+  old-pipeline parallax fits no longer `abs(u0)` (prior -5 < u0 < 5; A_max/t_eff use |u0|).
+  `scratch/check_search.py` self-check (guards, dead worker raises, checkpoint + resume).
+- **Readable outputs**: `diagnose()` writes `summary.txt` (run identity, FSPL + best 2L1S with
+  +/- from the nearest mode's chain, chi2, both BICs, K, fs/fb, all modes, done-checks) and a
+  reworked `fit_lc.png` (caustic inset, text strip); BIC moved into `diagnose()`; overall best =
+  refined or any chain's best sample (`overall_best()` folded in). `search.sbatch` takes `$2` =
+  stage, so diagnose can be a dependent job (8 CPUs).
+- **Parallax-only null searched properly** (`parallax_search()`): FSPL on a 0.25-step
+  (piE_N, piE_E) grid x both u0 signs, best 3 minima refined; `fspl_parallax_map.png` with
+  1/2/3-sigma contours and an MCMC-needed verdict.
+- **Fair `fit_lc.png`** (after several wrong turns, below): all instruments in OGLE I magnitude,
+  aligned by the 2L1S fit (published convention), both models as predicted OGLE magnitudes,
+  residual rows in mag each aligned by its own model, shared axis.
+- Grid inner search 8/2/300 -> 16/5/600 (`N_SIGMA`, `N_POLISH`, `STD_MAXFEV`); `N_REFINE` 10 ->
+  30 -> back to 10. Configs `input/O-03-BLG235-fineq.toml`, `input/O-05-BLG169-fineq.toml` (log q
+  step 0.1). Pipeline explainer page: https://claude.ai/artifact/HoAGxWtDdMs6dREayZ2a5a
+- Jobs: O-05-BLG169 full/noMDM/noAuckland/noFTN and O-03-BLG235 rerun on the new code (noOGLE
+  dropped: parallax unconstrained without OGLE's baseline, pins on |piE| = 5); diagnoses
+  backfilled. Running at save: noMDM 4950111 (two modes stalled ~1 h each on single VBBL calls,
+  diagnose 4950156 queued), O-03-BLG235-fineq 4954934 (grid ~6 h, diagnose 4955513 queued),
+  O-05-BLG169-fineq 4955514 (diagnose 4955515 queued).
+
+### Learned & open questions
+- **Verdicts (conservative Delta BIC, K at FSPL; all MCMC unconverged)**: O-05-BLG169 131.8
+  (chi2 575.0 vs 424.1, best s = 0.813, q = 3.5e-5, a close/wide x +-u0 family within 0.6 in chi2),
+  noFTN 125.7, noAuckland 136.7 -- the planet signal survives dropping FTN or Auckland.
+  O-03-BLG235 319.0, but its best is s = 1.18, q = 4.1e-4, *not* Bond's solution.
+- **Why the grid missed Bond on O-03-BLG235**: Bond's trajectory scores chi2 1201 at the grid's
+  own point-source footing (1104 with finite source) -- better than every one of the 1025 cells
+  (best 1291) -- but the nearest cell (log q -2.5 vs Bond's -2.38) scores 1457 and is no local
+  minimum. 16/5/600 alone changed no real cell (2.8x cost); 30 refinements found nothing (all
+  best results from minima ranked 0-7). Log q step 0.1 *plus* 16/5/600: the cell at log q -2.4
+  scores 1283 and refines to s = 1.126, q = 0.0042, alpha = 224.6 deg (Bond 1.120, 0.0039, 223.8)
+  at chi2 1176 -- both changes are needed. The grid chi2(s, q) surface is noisy (60-80 between
+  neighbours): the per-cell local search, not physics.
+- **Parallax alone does not explain O-05-BLG169**: the gridded parallax-only fit improves on the
+  two-start one (raw chi2 779.1 vs 790.8) and Delta BIC barely moves (131.3 -> 131.8). Its map is
+  one long flat valley in piE_N (piE_E ~ -0.2) trading off with tE; the "N separate minima"
+  verdict counts ripples along it and over-states multimodality.
+- **Magnification is model-dependent** (blending degeneracy): the parallax-only FSPL has OGLE
+  fs = 0.025, fb = 0.255, 2L1S fs = 0.107, fb = 0.173 -- same baseline (0.280) and peak flux,
+  A differing ~4x. Plotting data "in A" therefore picks a model; the chi2 itself is in observed
+  flux and fair. Cross-instrument alignment differs by ~0.04 mag between models (see Future
+  developments).
+- **O-05-BLG169's 2L1S leaves correlated MDM residuals**: in the anomaly window, runs test z =
+  -4.2, lag-1 autocorrelation +0.59, chi2/pt 0.20 (MDM errors ~2.2x too large), the same wave as
+  FSPL's at ~1/3 the amplitude. Candidates: a missed resonant solution (literature: s ~ 1,
+  q ~ 6-9e-5, from memory -- check), MDM binning/smoothing (137 archive points vs 1025 images),
+  rough limb darkening. The fineq run tests the first.
+- **Why MCMC doesn't converge**: tau ~ 800-1400 steps (rho, alpha, q, u0, s slowest) vs 12000;
+  curved degeneracies (u0 tE, rho tE at high magnification; s-q-alpha), linear sampling of
+  decade-spanning q/rho, starts below the minimum (MCMC beats Nelder-Mead by 3-8 on O-05-BLG169,
+  25-97 on O-03-BLG235), and on O-03-BLG235 split walker groups (acceptance 0.08-0.10).
+- BIC caveats discussed: it penalises parameters, not the search (look-elsewhere), assumes
+  independent correct errors (correlated residuals), and K at 2L1S is circular.
+- Mistakes this session (Claude): reported the full run's Nelder-Mead best as 485 (it was the
+  worst refinement printed; best 428.4); called magnification "different units"; drew the FSPL
+  curve through one instrument's calibration, then raw, before the fair magnitude plot.
+
+### Next session
+Confirmed with the user (2026-10-08), in priority order:
+1. **Read the two fine-q runs** (cheap, and decides the rest): O-03-BLG235-fineq (search 4954934,
+   diagnose 4955513) -- goal 1's acceptance test, does the unseeded pipeline reach chi2 ~ 1100 in
+   Bond's basin?; O-05-BLG169-fineq (search 4955514, diagnose 4955515) -- does it find the published
+   resonant caustic (check the literature values first), and does the MDM residual wave go away?
+2. **MCMC convergence** (session 21's goal 1, still open): polish each mode from its MCMC best,
+   sample log q / log rho / log s, add DE moves to the stretch move, then longer chains.
+3. **MDM residual wave**, if the fine-q runs don't remove it: free or colour-derived limb
+   darkening; check whether MDM's archive points are binned/smoothed.
+4. Housekeeping: resubmit noMDM (two modes stalled on single VBBL calls; resume works) instead
+   of building a VBBL watchdog without a reproducer; make the parallax map's "N separate minima"
+   merge ripples along one valley (require a chi2 barrier between minima); `--stage=probe` (grids
+   now take ~6 h); uninstall py-spy from .venv.
+- The shared source-flux ratio (Future developments below) stays future work, after convergence.
+- None of session 22 is committed (session 21 was, at session start); suggested commits given to
+  the user in chat.
+
+### Future developments
+- **Shared source-flux ratios across models (cross-instrument constraint).** Today every model
+  profiles each instrument's fs/fb independently, so the source's flux ratio between instruments
+  is a free number per model -- on O-05-BLG169, fs_OGLE/fs_MDM = 0.700 (FSPL + parallax) vs 0.672
+  (2L1S). Physically it is one number (the same star through two telescopes/filters). The 4%
+  freedom shifts MDM's OGLE-aligned points by ~0.04 mag between the two models' alignments, about
+  twice the anomaly amplitude (+-0.02 mag), which is why `fit_lc.png`'s light-curve row can only be
+  aligned by one model (2L1S) and each residual row aligns by its own. Fix: tie the ratio across
+  models -- from a measured source colour (as published analyses do), or by requiring a common
+  ratio in both fits. Gives one model-independent multi-instrument axis and stops either model
+  absorbing residuals through that freedom. A model change, not a plotting tweak: `/grill-me` first.
