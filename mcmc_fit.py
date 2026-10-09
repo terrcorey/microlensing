@@ -38,6 +38,18 @@ def nelder_mead(f, x0, step, maxfev=20000):
     return r.x, float(r.fun)
 
 
+def polish(f, x0, steps, maxfev=5000):
+    """nelder_mead() restarted from its own result with a fresh simplex (`steps(x)`) until a pass gains
+    < 0.1: one run's simplex collapses in curved valleys and stopped 4-66 short of the MCMC best on
+    search.py's 2L1S (session 22-23). Returns (x, f(x))."""
+    x, c2 = np.asarray(x0, float), np.inf
+    while True:
+        x1, c1 = nelder_mead(f, x, steps(x), maxfev=maxfev)
+        if not c2 - c1 >= 0.1:  # `not >=`: an inf - inf = NaN start stops too
+            return (x1, c1) if c1 < c2 else (x, c2)
+        x, c2 = x1, c1
+
+
 def flat_chain(sampler: emcee.EnsembleSampler, discard: int, thin: int = 15) -> tuple[np.ndarray, np.ndarray]:
     """Flat (samples, log_probs) after burn-in/thinning -- shared by every emcee
     caller. emcee's getters are inferred Optional (None before run_mcmc), hence the assert."""

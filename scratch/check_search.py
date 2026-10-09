@@ -6,6 +6,8 @@
    hangs on NaN and segfaulted in that regime).
 2. pool(): a worker dying hard raises BrokenProcessPool instead of hanging.
 3. run_mcmc(): checkpoints, and a second call resumes to nsteps instead of restarting.
+4. caustic_crossing() (session 23): straight down the axis of a resonant caustic crosses it,
+   0.5 thetaE off it is a near miss beyond CLOSE.
 """
 import os
 import sys
@@ -28,7 +30,14 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
         assert search.chi2_binary(bad, event) == np.inf, bad
     assert np.isfinite(search.chi2_binary(good._replace(rho=0.0), event))  # point source still allowed
     assert search.chi2_fspl((2848.0, 0.1, 60.0, 1e-15, 0, 0), event) == np.inf
-    print("guards ok")
+    assert np.allclose(search.from_mcmc(search.to_mcmc(good)), good)
+    print("guards + MCMC coordinates ok")
+    trk = search.track(event, 2848.0)
+    through = search.Binary(2848.0, 0.0, 60.0, 1e-3, 0.0, 0.0, 1.0, 0.1, 0.0)
+    assert search.caustic_crossing(trk, through)[0]
+    miss = search.caustic_crossing(trk, through._replace(u0=0.5, q=1e-4))
+    assert not miss[0] and miss[1] == np.inf, miss
+    print("caustic_crossing ok")
 
     with search.pool(event) as ex:
         try:

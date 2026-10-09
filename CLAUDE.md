@@ -105,7 +105,8 @@ python3 search.py --config input/O-05-BLG169.toml --stage=diagnose   # FSPL + pa
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
 srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
-                                        # session-22 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume
+                                        # session-22/23 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
+                                        # MCMC coordinate round trip, caustic_crossing()
 ```
 
 ## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
@@ -154,8 +155,12 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   t_in/t_out candidates = largest FSPL residuals + t0 + tE x {-1..1}, best
   `N_POLISH` = 5 Nelder-Mead'd) and `n_alpha` standard starts (`STD_MAXFEV` =
   600) -- 16/5/600 since session 22, ~2.8x the cost of 8/2/300 per cell, and
-  only useful together with a finer log q step; point source (`rho = 0` -> VBBL
-  `BinaryMag0`, constant cost; refinement starts from FSPL's rho), parallax off,
+  only useful together with a finer log q step; each cell keeps the best of *both* families
+  (Cassan, standard) separately (`fam_chi2`/`fam_theta` in grid.npz, `chi2` = their min for the
+  map/minima; session 23, older caches recompute); point source (`rho = 0` -> VBBL
+  `BinaryMag0`, constant cost; refinement starts from FSPL's rho) -- **biased on O-05-BLG169**,
+  where rho ~ u0: a point source scores the true solutions 400-600 worse than a finite one and the
+  map missed a better resonant basin (session 23, see CHANGELOG); parallax off,
   Cassan abscissae offset half a step off the on-axis cusps (sigma = 0, 0.5),
   cached as `results/<short>/grid.npz` (reused only if config hash `key`,
   `plain`, the inner-search settings and K all match; a recompute deletes
@@ -165,10 +170,18 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   cell's time, up to 109 s per call; point source ~30-60 s per cell at 8/2/300.
   (iii) `minimum_filter` local minima, best `N_REFINE` = 10 (30 found nothing
   new on O-03-BLG235, session 22); (iv) refinement with everything free from
-  (u0, alpha) and (-u0, -alpha) (each start its own pool task), piE from 0,
-  cached as refined.npz (same key; a recompute deletes `mcmc_mode*`); emcee
+  both families' best start at each minimum, each with its mirror (-u0, -alpha)
+  (each start its own pool task), piE from 0, by `mcmc_fit.polish()` (Nelder-Mead
+  restarted with a fresh simplex until a pass gains < 0.1: one run stopped 4-66 short
+  of the MCMC best, session 23), cached as refined.npz with each result's `cell` and
+  start `family` (same key; a recompute deletes `mcmc_mode*`); emcee
   (32 walkers, 12000 steps) on the `distinct_modes()` within delta-chi2 10
-  (same u0 sign and within 0.02 in log s / 0.1 in log q = duplicate), all
+  (same u0 sign, same crossing class and within 0.02 in log s / 0.1 in log q =
+  duplicate), sampled in `to_mcmc()` coordinates (t0, t_eff = u0 tE, tE, t_star =
+  rho tE, piE_N, piE_E, log s, log q, alpha; `from_mcmc()` back) with a -2 log tE
+  Jacobian term in `log_prob` (priors flat in u0, tE, rho; log-uniform in s, q),
+  DEMove 0.8 / DESnookerMove 0.2 instead of the stretch move (session 23); chains are
+  still saved physical, log_prob = -chi2/2; all
   modes' samplers concurrently on one shared pool, one thread each (emcee
   maps only nwalkers/2 at a time and waits for the slowest chi2: 4 modes ran
   3.3x faster than serially on O-05-BLG169). `run_mcmc()` checkpoints the
@@ -197,6 +210,14 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   (optimistic, circular); `plot_fit()` -> fit_lc.png; `plot_parallax_map()`
   -> fspl_parallax_map.png; summary.txt (`fmt_params()` formats both:
   3 sig figs on the plot, full precision in the file, alpha in degrees).
+  Crossing vs near miss (session 23): `track()` (0.1 d polyline over the data span
+  + parallax offsets, once per event) and `caustic_crossing(trk, p)` -> (source centre
+  crosses a caustic?, closest approach / rho -- to the nearest caustic *vertex*, ~0.25 rho
+  coarse on a big resonant caustic, out to `CLOSE` = 0.05 thetaE --, crossing unobserved?);
+  summary.txt gets one overall line (best crossing vs best near miss over refined + chain
+  bests, Delta > MODE_DCHI2 -> "preferred" else "close", MCMC crossing fraction per mode
+  from 200 samples) and one line per refined local minimum; the modes table has class
+  and xfrac columns.
 - `plot_fit()` (session 22, after several wrong turns): magnification is
   model-dependent through blending (on O-05-BLG169 the parallax-only FSPL has
   OGLE fs = 0.025 vs 2L1S's 0.107, so the same fluxes mean A differing ~4x),
@@ -226,7 +247,9 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
 - `mcmc_fit.nelder_mead(f, x0, step)` (moved from search.py in session 22): Nelder-Mead from an
   explicit initial simplex, shared by search.py and the old pipeline's `fit_joint_pspl()` /
   `run_joint_fit()` (scipy's default 5%-of-value simplex was ~140 d on t0 and ~0 on zero-started
-  piE/fb). The old pipeline's parallax fits no longer take `abs(u0)` afterwards and their priors
+  piE/fb). `mcmc_fit.polish(f, x0, steps)` (session 23): `nelder_mead` restarted from its own
+  result with a fresh simplex `steps(x)` until a pass gains < 0.1 -- search.refine() and
+  scratch/ld_test.py. The old pipeline's parallax fits no longer take `abs(u0)` afterwards and their priors
   allow -5 < u0 < 5 (with parallax, -u0 is a distinct solution); derived A_max/t_eff use |u0|.
   `lc_models` imports torch lazily (`_torch()`), only the hand-rolled solver needs it.
 
@@ -247,8 +270,11 @@ give a fast/no-MCMC path without a second script to keep in sync.
 `cross_check_mulensmodel_parallax.py`, `cross_check_mulensmodel_fs.py`,
 `derive_binary_quintic.py`, `fit_2l1s_moa19008.py`, `cassan_caustic.py` (Cassan-parametrised 2L1S fit,
 see "PSPL-vs-2L1S" below), `compare_pspl_2l1s.py` (PSPL-vs-2L1S BIC, same
-section), `check_search.py` (session-22 self-check of search.py's guards, pool and
-checkpointing), `scratchpad.ipynb` (interactive exploration:
+section), `check_search.py` (session-22/23 self-check of search.py's guards, pool,
+checkpointing, MCMC coordinates and caustic_crossing), `ld_test.py` (session 23: free
+per-band limb darkening on O-05-BLG169's session-22 bests -- doesn't remove the MDM wave),
+`probe_fs_grid.py` (session 23: finite source in the *whole* grid cell, screen included --
+> 15x a point-source cell, rejected), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots -- not a pipeline step).
 SLURM job scripts live in `slurm/` (session 16), not `scratch/`: one
 `.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`, `cassan`,
@@ -765,7 +791,7 @@ measuring on already-rescaled errors gives k~1.
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
-  compare_pspl_2l1s.py, check_search.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
+  compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in results/ -- when a script graduates into
   the pipeline, move both its code and its output path out at the same

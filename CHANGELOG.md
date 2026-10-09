@@ -2269,3 +2269,82 @@ Confirmed with the user (2026-10-08), in priority order:
   models -- from a measured source colour (as published analyses do), or by requiring a common
   ratio in both fits. Gives one model-independent multi-instrument axis and stops either model
   absorbing residuals through that freedom. A model change, not a plotting tweak: `/grill-me` first.
+
+## 2026-10-09 — session 23
+
+### Built
+- **Convergence, part 1** (Claude, ponytail ultra): `mcmc_fit.polish()` (Nelder-Mead restarted with a fresh simplex
+  until a pass gains < 0.1), used by `search.refine()`; emcee samples `to_mcmc()` coordinates (t0, t_eff = u0 tE, tE,
+  t_star = rho tE, piE, log s, log q, alpha) with a -2 log tE Jacobian (flat in u0, tE, rho; log-uniform in s, q --
+  a prior *change* vs pre-23 chains, flat in s, q); DEMove 0.8 / DESnookerMove 0.2. Chains still saved physical.
+- **Crossing vs near miss** (grilled): grid cells keep both families' best (`fam_chi2`/`fam_theta`); both refined
+  at every minimum (+ mirrors); `track()` + `caustic_crossing()` classify by outcome (source centre crosses a caustic
+  in the data span; closest approach / rho for near misses); class splits `distinct_modes()`; summary.txt: one
+  overall line + one per refined minimum, MCMC crossing fraction; self-check covers it.
+- Scratch: `ld_test.py` (free per-band LD), `probe_fs_grid.py` (fully finite-source cell cost). One-off checks
+  (noFTN solution on all data, point- vs finite-source at fixed (s, q)) ran from the scratchpad, not kept.
+- **Not merged -- worktree `.worktrees/fs-grid/`** (holds all of the above + these; jobs re-read search.py when they
+  spawn pools, so it waits): finite-source grid (`finite_grid(plain)`: rho >= |u0|/10; point-source Cassan screen,
+  every polish fits rho from t_star/tE; per-cell call timing in the progress line, grid.npz and summary.txt);
+  `chi2_binary`: 0 <= rho < RHO_MIN = exact point source, rho > RHO_MAX = 0.1 rejected (grid, refinement, MCMC);
+  modes table `psfrac`; alpha bounded to (alpha0 - pi, alpha0 + pi] in `log_prob`. Self-check passes on it.
+  `scratch/_fs_cell_test.py` there is temporary (don't merge). Merge once 4967231 and 4967233 have spawned their
+  refinement pools (~16:30 on 2026-10-09), then remove the worktree.
+- noMDM: cancelled 4950111 (modes 0/12 stalled ~23 h on VBBL calls) and its broken diagnose; session 22's diagnose
+  (`git show f605789:search.py`) run on the saved outputs instead.
+- Jobs at save: 4967231 O-03-BLG235-fineq two families (stretch only -- it loaded search.py 34 s before the DE
+  edit); 4967206 O-05-BLG169-fineq convergence-only rerun -> backup 4967232 (to `session23a/`) -> 4967233 two
+  families + DE (point-source grid, the user's choice); 4967458 finite-source cells at the exact (s, q) (see below).
+  Session-22 fine-q outputs backed up in `results/<short>/session22/`, 4967205's in `results/O-03-BLG235-fineq/session23a/`.
+
+### Learned & open questions
+- **Restarted Nelder-Mead works**: O-03-BLG235-fineq Nelder-Mead 1166 -> 1101.3 (MCMC best 1100.1); the +u0 mirror
+  is now a real second mode (1102.2). Burn-in gone (median chi2 flat from the first tenth, best + 7.6). But mixing
+  is still slow and uniform: tau 500-1200 on *every* parameter, acceptance 0.14-0.19, no stuck walkers, q unimodal
+  (0.0032-0.0050, no early-caustic) -- the curved posterior the stretch move handles badly; t_eff/t_star didn't help
+  this low-magnification event. DE moves untested so far. N_eff ~ 550 already; 50 tau is about trusting tau.
+- **O-05-BLG169's planet rests on MDM alone**: noMDM Delta BIC -5.5 (K at FSPL) / -2.7 vs +131.8 with all data
+  (noFTN 125.7, noAuckland 136.7); without MDM the 2L1S fits OGLE baseline noise (q 2e-5..9e-3).
+- **Limb darkening isn't the MDM wave**: free per-band LD gains 2L1S 3.1 (3 params), runs z -4.18 -> -4.19, I-band
+  a1 -> 0.125 (unphysical: absorbing something else); FSPL's run to the bound. Binning stays the lead (MDM's 137
+  points are a near-uniform 1.5 min cadence vs 1025 images in the paper; chi2/pt ~0.2, lag-1 ~0.5).
+- **The full-data search missed a better solution**: noFTN's resonant crossing (s 0.995, q 4.4e-6, rho 3.6e-4),
+  polished on *all* data: chi2 422.28 vs the full run's 424.14 (near miss, 0.87 rho). FTN prefers the near miss
+  (+4.7), MDM the crossing (-5.7). The MDM wave shrinks (runs z -3.8 -> -2.8, lag-1 0.59 -> 0.47) but stays.
+  A crossing and a near miss within 2 chi2: "close" by today's rule.
+- **Why the grid missed it -- point source is wrong for this event**: at fixed (s, q), parallax off, from the true
+  trajectory: finite 422.8 / point 829.7 (crossing), 424.6 / 1035.3 (control); the grid scored them 512.8 / 498.3
+  by distorting trajectories, ranking the wrong way round. rho ~ u0 here, so the whole peak is finite-source.
+  O-03-BLG235 (u0 ~ 100 rho) was the wrong event to validate the point-source grid on (session 21).
+  FSPL t_star isn't a clean observable: 0.0045 d (plain) vs 0.014 (parallax FSPL) vs 0.014-0.040 (2L1S).
+- **Finite-source grid, first test** (worktree code, nearest grid cells): ~5.5 min/cell (5.5x point source, no heavy
+  tail: longest call 1.3 s; full O-05-BLG169 grid ~9.5 h on 24 cores), but cells scored 534.5 / 477.6 vs truths
+  422.8 / 424.6 -- the cells sit at neighbouring (s, q) (s 1.000 vs 0.995), so search failure and grid spacing
+  aren't separated yet: 4967458 reruns at the exact (s, q). **And `finite_grid()` returns False on O-05-BLG169**
+  (rho/|u0| = 0.0854 < 0.1): the threshold must change before the switch does anything here.
+- MCMC parametrisation checked: proposal, likelihood and prior consistent (likelihood invariant, -2 log tE is the
+  right Jacobian); alpha's flat unbounded prior was improper (hence noMDM's +/-80000 deg) -> bounded in the worktree.
+- noMDM's fit_lc.png colours by instrument *position*: Auckland inherits MDM's orange (open: colour by name).
+- Mistake (Claude): quoted t_star = 0.014 d as "the" FSPL value (parallax FSPL) when the grid would use plain's
+  0.0045 d; caught by the probe's first line. Also crashed ld_test's first submit on an untested summary parser.
+- `finite_grid()` threshold set to rho >= |u0| / 20 in the worktree (user, at save).
+- graphify not refreshed: session 23 added functions inside existing files; refresh once after the worktree merge.
+
+### Next session
+Confirmed with the user (2026-10-09), in priority order:
+1. **Merge `.worktrees/fs-grid/`** into the main tree (if not done on 2026-10-09 after ~16:30: check 4967231 and
+   4967233 have spawned their refinement pools), drop `scratch/_fs_cell_test.py`, `git worktree remove`, then
+   graphify `--update`.
+2. **Validate the finite-source grid**: read 4967458 (finite cells at the exact (s, q); truths 422.8 / 424.6). If
+   cells still miss, improve the per-cell search (polish budget, more screen candidates) before a ~9.5 h grid; then
+   full O-05-BLG169-fineq (pass: the resonant-crossing cell is a local minimum and refines to <~ 423 unaided) and
+   O-03-BLG235-fineq as the regression test (Bond's basin, ~1100).
+3. **Read today's reruns**: 4967231 (O-03-BLG235 two families: crossing report), 4967206 (O-05-BLG169 convergence
+   change), 4967233 (two families + DE: does it reach the 422 crossing?); rerun O-03-BLG235's MCMC alone with the DE
+   moves (grid/refined cached) as the clean A/B.
+4. **MDM**: is the unbinned MDM photometry (Bennett et al. 2015) available? Gould et al. 2006's s, q, and does their
+   source cross the caustic?
+5. **Convergence part 2** (after 3): does O-05-BLG169's 2L1S need parallax (refit with it off); 64 walkers /
+   longer chains; nested sampling (dynesty) as the principled multimodal + evidence option -- `/grill-me` first.
+6. Housekeeping: colour instruments by name in fit_lc.png; uninstall py-spy; commits (user).
+- Stretch, if time: start the codebase improvement plan -- not yet scoped, `/grill-me` it first.
