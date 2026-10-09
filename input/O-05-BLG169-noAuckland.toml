@@ -11,7 +11,7 @@ log_s = [-1.0, 1.0, 0.05]
 log_q = [-6.0, 0.0, 0.25]
 
 # NASA Exoplanet Archive UID 0300030 (Gould et al. 2006); all relative mags, all HJD.
-# ld: rough linear (u) coefficients for a ~G-dwarf bulge source (Claret-like), not fitted --
+# ld: rough linear (u) coefficients for a ~G-dwarf bulge source (Claret-like): the means of the free-LD Gaussian prior (ld_sigma, session 24) --
 # refine once the source colour is known.
 
 [[instruments]]
@@ -21,6 +21,7 @@ kind = "mag"
 band = "I"
 K = 1.0
 ld = 0.53
+ld_sigma = 0.1  # free LD, Gaussian prior around ld (session 24)
 time_fmt = "HJD"
 
 [[instruments]]
@@ -30,6 +31,7 @@ kind = "mag"
 band = "I"
 K = 1.0
 ld = 0.53
+ld_sigma = 0.1  # free LD, Gaussian prior around ld (session 24)
 time_fmt = "HJD"
 
 # FTN's "mags" aren't total-flux magnitudes: its flux is linear in OGLE's with a large
@@ -42,4 +44,5 @@ kind = "mag"
 band = "R"
 K = 1.0
 ld = 0.62
+ld_sigma = 0.1  # free LD, Gaussian prior around ld (session 24)
 time_fmt = "HJD"

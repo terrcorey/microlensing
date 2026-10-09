@@ -105,8 +105,8 @@ python3 search.py --config input/O-05-BLG169.toml --stage=diagnose   # FSPL + pa
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
 srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
-                                        # session-22/23 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
-                                        # MCMC coordinate round trip, caustic_crossing()
+                                        # session-22/23/24 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
+                                        # MCMC coordinate round trip, caustic_crossing(), free LD
 ```
 
 ## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
@@ -115,7 +115,7 @@ Configs so far: `input/O-03-BLG235.toml` (regression test vs Bond) and
 `input/O-05-BLG169.toml` (session 20: 4 NASA Exoplanet Archive tables --
 OGLE I, MDM I, Auckland unfiltered, FTN R -- all `"mag"`, HJD; the 22 SMARTS
 points aren't on the archive, MDM's 137 points vs the paper's 1025 images
-look binned; FTN's "mags" are a negative-offset flux scale, absorbed by a
+looked binned, but night 1's 127 are at a uniform 1.46 min cadence (session 24); FTN's "mags" are a negative-offset flux scale, absorbed by a
 free-sign fb -- see the TOML comment; `ld` values rough, not from the source
 colour; MDM and Auckland are offset-scaled too, fb < 0). `input/O-05-BLG169-no{OGLE,MDM,Auckland,FTN}.toml` (session 21):
 drop-one sensitivity copies, each its own `short_name` (see dataset_names.txt;
@@ -123,6 +123,9 @@ noOGLE dropped in session 22: without OGLE's baseline parallax is unconstrained
 and pins on the |piE| = 5 bound). `input/O-03-BLG235-fineq.toml` (session 22):
 log q step 0.1 instead of 0.25 -- the 0.25 grid put no cell near Bond's q;
 `input/O-05-BLG169-fineq.toml`, same change, testing whether it finds the published resonant caustic.
+All six O-05-BLG169 configs have `ld_sigma = 0.1` on every instrument (session 24: free LD); the
+O-03-BLG235 ones keep LD fixed. `scratch/ld_smoke/O-03-BLG235-ldsmoke.toml` is a 3x3-cell free-LD smoke
+config (outputs in scratch/ld_smoke/out/ via `short_name = "../scratch/ld_smoke/out"`).
 
 The long-term direction above has started. Three pieces, independent of the
 old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
@@ -132,11 +135,15 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   `n_alpha`), and one `[[instruments]]` entry per telescope: `name`, `path`,
   `kind` (`"mag"` -> flux = fs*A + fb; `"dia"` -> flux = fs*(A - 1)), `band`,
   `K` (manual error multiplier, applied to the raw error before mag->flux),
-  `ld` (VBBL's linear `a1`, u convention), `time_fmt` (`"HJD"`,
+  `ld` (VBBL's linear `a1`, u convention), optional `ld_sigma` (session 24: LD free in
+  refinement + MCMC, one coefficient per band, Gaussian prior mean `ld` / sigma `ld_sigma`,
+  bounded [0, 1]; every instrument of a band must agree), `time_fmt` (`"HJD"`,
   `"HJD-2450000"`, or `"Geocentric JD"` -> astropy heliocentric light-travel
   correction, up to ~8 min). No literature initial guesses.
 - `event.py` (library): `load_event()` -> `Event(short_name, coords, grid,
-  instruments)`, each an `Instrument` NamedTuple holding (time, flux,
+  instruments, ld_prior)` (`ld_prior`: (band, mean, sigma) per free-LD band, sorted;
+  `with_ld(event, ld)` sets those bands' coefficients, `ld_penalty()` is the prior as a
+  chi2 term), each instrument an `Instrument` NamedTuple holding (time, flux,
   flux_err) plus `dsN`/`dsE` parallax offsets (zero until
   `with_t0_par()`). `flux_residuals(event, A)` takes one magnification array
   per instrument and profiles fs/fb with one weighted `lstsq` (kind only picks
@@ -150,7 +157,14 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   keeps the two-start fit): FSPL at fixed (piE_N, piE_E) on a 0.25-step grid
   inside |piE| <= 5, for each u0 sign (`fspl_cell`), the 3 best local minima
   refined all-free -- the parallax-only null hypothesis searched as thoroughly
-  as the planet; k (error rescaling) derived at it. (ii) (s, q) grid, every
+  as the planet; k (error rescaling) derived at it (with LD free: the refinements free it,
+  so K comes from a free-LD FSPL). **Fit vectors** (session 24): a fit is the model's fields
+  then one LD per `event.ld_prior` band (`as_fspl()`/`as_binary()` slice, `labels()` names,
+  `ld_start()` = the prior means); `fspl_A`/`binary_A`/`chi2_*` take either, and a bare
+  FSPL/Binary keeps the config's LD -- so both grids, `fit_fspl` and `fspl_cell` run LD fixed.
+  `chi2_*` are data-only (LD outside [0, 1] -> inf); `refine_fspl`/`refine` minimise chi2 + LD
+  prior and `log_prob` adds it, so refined.npz chi2 and chain log_prob carry the prior term,
+  summary/BIC chi2 don't; BIC k = len(fit vector). (ii) (s, q) grid, every
   cell runs Cassan over every caustic (`N_SIGMA` = 16 entry/exit abscissae x
   t_in/t_out candidates = largest FSPL residuals + t0 + tE x {-1..1}, best
   `N_POLISH` = 5 Nelder-Mead'd) and `n_alpha` standard starts (`STD_MAXFEV` =
@@ -158,12 +172,15 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   only useful together with a finer log q step; each cell keeps the best of *both* families
   (Cassan, standard) separately (`fam_chi2`/`fam_theta` in grid.npz, `chi2` = their min for the
   map/minima; session 23, older caches recompute); point source (`rho = 0` -> VBBL
-  `BinaryMag0`, constant cost; refinement starts from FSPL's rho) -- **biased on O-05-BLG169**,
-  where rho ~ u0: a point source scores the true solutions 400-600 worse than a finite one and the
-  map missed a better resonant basin (session 23, see CHANGELOG); parallax off,
+  `BinaryMag0`, constant cost; refinement starts from FSPL's rho) unless `finite_grid(plain)`
+  (parallax-free FSPL rho >= |u0| / 20: O-05-BLG169 0.085, O-03-BLG235 ~0.001), then every polish
+  in a cell fits rho too (from t_star = plain's rho tE; the Cassan screen stays point source),
+  ~5.5 min/cell, ~5.5x point source -- a point source scored O-05-BLG169's true solutions 400-600
+  worse and the map missed a better resonant basin (session 23; the finite cells still missed one
+  known solution at its exact (s, q), 468.7 vs 424.6 -- per-cell search not validated); parallax off,
   Cassan abscissae offset half a step off the on-axis cusps (sigma = 0, 0.5),
   cached as `results/<short>/grid.npz` (reused only if config hash `key`,
-  `plain`, the inner-search settings and K all match; a recompute deletes
+  `plain`, the inner-search settings (incl. the finite flag) and K all match; a recompute deletes
   refined.npz), every finished cell checkpointed to `grid_partial.npz` (a
   killed run resumes). Finite source in the grid was heavy-tailed: <1% of
   calls (trajectories along the axis through cusps, tiny rho) took ~half a
@@ -179,9 +196,10 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   (same u0 sign, same crossing class and within 0.02 in log s / 0.1 in log q =
   duplicate), sampled in `to_mcmc()` coordinates (t0, t_eff = u0 tE, tE, t_star =
   rho tE, piE_N, piE_E, log s, log q, alpha; `from_mcmc()` back) with a -2 log tE
-  Jacobian term in `log_prob` (priors flat in u0, tE, rho; log-uniform in s, q),
+  Jacobian term in `log_prob` (priors flat in u0, tE, rho; log-uniform in s, q; alpha bounded
+  to one period around the mode's start -- unbounded it was improper; free LD appended unchanged),
   DEMove 0.8 / DESnookerMove 0.2 instead of the stretch move (session 23); chains are
-  still saved physical, log_prob = -chi2/2; all
+  still saved physical with their `labels`, log_prob = -(chi2 + LD prior)/2; all
   modes' samplers concurrently on one shared pool, one thread each (emcee
   maps only nwalkers/2 at a time and waits for the slowest chi2: 4 modes ran
   3.3x faster than serially on O-05-BLG169). `run_mcmc()` checkpoints the
@@ -191,7 +209,8 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   all inside VBBL `BinaryMag2` (O-03-BLG235 ~10 ms, O-05-BLG169 100-270 ms,
   ~4 ms per MDM point at A ~ 800); `RelTol` 1e-3 -> 2e-3 already moves chi2
   by > 1, so it stays. Robustness (session 22): every chi2 rejects
-  non-finite theta, rho < `RHO_MIN` = 1e-5 (rho = 0 allowed in 2L1S),
+  non-finite theta, rho < `RHO_MIN` = 1e-5 in FSPL (in 2L1S 0 <= rho < RHO_MIN is the exact point
+  source, rho > `RHO_MAX` = 0.1 rejected),
   |piE| > `PIE_MAX` = 5, and (s, q) outside the config's grid box -- VBBL
   hangs forever on NaN/inf input and segfaulted at rho ~ 1e-15 (the VBBL
   wrappers in lc_models also return NaN on non-finite input);
@@ -216,8 +235,8 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   coarse on a big resonant caustic, out to `CLOSE` = 0.05 thetaE --, crossing unobserved?);
   summary.txt gets one overall line (best crossing vs best near miss over refined + chain
   bests, Delta > MODE_DCHI2 -> "preferred" else "close", MCMC crossing fraction per mode
-  from 200 samples) and one line per refined local minimum; the modes table has class
-  and xfrac columns.
+  from 200 samples) and one line per refined local minimum; the modes table has class,
+  xfrac and psfrac (fraction of samples with rho < RHO_MIN, i.e. point source) columns.
 - `plot_fit()` (session 22, after several wrong turns): magnification is
   model-dependent through blending (on O-05-BLG169 the parallax-only FSPL has
   OGLE fs = 0.025 vs 2L1S's 0.107, so the same fluxes mean A differing ~4x),
@@ -274,7 +293,9 @@ section), `check_search.py` (session-22/23 self-check of search.py's guards, poo
 checkpointing, MCMC coordinates and caustic_crossing), `ld_test.py` (session 23: free
 per-band limb darkening on O-05-BLG169's session-22 bests -- doesn't remove the MDM wave),
 `probe_fs_grid.py` (session 23: finite source in the *whole* grid cell, screen included --
-> 15x a point-source cell, rejected), `scratchpad.ipynb` (interactive exploration:
+> 15x a point-source cell, rejected), `ld_test.py --scan` / `--free0` (session 24: shared LD scanned
+at fixed 2L1S geometry; per-band LD polish started from 0), `mdm_systematics.py` (session 24:
+MDM night-1 residuals vs airmass / reported error + Lomb-Scargle), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots -- not a pipeline step).
 SLURM job scripts live in `slurm/` (session 16), not `scratch/`: one
 `.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`, `cassan`,
@@ -791,7 +812,7 @@ measuring on already-rescaled errors gives k~1.
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
-  compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
+  compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, mdm_systematics.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in results/ -- when a script graduates into
   the pipeline, move both its code and its output path out at the same

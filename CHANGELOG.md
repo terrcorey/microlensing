@@ -2348,3 +2348,102 @@ Confirmed with the user (2026-10-09), in priority order:
    longer chains; nested sampling (dynesty) as the principled multimodal + evidence option -- `/grill-me` first.
 6. Housekeeping: colour instruments by name in fit_lc.png; uninstall py-spy; commits (user).
 - Stretch, if time: start the codebase improvement plan -- not yet scoped, `/grill-me` it first.
+
+## 2026-10-09 — session 24
+
+### Built
+- `scratch/ld_test.py --scan`: 2L1S geometry fixed at the session-22 fine-q best, one LD coefficient shared by every
+  instrument scanned over [0, 1] (step 0.05; fs/fb profiled); per-instrument chi2 table, MDM night-1 wave stats,
+  `scratch/ld_test/O-05-BLG169_ld_scan.png` (MDM flux + models at a = 0, 0.25, 0.45, 0.75, 1, and model minus best
+  in sigma). `--free0`: the 2L1S + per-band-LD polish alone, LD started from 0 (`..._mdm_residuals_free0.png`).
+- **Merged `.worktrees/fs-grid/`** (session 23 goal 1) into the main tree after 4967233 entered refinement:
+  the worktree's diff vs 8464027 applied cleanly as a patch on top of the uncommitted inset-placement change;
+  check_search.py passed; graphify code graph refreshed (`graphify update .`; docs not re-extracted). The
+  worktree directory (Claude made it in session 23, not the user) is still there: Claude's `git worktree remove --force
+  .worktrees/fs-grid` was blocked by the permission classifier (irreversible); only `scratch/_fs_cell_test.py`
+  (meant to be dropped) is unmerged.
+- **Free LD in search.py** (as agreed below): `Event.ld_prior` ((band, mean, sigma) per free band, from optional
+  per-instrument `ld_sigma`; `load_event` raises if one band's instruments disagree), `event.with_ld()` /
+  `ld_penalty()`. A fit is a *vector*: model fields then one LD per free band (`as_fspl()`/`as_binary()`,
+  `labels()`, `ld_start()`); fspl_A/binary_A/chi2_* slice it, a bare FSPL/Binary keeps the config's LD (so the
+  grids, fit_fspl and fspl_cell are unchanged). chi2_* stay data-only and reject LD outside [0, 1];
+  refine_fspl/refine minimise chi2 + LD prior, log_prob adds it; refined.npz chi2 and chain log_prob carry the
+  prior term, summary/BIC chi2 don't. to_mcmc/from_mcmc take/return arrays with LD appended; chains save their
+  `labels`, which save_mcmc/plot_trace/diagnose read; distinct_modes returns fit vectors; BIC k = len(fit vector).
+  `ld_sigma = 0.1` added to all six O-05-BLG169 configs. check_search.py: case 5 (free LD). Smoke run:
+  `scratch/ld_smoke/O-03-BLG235-ldsmoke.toml` (3x3 cells around Bond, n_alpha 4, LD free; outputs in
+  scratch/ld_smoke/out/ via short_name "../scratch/ld_smoke/out"), job 4967727.
+- **Every search output regenerated** (user's call, overriding the agreed wait for goal 2 on the O-05 configs):
+  all 7 configs (noOGLE stays dropped) recompute their grids -- O-05-BLG169's keys changed (ld_sigma), O-03's
+  grid `settings` gained the finite flag. Each search is `afterok` on the smoke run 4967727 and on a backup of its
+  folder's top-level files to `results/<short>/pre24/` (4967743; O-05-BLG169-fineq's 4967735 waits `afterany` on
+  4967233, which writes that folder). Searches: O-03-BLG235 4967744, -fineq 4967745, O-05-BLG169 4967746,
+  noAuckland 4967747, noFTN 4967748, noMDM 4967749, fineq 4967742. O-05 grids are finite source (~4 h / 1025
+  cells, ~9.5 h fineq on 24 cores) and may need redoing after goal 2 (per-cell search missed a control solution:
+  468.7 vs 424.6, 4967458). The clean O-03-BLG235 DE A/B (MCMC alone on cached grid/refined) is no longer
+  possible: its grid recomputes.
+- `scratch/mdm_systematics.py`: MDM night-1 fractional residuals at the session-22 best vs airmass (Kitt Peak) and
+  reported error, wave stats after removing a linear trend in each, Lomb-Scargle (`..._mdm_systematics.png`).
+
+### Learned & open questions
+- **Fixed geometry**: best shared a = 0.45 (MDM alone also 0.45), total 423.70 vs 424.14 at the config's 0.53; a = 0
+  428.75, a = 1 446.49. The MDM wave survives every a (runs z <= -3.8, lag-1 >= +0.59). LD's model change has fixed
+  nodes (~3491.902, .947, .976) and a ~0.09 d period; the data wave is ~0.045 d, peaking near an LD node -- no linear
+  LD can make it.
+- **LD free with geometry free is start-dependent**: from 0 -> chi2 419.67, LD (I, clear, R) = (0.003, 0.06, 0.049);
+  from the config (session 23) -> 420.87, (0.125, 0.545, 0.674). LD is unconstrained here and trades against rho
+  (0.98e-3 vs 1.02e-3) and s; < 4 chi2 for 3 parameters. Runs z -3.5: the wave stays.
+- **MDM wave vs systematics**: 127 points at a uniform 1.46 min cadence (no gaps > 1.6 min), airmass 2.18-2.62 all
+  night (smooth, minimum ~3491.955). Residual rms 0.45% vs reported errors ~1.00% (nearly constant, 0.94-1.04%:
+  carry no seeing information; errors ~2.2x too large, hence chi2/pt 0.2). corr with airmass -0.09, with error
+  -0.12; removing a linear trend in either leaves runs z -4.2 / -3.7, lag-1 +0.59: not airmass-driven. Lomb-Scargle
+  peak 70.7 min (FAP 4e-12 is meaningless: white noise assumed, only ~2.5 cycles in 3 h). Seeing-dependent blending
+  at airmass > 2.2 in a crowded bulge field can't be tested without a seeing column. The uniform 1.46 min cadence
+  also weakens session 23's "binned" reading of MDM's 137 points.
+- **Binary-source orbital motion (xallarap) can't make a ~1 h wobble**: a K5 dwarf's minimum (Roche-filling)
+  period is ~6.4 h for any companion mass. Ignoring that, a 2% wobble needs ~0.04 R_sun of reflex (~0.06 rho; the
+  light curve's slope is ~340 ln F per theta_E), i.e. M2 ~ 0.07 M_sun at a separation of 0.46 R_sun -- inside the star.
+- Auckland's chi2 jitters ~0.5 between neighbouring a at fixed geometry: VBBL RelTol noise floor.
+
+### Free-LD design (agreed via grilling 2026-10-09; implemented above)
+1. Optional `ld_sigma` per `[[instruments]]` entry: LD free iff set, one coefficient per `band`, Gaussian prior
+   (mean = config `ld`, sigma = `ld_sigma`), bounded [0, 1]; instruments in one band must agree (load_event raises).
+2. Both grids ((s, q) and the FSPL parallax grid) keep LD fixed at the config values; cache key stays the whole-file
+   hash.
+3. LD free in the parallax FSPL's all-free refinement (so K is derived with LD free -- grid recomputes), 2L1S
+   refinement (Nelder-Mead on chi2 + prior penalty) and MCMC (penalty in log_prob, LD appended to the MCMC
+   coordinates). Reported chi2 data-only; BIC k counts the LD parameters in both models; summary, modes table and
+   corners show them. check_search.py gets a case for the coordinates and the prior.
+4. `ld_sigma = 0.1` in every O-05-BLG169 config (base, fineq, drop-one); O-03-BLG235 stays fixed.
+5. First full run together with the finite-source grid (session 23 goal 2), not on the point-source grid --
+   superseded by the user at save: all 7 configs rerun now (Built).
+- Smoke run 4967727 at save: parallax FSPL refinement with LD, K, grid and refinement (I-band LD 0.5 -> 0.592 in
+  one start) all ran; MCMC + diagnose still running -- not yet verified end to end.
+- Ideas from brainstorming, not pursued: a binary source (2L2S) can add one bump of width ~ t_star (= 0.04 d here,
+  the wave's scale) but not a train of oscillations; 1L2S (no planet) is the classic alternative to a planetary
+  anomaly (Gaudi 1998) -- a separate, blind-search question.
+
+### Next session
+Confirmed with the user (2026-10-09), in priority order:
+1. **Smoke run 4967727**: MCMC + diagnose with free LD (summary LD lines, `ld_*` corner/trace columns, modes table).
+   If it failed, the 7 reruns never start (afterok): fix, resubmit them.
+2. **Read the 7 reruns** as they land: O-03-BLG235 / -fineq (regression: Bond's basin ~1100 under current code;
+   -fineq vs 4967231 is a near-clean DE vs stretch comparison -- same point-source grid settings bar the finite
+   flag); O-05-BLG169-fineq = goal 2's pass test (resonant-crossing cell a local minimum, refines to <~ 423
+   unaided), do the LD posteriors leave their priors / trade with rho, does the MDM wave survive; drop-one configs:
+   is the planet still MDM-only with free LD?
+3. **Read 4967233** (two families + DE, point-source grid; backed up in `results/O-05-BLG169-fineq/pre24/`): did it
+   reach the 422 crossing?
+4. **If O-05-BLG169-fineq misses**: improve the finite-source per-cell search (polish budget, screen candidates),
+   rerun the O-05 configs.
+5. **MDM**: periodogram check (`scratch/mdm_systematics.py`) on the 422 crossing solution; the original MDM
+   photometry with seeing (Gould et al. 2006 / Bennett et al. 2015)?
+6. **Proper LD priors**: Claret coefficients from the source colour instead of the rough 0.53/0.60/0.62.
+7. **Convergence part 2** (from session 23): does O-05-BLG169's 2L1S need parallax; 64 walkers / longer chains;
+   dynesty -- `/grill-me` first.
+8. Housekeeping: Claude -- remove its session-23 worktree (`git worktree remove --force .worktrees/fs-grid`,
+   blocked this session: needs the user's approval), colour instruments by name in fit_lc.png, uninstall py-spy;
+   user -- commits.
+- Stretch: **1L2S** (binary source, no planet) as the alternative to O-05-BLG169's planet -- `/grill-me` to scope.
+- Stretch: the codebase improvement plan (not yet scoped, `/grill-me` first); today's fit-vector refactor
+  (`as_binary(...)` throughout diagnose()) is a natural candidate to tidy.

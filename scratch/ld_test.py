@@ -8,6 +8,13 @@ scratch/ld_test/O-05-BLG169_mdm_residuals.png. Never on the login node:
     sbatch --partition=small-short --cpus-per-task=4 --mem=4G --time=06:00:00 --job-name=ld-test \\
         --output=slurm/output/slurm-ld-test-%j.out --export=ALL,PYTHONUNBUFFERED=1,OMP_NUM_THREADS=1 \\
         --wrap ".venv/bin/python scratch/ld_test.py"
+
+--free0: the 2L1S + per-band LD job alone, LD started from 0 (does session 23's I-band 0.125 depend on the start?).
+
+--scan instead: the 2L1S geometry fixed at the session-22 best, one coefficient shared by every instrument,
+scanned over [0, 1] (seconds, plus the blind FSPL fit; scratch/ld_test/O-05-BLG169_ld_scan.png):
+
+    srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:15:00 .venv/bin/python scratch/ld_test.py --scan
 """
 import sys
 from concurrent.futures import ProcessPoolExecutor
@@ -18,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import matplotlib.pyplot as plt
 import numpy as np
 
-from event import flux_residuals, load_event, rescale
+from event import flux_residuals, load_event, profile_flux, rescale
 from mcmc_fit import polish
 from search import FSPL, Binary, binary_A, binary_steps, chi2_binary, chi2_fspl, fit_fspl, fspl_A, fspl_steps
 
@@ -66,13 +73,72 @@ def wave(r):
     return (runs - mu) / np.sqrt((mu - 1) * (mu - 2) / (n - 1)), np.corrcoef(r[:-1], r[1:])[0, 1], np.mean(r ** 2)
 
 
+def scan(event, best):
+    """Shared LD coefficient a over [0, 1], geometry fixed (fs/fb still profiled). With the geometry fixed each
+    instrument's chi2 depends only on its own fs/fb, so the same scan gives MDM's own best a too."""
+    names = [i.name for i in event.instruments]
+    mdm = names.index("MDM")
+    night = event.instruments[mdm].time < 3492.4
+    a = np.linspace(0, 1, 21)
+    chi2, mdm_r = [], []
+    for ai in a:
+        ev = event._replace(instruments=[i._replace(ld=ai) for i in event.instruments])
+        r = np.split(flux_residuals(ev, binary_A(ev, best)), np.cumsum([i.time.size for i in ev.instruments])[:-1])
+        chi2.append([np.sum(x ** 2) for x in r])
+        mdm_r.append(r[mdm][night])
+    chi2 = np.array(chi2)
+    print(f"{'a':>5s} {'total':>9s} " + " ".join(f"{n:>9s}" for n in names) + "   MDM night 1: runs z, lag-1, chi2/pt")
+    for ai, c, r in zip(a, chi2, mdm_r):
+        print(f"{ai:5.2f} {c.sum():9.2f} " + " ".join(f"{x:9.2f}" for x in c) + "   {:+.2f}, {:+.2f}, {:.2f}".format(*wave(r)))
+    best_all, best_mdm = chi2.sum(1).argmin(), chi2[:, mdm].argmin()
+    print(f"best shared a = {a[best_all]:.2f}, best for MDM alone = {a[best_mdm]:.2f} (grid step 0.05)")
+    # MDM's anomaly night: data in its own flux, each a's model at its own profiled fs/fb (on all MDM points)
+    inst = event.instruments[mdm]
+    t, F, err = inst.time[night], inst.flux[night], inst.flux_err[night]
+    td = np.linspace(t.min(), t.max(), 2000)
+    dense = inst._replace(time=td, dsN=np.interp(td, inst.time, inst.dsN), dsE=np.interp(td, inst.time, inst.dsE))
+
+    def model(ai):  # MDM model flux on the data's times and on td
+        ev = event._replace(instruments=[i._replace(ld=ai) for i in (inst, dense)])
+        A_data, A_dense = binary_A(ev, best)
+        fs, fb = profile_flux(ev.instruments[0], A_data)[0]
+        return fs * A_data + fb, fs * A_dense + fb
+
+    ref_data, ref_dense = model(a[best_all])
+    sig = np.median(err)
+    fig, (top, bot) = plt.subplots(2, 1, figsize=(9, 7), sharex=True, height_ratios=[2, 1])
+    top.errorbar(t, F, err, fmt=".", color="k", ms=3, lw=0.5, label="MDM")
+    bot.plot(t, (F - ref_data[night]) / err, ".", color="k", ms=3)
+    for ai in (0, 0.25, a[best_all], 0.75, 1):
+        k = np.abs(a - ai).argmin()
+        m_dense = model(ai)[1]
+        label = f"a = {ai:.2f}{' (best)' if k == best_all else ''}: total chi2 {chi2[k].sum():.1f}, MDM {chi2[k, mdm]:.1f}"
+        top.plot(td, m_dense, lw=1, label=label)
+        bot.plot(td, (m_dense - ref_dense) / sig, lw=1)
+    bot.axhline(0, color="k", lw=0.5)
+    top.set(ylabel="MDM flux (instrument scale)",
+            title="O-05-BLG169 MDM, anomaly night: 2L1S geometry fixed, shared LD a")
+    bot.set(xlabel="HJD - 2450000", ylabel=f"minus best model / sigma\n(curves: median sigma)")
+    top.legend(fontsize=8)
+    fig.tight_layout()
+    OUT.mkdir(exist_ok=True)
+    fig.savefig(OUT / "O-05-BLG169_ld_scan.png", dpi=200)
+    print(f"saved {OUT / 'O-05-BLG169_ld_scan.png'}")
+
+
 if __name__ == "__main__":  # spawned pool workers re-import this file
     fspl0, best0, k = read_summary()
     _, _, base = fit_fspl(load_event(CONFIG))  # parallax offsets at the run's t0_par (same blind fit)
     event = rescale(base, k)
     print(f"start chi2: FSPL {chi2_fspl(fspl0, event):.2f}, 2L1S {chi2_binary(best0, event):.2f} "
           "(session 22 summary: 575.00, 424.14 -- must match)")
+    if "--scan" in sys.argv:
+        scan(event, best0)
+        sys.exit()
     jobs = [(m, free, p0, event) for m, p0 in ((FSPL, fspl0), (Binary, best0)) for free in (False, True)]
+    tag = "_free0" if "--free0" in sys.argv else ""
+    if tag:  # 2L1S only, per-band LD free from a uniform disk instead of the config's values
+        jobs = [(Binary, True, best0, with_ld(event, [0.0] * len(BANDS)))]
     with ProcessPoolExecutor(len(jobs), mp_context=get_context("spawn")) as ex:
         results = list(ex.map(fit, jobs))
 
@@ -96,5 +162,5 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
     ax.set(xlabel="HJD - 2450000", ylabel="MDM standardized residual", title="O-05-BLG169 MDM, anomaly night")
     ax.legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(OUT / "O-05-BLG169_mdm_residuals.png", dpi=200)
-    print(f"saved {OUT / 'O-05-BLG169_mdm_residuals.png'}")
+    fig.savefig(OUT / f"O-05-BLG169_mdm_residuals{tag}.png", dpi=200)
+    print(f"saved {OUT / f'O-05-BLG169_mdm_residuals{tag}.png'}")

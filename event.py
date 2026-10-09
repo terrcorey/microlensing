@@ -39,6 +39,9 @@ class Event(NamedTuple):
     coords: SkyCoord
     grid: dict             # the config's [grid] table, as parsed
     instruments: list[Instrument]
+    # (band, mean, sigma) per band whose LD is free (an instrument's optional `ld_sigma`), sorted by band:
+    # a fit's LD coefficients follow this order; () = every LD fixed at the config's (session 24)
+    ld_prior: tuple = ()
 
 
 def load_instrument(cfg: dict, coords: SkyCoord) -> Instrument:
@@ -75,8 +78,27 @@ def load_event(path: str) -> Event:
     with open(path, "rb") as f:
         cfg = tomllib.load(f)
     coords = SkyCoord(f'{cfg["ra"]} {cfg["dec"]}')
+    free = sorted({inst["band"] for inst in cfg["instruments"] if "ld_sigma" in inst})
+    prior = {}
+    for inst in cfg["instruments"]:  # one coefficient per band: every instrument in it must agree on the prior
+        if inst["band"] in free and prior.setdefault(inst["band"], (inst["ld"], inst.get("ld_sigma"))) != (
+                inst["ld"], inst.get("ld_sigma")):
+            raise ValueError(f"band {inst['band']!r}: free LD needs the same ld and ld_sigma on every instrument in it")
     return Event(cfg["short_name"], coords, cfg["grid"],
-                 [load_instrument(inst, coords) for inst in cfg["instruments"]])
+                 [load_instrument(inst, coords) for inst in cfg["instruments"]], tuple((b, *prior[b]) for b in free))
+
+
+def with_ld(event: Event, ld) -> Event:
+    """Event with the free bands' LD set to `ld` (one per event.ld_prior entry); () leaves the config's."""
+    if not len(ld):
+        return event
+    band = {b: float(a) for (b, _, _), a in zip(event.ld_prior, ld, strict=True)}
+    return event._replace(instruments=[i._replace(ld=band.get(i.band, i.ld)) for i in event.instruments])
+
+
+def ld_penalty(event: Event, ld) -> float:
+    """Gaussian LD prior as a chi2 term: sum ((a - mean) / sigma)^2 over the free bands; 0 for ld = ()."""
+    return float(sum(((a - m) / sd) ** 2 for (_, m, sd), a in zip(event.ld_prior, ld)))
 
 
 def flux_residuals(event: Event, A: list[np.ndarray]) -> np.ndarray:

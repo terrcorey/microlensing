@@ -1,0 +1,31 @@
+# Metadata
+full_name = "OGLE-2003-BLG-235"
+short_name = "../scratch/ld_smoke/out"  # session-24 free-LD smoke run: results/../scratch keeps it out of results/
+ra = "18h01m16.35s"
+dec = "-28d53m42.00s"
+
+[grid]
+n_alpha = 4
+#[l_bound, u_bound, step_size]
+log_s = [0.03, 0.07, 0.02]
+log_q = [-2.6, -2.2, 0.2]
+
+[[instruments]]
+name = "OGLE"
+path = "data/OGLE-2003-BLG-235_OGLE.tbl.txt"
+kind = "mag"
+band = "I"
+K = 1.0
+ld = 0.5
+ld_sigma = 0.1
+time_fmt = "Geocentric JD"
+
+[[instruments]]
+name = "MOA"
+path = "data/OGLE-2003-BLG-235_MOA.tbl.txt"
+kind = "dia"
+band = "I"
+K = 1.0
+ld = 0.5
+ld_sigma = 0.1
+time_fmt = "HJD"

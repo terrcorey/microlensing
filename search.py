@@ -7,8 +7,10 @@ Stages (session 18 plan, see CHANGELOG):
         u0 signs + refinement: the parallax-only model 2L1S is judged against, as thorough as the
         planet search); per-instrument K derived here too
   (ii)  (s, q) grid from event.grid: Cassan (every caustic) + standard
-        (n_alpha alphas) in each cell, point source, parallax off; each cell
-        is checkpointed to grid_partial.npz, so a killed run resumes
+        (n_alpha alphas) in each cell, parallax off; point source, or -- when FSPL
+        says the source size shapes the peak -- finite-source polishes with rho
+        fitted per cell (session 23); each cell is checkpointed to grid_partial.npz,
+        so a killed run resumes; the progress line projects the wall-clock
   (iii) distinct local minima of the delta-chi2(s, q) map
   (iv)  refine each minimum with everything free (both u0 signs, both start families: Cassan and
         standard), MCMC on those within delta-chi2 <~ 10 of the best, crossing and near-miss
@@ -24,6 +26,7 @@ login node.
 import argparse
 import hashlib
 import subprocess
+import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from datetime import datetime
 from itertools import combinations, product
@@ -37,8 +40,8 @@ import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from scipy.ndimage import median_filter, minimum_filter
 
-from event import (Event, chi2, error_scale, flux_residuals, load_event, profile_flux, rescale, to_magnification,
-                   with_t0_par)
+from event import (Event, chi2, error_scale, flux_residuals, ld_penalty, load_event, profile_flux, rescale,
+                   to_magnification, with_ld, with_t0_par)
 from lc_models import (ZERO_POINT_MAG, binary_magnification_vbbl, binary_trajectory, cassan_caustic, cassan_to_standard,
                        caustic_curve, fspl_magnification, lens_position, sun_earth_projection, trajectory)
 from mcmc_fit import nelder_mead, polish, save_corner
@@ -57,8 +60,10 @@ N_REFINE = 10        # lowest local minima of the (s, q) map that get refined (3
 MODE_DCHI2 = 10.0    # refined minima within this of the best get an MCMC
 # Finite-source floor: rho -> 0 collapsed FSPL to 1e-15..1e-24 on O-05-BLG169-noOGLE (session 22) and
 # every refinement then ran VBBL BinaryMag2 at that rho -- the heavy tail / segfault regime. Physical
-# rho = theta_* / theta_E is >~ 1e-4 for bulge sources; rho = 0 (exact point source) stays allowed in 2L1S.
+# rho = theta_* / theta_E is >~ 1e-4 for bulge sources. In 2L1S, 0 <= rho < RHO_MIN *is* the exact point
+# source (session 23): a polish pushing rho down to the floor is modelled as a point, never rejected.
 RHO_MIN = 1e-5
+RHO_MAX = 0.1  # 2L1S ceiling: a huge source is unphysical for a bulge dwarf and slow in VBBL
 PIE_MAX = 5.0        # |piE| bound for every chi2 (was MCMC-only: a refined |piE| > 5 froze its walkers)
 
 
@@ -83,23 +88,56 @@ class Binary(NamedTuple):
     alpha: float
 
 
-def fspl_A(event: Event, p: FSPL) -> list[np.ndarray]:
+# A fit vector is a model's fields, then (optionally) one linear LD coefficient per event.ld_prior band (session 24):
+# a bare FSPL/Binary -- the grids, the parallax-free FSPL -- keeps every LD at the config's value.
+NF, NB = len(FSPL._fields), len(Binary._fields)
+
+
+def as_fspl(theta) -> FSPL:
+    return FSPL(*theta[:NF])
+
+
+def as_binary(theta) -> Binary:
+    return Binary(*theta[:NB])
+
+
+def labels(event: Event, model) -> list[str]:
+    return [*model._fields, *(f"ld_{b}" for b, _, _ in event.ld_prior)]
+
+
+def ld_start(event: Event) -> list[float]:
+    return [m for _, m, _ in event.ld_prior]
+
+
+def ld_steps(theta, n) -> list[float]:
+    return [0.05] * (len(theta) - n)
+
+
+def ld_ok(ld) -> bool:
+    return bool(np.all((np.asarray(ld, float) >= 0) & (np.asarray(ld, float) <= 1)))
+
+
+def fspl_A(event: Event, theta) -> list[np.ndarray]:
+    p, event = as_fspl(theta), with_ld(event, theta[NF:])
     return [fspl_magnification(trajectory(i.time, p.t0, p.u0, p.tE, p.piE_N, p.piE_E, i.dsN, i.dsE), p.rho, i.ld)
             for i in event.instruments]
 
 
-def binary_A(event: Event, p: Binary) -> list[np.ndarray]:
+def binary_A(event: Event, theta) -> list[np.ndarray]:
+    p, event = as_binary(theta), with_ld(event, theta[NB:])
     return [binary_magnification_vbbl(binary_trajectory(i.time, p.t0, p.u0, p.tE, p.alpha, p.piE_N, p.piE_E,
                                                         i.dsN, i.dsE), p.s, p.q, p.rho, i.ld)
             for i in event.instruments]
 
 
 def chi2_fspl(theta, event: Event) -> float:
-    p = FSPL(*theta)
+    """Data-only chi2 (the LD prior is added by the objectives that free LD: refine_fspl, refine, log_prob)."""
+    p = as_fspl(theta)
     # isfinite first: VBBL loops forever on a NaN/inf input, and NaN slips past every `<=` test
-    if not np.all(np.isfinite(theta)) or p.tE <= 0 or p.rho < RHO_MIN or np.hypot(p.piE_N, p.piE_E) > PIE_MAX:
+    if (not np.all(np.isfinite(theta)) or p.tE <= 0 or p.rho < RHO_MIN or np.hypot(p.piE_N, p.piE_E) > PIE_MAX
+            or not ld_ok(theta[NF:])):
         return np.inf
-    return chi2(event, fspl_A(event, p))
+    return chi2(event, fspl_A(event, theta))
 
 
 def in_range(x, spec):
@@ -109,13 +147,13 @@ def in_range(x, spec):
 
 def chi2_binary(theta, event: Event) -> float:
     """(s, q) confined to the config's grid box: q -> 0 is FSPL again, and walkers drifting
-    down it (q ~ 1e-6) burned MCMC time at acceptance ~0.1 (session 21)."""
-    p = Binary(*theta)
-    if (not np.all(np.isfinite(theta)) or p.tE <= 0 or not (p.rho == 0 or p.rho >= RHO_MIN)  # rho = 0: point source
+    down it (q ~ 1e-6) burned MCMC time at acceptance ~0.1 (session 21). rho below RHO_MIN -> point source."""
+    p = as_binary(theta)
+    if (not np.all(np.isfinite(theta)) or p.tE <= 0 or not 0 <= p.rho <= RHO_MAX
             or np.hypot(p.piE_N, p.piE_E) > PIE_MAX or not in_range(p.s, event.grid["log_s"])
-            or not in_range(p.q, event.grid["log_q"]) or p.q > 1):
+            or not in_range(p.q, event.grid["log_q"]) or p.q > 1 or not ld_ok(theta[NB:])):
         return np.inf
-    return chi2(event, binary_A(event, p))
+    return chi2(event, binary_A(event, (*p._replace(rho=p.rho if p.rho >= RHO_MIN else 0.0), *theta[NB:])))
 
 
 def fspl_steps(p: FSPL):
@@ -172,8 +210,9 @@ def fspl_cell(k_pie):
 
 
 def refine_fspl(x0):
-    """Pool task: FSPL with everything free (parallax too) from x0."""
-    return nelder_mead(lambda x: chi2_fspl(x, EVENT), x0, fspl_steps(FSPL(*x0)))
+    """Pool task: FSPL with everything free (parallax, and the free bands' LD under their prior) from x0."""
+    return nelder_mead(lambda x: chi2_fspl(x, EVENT) + ld_penalty(EVENT, x[NF:]), x0,
+                       [*fspl_steps(as_fspl(x0)), *ld_steps(x0, NF)])
 
 
 def parallax_search(event: Event, plain: FSPL, quick: FSPL, ex):
@@ -191,13 +230,15 @@ def parallax_search(event: Event, plain: FSPL, quick: FSPL, ex):
     c2i, theta = c2i.reshape(2, pie.size, pie.size, n_inst), theta.reshape(2, pie.size, pie.size, 4)
     total = c2i.sum(axis=-1)
     minima = sorted(((total[g][i, j], g, i, j) for g in range(2) for i, j in local_minima(total[g], n=pie.size ** 2)))
-    starts = [FSPL(*theta[g, i, j], pie[i], pie[j]) for _, g, i, j in minima[:3]]
-    fits = list(ex.map(refine_fspl, starts)) + [(np.array(quick), chi2_fspl(quick, event))]
-    x, c2 = min(fits, key=lambda r: r[1])
-    fspl = FSPL(*x)
-    on_bound = np.hypot(fspl.piE_N, fspl.piE_E) > PIE_MAX - PIE_STEP / 2
-    print(f"[fspl] parallax grid ({len(cells)} cells x 2 u0 signs, {len(minima)} local minima): chi2={c2:.2f} {fspl}"
-          + (f"\n[fspl] WARNING: best |piE| = {np.hypot(fspl.piE_N, fspl.piE_E):.2f} sits on the |piE| <= {PIE_MAX} bound"
+    ld = ld_start(event)  # the grid ran with LD fixed; the refinements free it (session 24)
+    starts = [(*FSPL(*theta[g, i, j], pie[i], pie[j]), *ld) for _, g, i, j in minima[:3]]
+    fits = list(ex.map(refine_fspl, starts)) + [(np.array([*quick, *ld]), chi2_fspl((*quick, *ld), event))]
+    fspl, c2 = min(fits, key=lambda r: r[1])
+    p = as_fspl(fspl)
+    on_bound = np.hypot(p.piE_N, p.piE_E) > PIE_MAX - PIE_STEP / 2
+    print(f"[fspl] parallax grid ({len(cells)} cells x 2 u0 signs, {len(minima)} local minima): chi2={c2:.2f} {p}"
+          + (f" LD {dict(zip(labels(event, FSPL)[NF:], np.round(fspl[NF:], 3)))}" if event.ld_prior else "")
+          + (f"\n[fspl] WARNING: best |piE| = {np.hypot(p.piE_N, p.piE_E):.2f} sits on the |piE| <= {PIE_MAX} bound"
              if on_bound else ""))
     return fspl, dict(pie=pie, c2i=c2i, on_bound=on_bound)
 
@@ -230,19 +271,35 @@ def _init(event, *ctx):
 
 
 def grid_cell(k_sq):
-    """Best parallax-free point-source 2L1S at fixed (s, q), over both families:
-    Cassan (inner grid over entry/exit abscissa x candidate times, every caustic, Nelder-Mead
-    the best 2) and standard (n_alpha alphas from FSPL's t0/u0/tE, short Nelder-Mead each).
-    Point source keeps every chi2 the same cost: finite source near a cusp took up to minutes
-    per call (sessions 20-21). The returned Binary carries FSPL's rho to start refinement from.
-    Takes (cell index, (s, q)), returns (cell index, [chi2], [Binary]), one per FAMILIES entry: both
-    get refined at every local minimum (session 23: crossing vs near miss)."""
+    """Best parallax-free 2L1S at fixed (s, q), over both families: Cassan (inner grid over entry/exit
+    abscissa x candidate times, every caustic, Nelder-Mead the best N_POLISH) and standard (n_alpha
+    alphas from FSPL's t0/u0/tE, short Nelder-Mead each). The Cassan screen is always point source
+    (constant cost: finite source near a cusp took minutes per call, sessions 20-21). `finite` (CTX):
+    every polish -- what scores the cell -- fits rho too, from t_star / tE, t_star = plain's rho tE:
+    on O-05-BLG169 a point source scored the true solutions 400-600 worse than a finite one and the map
+    missed a better basin (session 23). Otherwise the polishes are point source and the Binary carries
+    FSPL's rho to start refinement from. Takes (cell index, (s, q)), returns (cell index, [chi2],
+    [Binary], (wall s, 99th-percentile call s, longest call s)), one chi2/Binary per FAMILIES entry."""
+    t_cell = time.perf_counter()
     k, (s, q) = k_sq
-    plain, times, n_alpha = CTX
-    rho = plain.rho
+    plain, times, n_alpha, finite = CTX
+    t_star = plain.rho * plain.tE
+    calls = []
 
-    def c2(t0, u0, tE, alpha):
-        return chi2_binary((t0, u0, tE, 0.0, 0, 0, s, q, alpha), EVENT)
+    def c2(t0, u0, tE, alpha, rho=0.0):
+        t = time.perf_counter()
+        c = chi2_binary((t0, u0, tE, rho, 0, 0, s, q, alpha), EVENT)
+        calls.append(time.perf_counter() - t)
+        return c
+
+    def polish(f, x0, step, maxfev, tE0):
+        """Nelder-Mead over x0 (+ rho from t_star / tE0 when finite) -> (chi2, x, rho)."""
+        if not finite:
+            x, c = nelder_mead(f, x0, step, maxfev=maxfev)
+            return c, x, plain.rho
+        rho0 = t_star / tE0
+        x, c = nelder_mead(lambda x: f(x[:-1], x[-1]), (*x0, rho0), (*step, 0.2 * rho0), maxfev=maxfev)
+        return c, x[:-1], x[-1]
 
     cassan_r, std_r = [], []  # (chi2, Binary)
     try:
@@ -253,26 +310,26 @@ def grid_cell(k_sq):
     # trajectory straight down the binary axis through both (session 21)
     sigmas = (np.arange(N_SIGMA) + 0.5) / N_SIGMA
     for caustic in caustics:
-        def cassan(x, caustic=caustic):
-            if x[3] <= x[2]:
-                return np.inf
-            return c2(*cassan_to_standard(caustic, *x))
+        def cassan_f(x, rho=0.0, caustic=caustic):
+            return np.inf if x[3] <= x[2] else c2(*cassan_to_standard(caustic, *x), rho)
         grid = [(si, so, ti, to) for si, so in product(sigmas, sigmas) if si != so for ti, to in combinations(times, 2)]
-        for x0 in [x for x in sorted(grid, key=cassan)[:N_POLISH] if np.isfinite(cassan(x))]:
-            x, _ = nelder_mead(cassan, x0, (0.02, 0.02, 0.01 * plain.tE, 0.01 * plain.tE), maxfev=600)
+        for x0 in [x for x in sorted(grid, key=cassan_f)[:N_POLISH] if np.isfinite(cassan_f(x))]:
+            c, x, rho = polish(cassan_f, x0, (0.02, 0.02, 0.01 * plain.tE, 0.01 * plain.tE), 600,
+                               cassan_to_standard(caustic, *x0)[2])
             t0, u0, tE, alpha = cassan_to_standard(caustic, *x)
-            cassan_r.append((c2(t0, u0, tE, alpha), Binary(t0, u0, tE, rho, 0, 0, s, q, alpha)))
+            cassan_r.append((c, Binary(t0, u0, tE, rho, 0, 0, s, q, alpha)))
 
     for alpha in np.linspace(0, 2 * np.pi, n_alpha, endpoint=False):
         x0 = (plain.t0, abs(plain.u0), plain.tE, alpha)
         if not np.isfinite(c2(*x0)):  # an all-inf simplex never meets fatol: burns maxfev for nothing
             continue
-        x, c = nelder_mead(lambda x: c2(*x), x0, (0.01 * plain.tE, 0.05 * abs(plain.u0) + 1e-3, 0.05 * plain.tE, 0.05),
-                           maxfev=STD_MAXFEV)
+        c, x, rho = polish(lambda x, rho=0.0: c2(*x, rho), x0,
+                           (0.01 * plain.tE, 0.05 * abs(plain.u0) + 1e-3, 0.05 * plain.tE, 0.05), STD_MAXFEV, plain.tE)
         std_r.append((c, Binary(x[0], x[1], x[2], rho, 0, 0, s, q, x[3])))
-    none = (np.inf, Binary(plain.t0, plain.u0, plain.tE, rho, 0, 0, s, q, 0.0))
+    none = (np.inf, Binary(plain.t0, plain.u0, plain.tE, plain.rho, 0, 0, s, q, 0.0))
     best = [min(r, key=lambda r: r[0], default=none) for r in (cassan_r, std_r)]
-    return k, [c for c, _ in best], [p for _, p in best]
+    calls = np.array(calls or [0.0])
+    return k, [c for c, _ in best], [p for _, p in best], (time.perf_counter() - t_cell, np.percentile(calls, 99), calls.max())
 
 
 def axis(spec):
@@ -298,10 +355,18 @@ def pool(*initargs):
     return ProcessPoolExecutor(mp_context=get_context("spawn"), initializer=_init, initargs=initargs)
 
 
+def finite_grid(plain: FSPL) -> bool:
+    """Does the source size shape the peak (parallax-free FSPL rho >= |u0| / 20)? Then grid cells are
+    scored with a finite source (grid_cell). O-05-BLG169 0.085 (|u0| / 10 missed it), O-03-BLG235 ~0.001;
+    a finite-source cell costs ~5.5x a point-source one (session 23)."""
+    return plain.rho >= abs(plain.u0) / 20
+
+
 def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
-    """(ii) delta-chi2(s, q) map, cached at `path`."""
+    """(ii) delta-chi2(s, q) map, cached at `path`, + the timing of the cells this run computed."""
+    finite = finite_grid(plain)
     # code-side knobs the TOML key can't see, and the K the cells were scored at (a new FSPL moves it)
-    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, *k_fspl])
+    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, finite, *k_fspl])
     fresh = lambda d: (d is not None and "plain" in d and np.allclose(d["plain"], plain)  # cells start from plain
                        and "settings" in d and d["settings"].shape == settings.shape
                        and np.allclose(d["settings"], settings) and "fam_theta" in d)  # pre-session-23: one family
@@ -310,7 +375,8 @@ def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
         return d
     log_s, log_q = axis(event.grid["log_s"]), axis(event.grid["log_q"])
     times = sorted(anomaly_times(event, plain) + list(plain.t0 + plain.tE * np.linspace(-1, 1, 5)))
-    print(f"[grid] {log_s.size} x {log_q.size} cells, Cassan times {np.round(times, 2)}")
+    print(f"[grid] {log_s.size} x {log_q.size} cells, {'finite' if finite else 'point'} source "
+          f"(FSPL rho/|u0| = {plain.rho / abs(plain.u0):.3g}), Cassan times {np.round(times, 2)}")
     cells = [(10 ** a, 10 ** b) for a, b in product(log_s, log_q)]
     chi2_map, theta = np.empty((len(cells), 2)), np.empty((len(cells), 2, len(Binary._fields)))
     done = np.zeros(len(cells), bool)
@@ -320,26 +386,40 @@ def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
         print(f"[grid] resuming: {done.sum()}/{len(cells)} cells from {partial}")
     todo = [(k, c) for k, c in enumerate(cells) if not done[k]]
     path.with_name("refined.npz").unlink(missing_ok=True)  # refined from the old grid's minima: stale
-    with pool(event, plain, times, event.grid["n_alpha"]) as ex:
+    t_run, stats = time.perf_counter(), []  # (cell wall s, 99th-percentile call s, longest call s)
+    with pool(event, plain, times, event.grid["n_alpha"], finite) as ex:
         futures = [ex.submit(grid_cell, kc) for kc in todo]
         for fut in as_completed(futures):
             try:
-                k, c, p = fut.result()
+                k, c, p, st = fut.result()
             except BaseException:  # else __exit__ waits for every queued cell, then discards them
                 ex.shutdown(cancel_futures=True)
                 raise
             chi2_map[k], theta[k], done[k] = c, p, True
+            stats.append(st)
             with open(partial.with_suffix(".tmp"), "wb") as f:  # write-then-rename: a kill can't corrupt it
                 np.savez(f, log_s=log_s, log_q=log_q, fam_chi2=chi2_map, fam_theta=theta, done=done, key=key,
                          plain=plain, settings=settings)
             partial.with_suffix(".tmp").replace(partial)
             if done.sum() % 50 == 0:
-                print(f"[grid] {done.sum()}/{len(cells)}")
+                print(f"[grid] {done.sum()}/{len(cells)} | {grid_timing(t_run, stats, len(cells) - done.sum())}")
     d = dict(log_s=log_s, log_q=log_q, chi2=chi2_map.min(1).reshape(log_s.size, log_q.size),
              fam_chi2=chi2_map.reshape(log_s.size, log_q.size, 2), fam_theta=theta.reshape(log_s.size, log_q.size, 2, -1))
+    d["timing"] = grid_timing(t_run, stats, 0)
     np.savez(path, **d, key=key, plain=plain, settings=settings)
     partial.unlink(missing_ok=True)
     return d
+
+
+def grid_timing(t_run, stats, left) -> str:
+    """Progress/summary line from this run's finished cells: elapsed, projected time left, the slow-call
+    tail. ponytail: the 99th percentile is each cell's own, medianed -- not the pooled calls' (too many)."""
+    if not stats:
+        return "no cells computed this run (all resumed from grid_partial.npz)"
+    wall, p99, top = np.array(stats).T
+    el = time.perf_counter() - t_run
+    return (f"{el / 3600:.2f} h elapsed, ~{el / len(stats) * left / 3600:.2f} h left, median cell {np.median(wall):.0f} s, "
+            f"99% call {1e3 * np.median(p99):.0f} ms, longest call {top.max():.1f} s")
 
 
 # ---- (iii)-(iv) minima, refinement, MCMC ------------------------------------------------------
@@ -358,11 +438,11 @@ def distinct_modes(refined, crosses, tol=(0.02, 0.1)):
     The class keeps a near miss within MODE_DCHI2 of a crossing at the same (s, q) (session 23)."""
     modes, kept = [], []
     for (x, c2, *_), cross in zip(refined, crosses):
-        p = Binary(*x)
+        p = as_binary(x)
         near = lambda m, mc: (mc == cross and np.sign(m.u0) == np.sign(p.u0) and abs(np.log10(m.s / p.s)) < tol[0]
                               and abs(np.log10(m.q / p.q)) < tol[1])
-        if c2 - refined[0][1] <= MODE_DCHI2 and not any(near(m, mc) for m, mc in zip(modes, kept)):
-            modes.append(p)
+        if c2 - refined[0][1] <= MODE_DCHI2 and not any(near(as_binary(m), mc) for m, mc in zip(modes, kept)):
+            modes.append(np.asarray(x, float))  # the whole fit vector: LD too
             kept.append(cross)
     return modes
 
@@ -413,68 +493,86 @@ def caustic_crossing(trk, p: Binary):
         return bool(t_x), 0.0 if t_x else d / p.rho, bool(t_x) and not seen  # d: nearest caustic *vertex*
 
 
-def refine_starts(theta):
+def refine_starts(theta, ld=()):
     """Everything free, parallax on (from zero), from both (u0, alpha) and its mirror (-u0, -alpha):
-    identical without parallax, distinct with it (ecliptic degeneracy)."""
-    p = Binary(*theta)._replace(piE_N=0.0, piE_E=0.0)
-    return [p, p._replace(u0=-p.u0, alpha=-p.alpha)]
+    identical without parallax, distinct with it (ecliptic degeneracy). `ld`: the free bands' LD start."""
+    p = as_binary(theta)._replace(piE_N=0.0, piE_E=0.0)
+    return [np.array([*p, *ld]), np.array([*p._replace(u0=-p.u0, alpha=-p.alpha), *ld])]
 
 
-def refine(x0: Binary):
-    """One restarted Nelder-Mead per Pool task, so both starts of a minimum run on separate cores."""
-    return polish(lambda x: chi2_binary(x, EVENT), x0, lambda x: binary_steps(Binary(*x)))
+def theta_steps(x):
+    return [*binary_steps(as_binary(x)), *ld_steps(x, NB)]
 
 
-def to_mcmc(p: Binary):
-    """MCMC coordinates (scalars or arrays): t_eff = u0 tE and t_star = rho tE, what a high-magnification
-    peak measures (corr(u0, tE) = -0.94 on O-05-BLG169, session 23), and log s, log q (q spanned two
-    decades). Flat in log s, log q = log-uniform priors on s, q; log_prob undoes t_eff/t_star's Jacobian."""
-    return np.stack([p.t0, p.u0 * p.tE, p.tE, p.rho * p.tE, p.piE_N, p.piE_E, np.log10(p.s), np.log10(p.q),
-                     p.alpha], -1)
+def refine(x0):
+    """One restarted Nelder-Mead per Pool task, so both starts of a minimum run on separate cores.
+    Minimises chi2 + the LD prior (log_prob's target too), so refined chi2s carry the prior term."""
+    return polish(lambda x: chi2_binary(x, EVENT) + ld_penalty(EVENT, x[NB:]), x0, theta_steps)
 
 
-def from_mcmc(x) -> Binary:
-    t0, t_eff, tE, t_star, piE_N, piE_E, log_s, log_q, alpha = np.moveaxis(x, -1, 0)
-    return Binary(t0, t_eff / tE, tE, t_star / tE, piE_N, piE_E, 10**log_s, 10**log_q, alpha)
+def to_mcmc(theta):
+    """MCMC coordinates (fit vectors, (..., NB + n_ld)): t_eff = u0 tE and t_star = rho tE, what a
+    high-magnification peak measures (corr(u0, tE) = -0.94 on O-05-BLG169, session 23), and log s, log q
+    (q spanned two decades); LD unchanged. Flat in log s, log q = log-uniform priors on s, q; log_prob
+    undoes t_eff/t_star's Jacobian."""
+    theta = np.asarray(theta, float)
+    t0, u0, tE, rho, piE_N, piE_E, s, q, alpha = np.moveaxis(theta[..., :NB], -1, 0)
+    return np.concatenate([np.stack([t0, u0 * tE, tE, rho * tE, piE_N, piE_E, np.log10(s), np.log10(q), alpha], -1),
+                           theta[..., NB:]], -1)
 
 
-def log_prob(x):
+def from_mcmc(x):
+    x = np.asarray(x, float)
+    t0, t_eff, tE, t_star, piE_N, piE_E, log_s, log_q, alpha = np.moveaxis(x[..., :NB], -1, 0)
+    return np.concatenate([np.stack([t0, t_eff / tE, tE, t_star / tE, piE_N, piE_E, 10**log_s, 10**log_q, alpha], -1),
+                           x[..., NB:]], -1)
+
+
+def log_prob(x, alpha0):
     """In to_mcmc() coordinates: Gaussian likelihood; priors flat in (t0, u0, tE, rho, piE, alpha) --
     -2 log tE is the Jacobian of (u0, rho) -> (t_eff, t_star), else the prior goes as tE^2 -- and in
-    log s, log q (chi2_binary's bounds)."""
-    p = from_mcmc(x)
-    c2 = chi2_binary(p, EVENT)
-    return -0.5 * c2 - 2 * np.log(p.tE) if np.isfinite(c2) else -np.inf
+    log s, log q (chi2_binary's bounds); Gaussian in each free LD, truncated to [0, 1] (session 24).
+    alpha is bounded to one period around the mode's start alpha0: the likelihood is 2pi-periodic, so an
+    unbounded flat prior is improper and walkers drifted through whole periods (+/-80000 deg on
+    O-05-BLG169-noMDM, session 23)."""
+    theta = from_mcmc(x)
+    p = as_binary(theta)
+    if not alpha0 - np.pi < p.alpha <= alpha0 + np.pi:
+        return -np.inf
+    c2 = chi2_binary(theta, EVENT)
+    return -0.5 * (c2 + ld_penalty(EVENT, theta[NB:])) - 2 * np.log(p.tE) if np.isfinite(c2) else -np.inf
 
 
-def run_mcmc(ex, best: Binary, path: Path, tag: str, nwalkers=32, nsteps=12000, every=200, seed=42):
+def run_mcmc(ex, best, path: Path, tag: str, names=Binary._fields, nwalkers=32, nsteps=12000, every=200, seed=42):
     """emcee around a refined minimum, checkpointed to `path` (chain + log_prob, unflattened) every
     `every` steps and resumed from it: a 48 h wall-clock kill used to lose every mode (session 22).
     nsteps: the Cassan chain had tau ~ 230 steps (session 19), so 3000 was only ~13 tau; 12000 aims
-    at the ~50 tau emcee recommends. `ex` is shared by every mode at once (see __main__)."""
+    at the ~50 tau emcee recommends. `ex` is shared by every mode at once (see __main__). `best`: a fit
+    vector (LD appended when free), `names` its labels (saved with the chain)."""
+    best = np.asarray(best, float)
     chain, lp = np.empty((0, nwalkers, len(best))), np.empty((0, nwalkers))
     if path.exists() and "start" in (d := np.load(path)) and np.allclose(d["start"], best):  # same mode, not index
         chain, lp = d["chain"], d["log_prob"]
         print(f"[mcmc {tag}] resuming at step {len(chain)}")
     rng = np.random.default_rng(seed)
     p0 = chain[-1] if len(chain) else (
-        np.array(best) + 0.01 * np.array(binary_steps(best)) * rng.standard_normal((nwalkers, len(best))))
+        best + 0.01 * np.array(theta_steps(best)) * rng.standard_normal((nwalkers, len(best))))
     # DE moves (emcee docs' mix): stretch alone left tau ~500-1200 on *every* parameter of O-03-BLG235 with no
     # burn-in drift or stuck walkers -- a curved posterior it can only cross along walker-to-walker lines (session 23)
-    sampler = emcee.EnsembleSampler(nwalkers, len(best), log_prob, pool=ex,
+    sampler = emcee.EnsembleSampler(nwalkers, len(best), log_prob, pool=ex, args=(as_binary(best).alpha,),
                                     moves=[(emcee.moves.DEMove(), 0.8), (emcee.moves.DESnookerMove(), 0.2)])
 
-    def save():  # saved physical, log_prob = -chi2/2 (diagnose reads chi2 off it): the MCMC coordinates stay in here
+    def save():  # saved physical, log_prob = -(chi2 + LD prior)/2 (diagnose reads chi2 off it): MCMC coordinates stay in here
         c, l = sampler.get_chain(), sampler.get_log_prob()
         assert c is not None and l is not None  # emcee's getters are inferred Optional
-        c = np.stack(from_mcmc(c), -1)
+        c = from_mcmc(c)
         l = l + 2 * np.log(c[..., Binary._fields.index("tE")])
         with open(path.with_suffix(".tmp"), "wb") as f:  # write-then-rename, as run_grid()
-            np.savez(f, chain=np.concatenate([chain, c]), log_prob=np.concatenate([lp, l]), labels=Binary._fields,
-                     start=np.array(best))
+            np.savez(f, chain=np.concatenate([chain, c]), log_prob=np.concatenate([lp, l]), labels=list(names),
+                     start=best)
         path.with_suffix(".tmp").replace(path)
 
-    for _ in sampler.sample(to_mcmc(Binary(*p0.T)), iterations=nsteps - len(chain), skip_initial_state_check=len(chain) > 0,
+    for _ in sampler.sample(to_mcmc(p0), iterations=nsteps - len(chain), skip_initial_state_check=len(chain) > 0,
                             progress=True, progress_kwargs={"desc": tag}):
         if sampler.iteration % every == 0:
             save()
@@ -490,16 +588,16 @@ def acceptance(chain):
 def save_mcmc(path: Path, out: Path, tag: str):
     """Summary + corner from a finished chain file (main thread: pyplot isn't thread-safe)."""
     d = np.load(path)
-    chain, lp = d["chain"], d["log_prob"]
+    chain, lp, names = d["chain"], d["log_prob"], list(d["labels"])
     tau = emcee.autocorr.integrated_time(chain, quiet=True)  # warns (not raises) when nsteps < 50 tau
     print(f"[mcmc {tag}] acceptance={acceptance(chain):.2f}, "
           f"nsteps/max(tau)={len(chain) / np.max(tau):.1f} (want > 50), tau={np.round(tau, 1)}")
     burn, thin = len(chain) // 4, 15
     samples, log_probs = chain[burn::thin].reshape(-1, chain.shape[2]), lp[burn::thin].ravel()
     lo, med, hi = np.percentile(samples, [16, 50, 84], axis=0)
-    for label, l, m, h in zip(Binary._fields, lo, med, hi):
+    for label, l, m, h in zip(names, lo, med, hi):
         print(f"[mcmc {tag}] {label} = {m:.6g} +{h - m:.3g} -{m - l:.3g}")
-    save_corner(samples, list(Binary._fields), samples[np.argmax(log_probs)], str(out / f"mcmc_{tag}_corner.png"))
+    save_corner(samples, names, samples[np.argmax(log_probs)], str(out / f"mcmc_{tag}_corner.png"))
 
 
 # ---- plots -----------------------------------------------------------------------------------
@@ -535,11 +633,11 @@ def on_grid(event: Event, inst, t, t0_par):
     return event._replace(instruments=[inst._replace(time=t, dsN=dsN, dsE=dsE)])
 
 
-def fmt_params(p, err=None, sig=3):
+def fmt_params(names, p, err=None, sig=3):
     """'name = value +hi -lo' per field, shared by fit_lc.png (sig figures) and summary.txt (sig=None:
     full precision). alpha in degrees [0, 360); t0 to 1e-4 d (3 sig figs of 3491.9 say nothing)."""
     out = []
-    for name, v in zip(p._fields, p):
+    for name, v in zip(names, p, strict=True):
         e = err[name] if err else None
         if name == "alpha":
             v, e = np.degrees(v) % 360, e and np.degrees(e)
@@ -550,11 +648,11 @@ def fmt_params(p, err=None, sig=3):
     return out
 
 
-def plot_caustic_inset(ax, event: Event, best: Binary, t0_par: float, tc: float):
+def plot_caustic_inset(ax, event: Event, best: Binary, t0_par: float, tc: float):  # model fields only
     """Square inset (physical inches + adjustable="datalim": a fraction-based or adjustable="box" inset
     isn't square, CLAUDE.md session 11): the caustics, the fitted trajectory (parallax-curved) with a
     direction arrow, the source disk at tc, both lenses (only if inside the zoom); zoomed on the caustic
-    nearest the source at tc, wide enough to hold the source there."""
+    nearest the source at tc, wide enough to hold the source there. Placed in ax's emptiest corner."""
     t = np.linspace(best.t0 - 3 * best.tE, best.t0 + 3 * best.tE, 20000)
     z = binary_trajectory(t, best.t0, best.u0, best.tE, best.alpha, best.piE_N, best.piE_E,
                           *sun_earth_projection(t, event.coords, t0_par))
@@ -566,7 +664,16 @@ def plot_caustic_inset(ax, event: Event, best: Binary, t0_par: float, tc: float)
     near = min(caustics, key=lambda c: np.abs(c - zc).min()) if caustics else np.array([zc])
     centre = near.mean()
     half = max(0.75 * max(np.ptp(near.real), np.ptp(near.imag)), 1.2 * abs(zc - centre), 5 * best.rho)
-    ins = inset_axes(ax, width=2.2, height=2.2, loc="upper left", borderpad=3.5)  # clear of ax's y labels
+    # the corner of ax covering the fewest plotted points (data + model curves), in axes fractions, padding
+    # (borderpad, ~ the inset's title) included; ax's size before tight_layout, close enough
+    pad = 1.5 * plt.rcParams["font.size"] / 72
+    bb = ax.get_position()
+    w, h = (2.2 + 2 * pad) / (bb.width * ax.figure.get_figwidth()), (2.2 + 2 * pad) / (bb.height * ax.figure.get_figheight())
+    xy = ax.transAxes.inverted().transform(ax.transData.transform(np.concatenate([l.get_xydata() for l in ax.lines])))
+    corners = {"upper left": (0, 1 - h), "upper right": (1 - w, 1 - h), "lower left": (0, 0), "lower right": (1 - w, 0)}
+    loc = min(corners, key=lambda c: np.sum((xy[:, 0] >= corners[c][0]) & (xy[:, 0] <= corners[c][0] + w)
+                                            & (xy[:, 1] >= corners[c][1]) & (xy[:, 1] <= corners[c][1] + h)))
+    ins = inset_axes(ax, width=2.2, height=2.2, loc=loc, borderpad=1.5)
     for c in caustics:
         ins.plot(c.real, c.imag, "r-", lw=0.8)
     ins.plot(z.real, z.imag, "k-", lw=0.6)
@@ -581,7 +688,7 @@ def plot_caustic_inset(ax, event: Event, best: Binary, t0_par: float, tc: float)
     ins.set_title(r"source plane ($\theta_E$)", fontsize=7)
 
 
-def plot_fit(event: Event, fspl: FSPL, best: Binary, t0_par: float, path: Path, text):
+def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text):  # fit vectors (LD appended when free)
     """Every instrument in the reference instrument's magnitude system (the longest-baseline "mag"
     instrument -- OGLE's calibrated I for both current events), the convention of published
     microlensing light curves. Other instruments have their own zero points and bands, so they can
@@ -648,7 +755,7 @@ def plot_fit(event: Event, fspl: FSPL, best: Binary, t0_par: float, path: Path, 
     axes[0, 0].legend(fontsize=8)
     axes[0, 0].set_title(f"{event.short_name}: peak")
     axes[0, 1].set_title("anomaly (where 2L1S gains most chi2)")
-    plot_caustic_inset(axes[0, 1], event, best, t0_par, tc)
+    plot_caustic_inset(axes[0, 1], event, as_binary(best), t0_par, tc)
     strip = fig.add_subplot(gs[3, :])
     strip.axis("off")
     for x, lines in zip((0.0, 0.36, 0.62), text):
@@ -659,10 +766,10 @@ def plot_fit(event: Event, fspl: FSPL, best: Binary, t0_par: float, path: Path, 
     print(f"saved {path}")
 
 
-def plot_trace(chain, path: Path):
+def plot_trace(chain, names, path: Path):
     """Every walker's path per parameter: burn-in, stuck walkers, drift."""
     fig, axes = plt.subplots(chain.shape[2], 1, figsize=(10, 1.4 * chain.shape[2]), sharex=True)
-    for n, (ax, label) in enumerate(zip(axes, Binary._fields)):
+    for n, (ax, label) in enumerate(zip(axes, names, strict=True)):
         ax.plot(chain[:, :, n], lw=0.3, alpha=0.4)
         ax.set_ylabel(label)
     axes[-1].set_xlabel("step")
@@ -672,7 +779,7 @@ def plot_trace(chain, path: Path):
     print(f"saved {path}")
 
 
-def diagnose(base: Event, k_fspl, fspl: FSPL, pgrid, t0_par: float, out: Path, key: str, config: str):
+def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: str, config: str):
     """(vi) Session 20's done-checks: per MCMC mode nsteps/tau > 50, acceptance 0.2-0.5, its best
     sample within ~1 of the Nelder-Mead chi2 it started from, trace plot; the overall best 2L1S
     (refined[0] or any chain's best sample: the MCMC regularly beats Nelder-Mead, session 21), its +/-
@@ -685,15 +792,16 @@ def diagnose(base: Event, k_fspl, fspl: FSPL, pgrid, t0_par: float, out: Path, k
     if refined is None or "family" not in refined:
         raise SystemExit(f"{out / 'refined.npz'} missing, from another config/FSPL or pre-session-23: rerun the search")
     trk = track(base, t0_par)
-    modes = []  # (tag, best chi2, best sample, chain, done-check line, converged, caustic_crossing(), crossing fraction)
+    modes = []  # (tag, best chi2, best sample, chain, done-check line, converged, caustic_crossing(), crossing
+    #              fraction, point-source fraction)
     for f in sorted(out.glob("mcmc_mode*_chain.npz"), key=lambda f: int(f.stem.split("_")[1].removeprefix("mode"))):
         tag = f.stem.removeprefix("mcmc_").removesuffix("_chain")
         d = np.load(f)
-        chain, lp = d["chain"], d["log_prob"]  # (nsteps, nwalkers, ndim), (nsteps, nwalkers)
+        chain, lp, names = d["chain"], d["log_prob"], list(d["labels"])  # (nsteps, nwalkers, ndim), (nsteps, nwalkers)
         ntau = len(chain) / emcee.autocorr.integrated_time(chain, quiet=True).max()
         acc = acceptance(chain)
         start = chain[0].mean(axis=0)  # walkers start in a 1%-of-step ball around their refined minimum
-        nm = refined["chi2"][np.argmin(np.linalg.norm((refined["theta"] - start) / binary_steps(Binary(*start)), axis=1))]
+        nm = refined["chi2"][np.argmin(np.linalg.norm((refined["theta"] - start) / theta_steps(start), axis=1))]
         i = np.unravel_index(np.argmax(lp), lp.shape)  # the full chain, not the burned-in thinned subset
         best = -2 * lp[i]
         conv = ntau > 50 and 0.2 <= acc <= 0.5 and abs(nm - best) <= 1
@@ -703,21 +811,23 @@ def diagnose(base: Event, k_fspl, fspl: FSPL, pgrid, t0_par: float, out: Path, k
         # ponytail: 200 random post-burn-in samples (binomial error <~ 3.5%): one caustic_curve() each
         smp = chain[len(chain) // 4:].reshape(-1, chain.shape[2])
         smp = smp[np.random.default_rng(0).choice(len(smp), min(200, len(smp)), replace=False)]
-        frac = np.mean([(cc := caustic_crossing(trk, Binary(*x))) is not None and cc[0] for x in smp])
-        modes.append((tag, best, Binary(*chain[i]), chain, check, conv, caustic_crossing(trk, Binary(*chain[i])), frac))
-        plot_trace(chain, out / f"mcmc_{tag}_trace.png")
+        frac = np.mean([(cc := caustic_crossing(trk, as_binary(x))) is not None and cc[0] for x in smp])
+        ps = np.mean(chain[len(chain) // 4:, :, Binary._fields.index("rho")] < RHO_MIN)  # sampled as a point source
+        modes.append((tag, best, chain[i], chain, check, conv, caustic_crossing(trk, as_binary(chain[i])), frac, ps))
+        plot_trace(chain, names, out / f"mcmc_{tag}_trace.png")
 
-    cands = [(refined["chi2"][0], Binary(*refined["theta"][0]))] + [(m[1], m[2]) for m in modes]
+    cands = [(refined["chi2"][0], refined["theta"][0])] + [(m[1], m[2]) for m in modes]  # chi2 + LD prior
     best = min(cands, key=lambda c: c[0])[1]
     c2_f, c2_b = chi2_fspl(fspl, event), chi2_binary(best, event)
-    print(f"[diag] overall best 2L1S: chi2={c2_b:.2f} {best}")
+    print(f"[diag] overall best 2L1S: chi2={c2_b:.2f} {as_binary(best)}"
+          + (f" LD {dict(zip(labels(event, Binary)[NB:], np.round(best[NB:], 3)))}" if event.ld_prior else ""))
     if not np.isfinite(c2_b):
         print("[diag] WARNING: best is outside the current bounds (pre-session-22 outputs?): rerun the search")
     err, err_note = None, "no MCMC chains"
     if modes:
-        tag, _, _, chain, _, conv, *_ = min(modes, key=lambda m: np.linalg.norm((np.array(m[2]) - best) / binary_steps(best)))
+        tag, _, _, chain, _, conv, *_ = min(modes, key=lambda m: np.linalg.norm((m[2] - best) / theta_steps(best)))
         lo, med, hi = np.percentile(chain[len(chain) // 4:].reshape(-1, chain.shape[2]), [16, 50, 84], axis=0)
-        err = {name: (h - m, m - l) for name, l, m, h in zip(Binary._fields, lo, med, hi)}
+        err = {name: (h - m, m - l) for name, l, m, h in zip(labels(event, Binary), lo, med, hi, strict=True)}
         err_note = f"+/- from {tag} (16-84%)" + ("" if conv else ", MCMC NOT CONVERGED")
 
     k_2l1s = error_scale(base, binary_A(base, best))
@@ -728,7 +838,7 @@ def diagnose(base: Event, k_fspl, fspl: FSPL, pgrid, t0_par: float, out: Path, k
     # a K change only reweights instruments, shifting the best fit slightly
     for name, k in (("K at FSPL, conservative", k_fspl), ("K at 2L1S, optimistic", k_2l1s)):
         ev = rescale(base, k)
-        bic_f, bic_b = bic(chi2_fspl(fspl, ev), 6, ev), bic(chi2_binary(best, ev), 9, ev)
+        bic_f, bic_b = bic(chi2_fspl(fspl, ev), len(fspl), ev), bic(chi2_binary(best, ev), len(best), ev)  # LD counted
         bic_lines.append(f"BIC ({name}): FSPL {bic_f:.2f}, 2L1S {bic_b:.2f}, Delta (FSPL - 2L1S) = {bic_f - bic_b:.2f}")
         print(f"[bic] {bic_lines[-1]}")
     flux_lines = []
@@ -740,7 +850,7 @@ def diagnose(base: Event, k_fspl, fspl: FSPL, pgrid, t0_par: float, out: Path, k
             print(f"[diag] {flux_lines[-1]}")
 
     # crossing vs near miss (session 23): (label, chi2, Binary, caustic_crossing()) candidates
-    ref = [(f"{FAMILIES[f]} start", c2, Binary(*x), caustic_crossing(trk, Binary(*x)), tuple(cell))
+    ref = [(f"{FAMILIES[f]} start", c2, as_binary(x), caustic_crossing(trk, as_binary(x)), tuple(cell))
            for x, c2, cell, f in zip(refined["theta"], refined["chi2"], refined["cell"], refined["family"])]
 
     def versus(cands):
@@ -758,7 +868,7 @@ def diagnose(base: Event, k_fspl, fspl: FSPL, pgrid, t0_par: float, out: Path, k
                                                   "crossing preferred" if dc > 0 else "near miss preferred")
         return line
 
-    overall = versus([(f"refined, {c[0]}", *c[1:4]) for c in ref] + [(m[0], m[1], m[2], m[6]) for m in modes])
+    overall = versus([(f"refined, {c[0]}", *c[1:4]) for c in ref] + [(m[0], m[1], as_binary(m[2]), m[6]) for m in modes])
     overall += " | MCMC crossing fraction: " + (", ".join(f"{m[0]} {m[7]:.2f}" for m in modes) or "no chains")
     cells = sorted({c[4] for c in ref}, key=lambda cell: min(c[1] for c in ref if c[4] == cell))
     per_min = [f"log s {cell[0]:+.2f}, log q {cell[1]:+.2f}: " + versus([c for c in ref if c[4] == cell]) for cell in cells]
@@ -766,31 +876,39 @@ def diagnose(base: Event, k_fspl, fspl: FSPL, pgrid, t0_par: float, out: Path, k
 
     ranked = sorted(modes, key=lambda m: m[1])
     kind = lambda m: "?" if m[6] is None else "cross" if m[6][0] else "miss"
-    row = lambda m: f"{m[0]:7s} {m[1]:8.1f} {m[2].s:7.3g} {m[2].q:9.3g} {m[2].u0:+10.3g} {kind(m):>5s} {m[7]:5.2f} {ok(m[5])}"
-    header = f"{'mode':7s} {'chi2':>8s} {'s':>7s} {'q':>9s} {'u0':>10s} {'class':>5s} {'xfrac':>5s} conv"
-    text = (["2L1S overall best", f"({err_note})"] + fmt_params(best, err),
-            ["FSPL (parallax)"] + fmt_params(fspl) + ["", f"chi2 FSPL  = {c2_f:.1f}", f"chi2 2L1S  = {c2_b:.1f}",
+    row = lambda m: (f"{m[0]:7s} {m[1]:8.1f} {as_binary(m[2]).s:7.3g} {as_binary(m[2]).q:9.3g} {as_binary(m[2]).u0:+10.3g} {kind(m):>5s} {m[7]:5.2f} "
+                     f"{m[8]:5.2f} {ok(m[5])}")
+    header = f"{'mode':7s} {'chi2':>8s} {'s':>7s} {'q':>9s} {'u0':>10s} {'class':>5s} {'xfrac':>5s} {'psfrac':>5s} conv"
+    text = (["2L1S overall best", f"({err_note})"] + fmt_params(labels(event, Binary), best, err),
+            ["FSPL (parallax)"] + fmt_params(labels(event, FSPL), fspl) + ["", f"chi2 FSPL  = {c2_f:.1f}", f"chi2 2L1S  = {c2_b:.1f}",
                                                        f"Delta chi2 = {c2_f - c2_b:.1f}", f"N = {n}"],
             [header] + [row(m) for m in ranked[:6]] + ([f"+{len(ranked) - 6} more, see summary.txt"] if len(ranked) > 6 else []))
     plot_fit(event, fspl, best, t0_par, out / "fit_lc.png", text)
-    verdict = plot_parallax_map(pgrid, k_fspl, fspl, c2_f, best, c2_b, out / "fspl_parallax_map.png")
+    verdict = plot_parallax_map(pgrid, k_fspl, as_fspl(fspl), c2_f, as_binary(best), c2_b, out / "fspl_parallax_map.png")
 
     commit = subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, text=True).stdout.strip()
     k_of = lambda ks: ", ".join(f"{i.name}={float(k)!r}" for i, k in zip(event.instruments, ks))
+    g = np.load(out / "grid.npz") if (out / "grid.npz").exists() else {}
+    grid_line = (f"grid: {'finite' if g['settings'][3] else 'point'} source cells; {g['timing']}" if "timing" in g
+                 else "grid: pre-session-23 cache (point source, no timing)")
     lines = [f"# {event.short_name} -- search.py summary", f"config: {config}",
-             f"written: {datetime.now():%Y-%m-%d %H:%M}, git: {commit or 'unknown'}", "",
-             "## FSPL (parallax)", *fmt_params(fspl, sig=None),
+             f"written: {datetime.now():%Y-%m-%d %H:%M}, git: {commit or 'unknown'}", grid_line, "",
+             "## FSPL (parallax)", *fmt_params(labels(event, FSPL), fspl, sig=None),
              f"parallax grid: step {PIE_STEP}, |piE| <= {PIE_MAX}, both u0 signs; {verdict}"
              + ("; WARNING: best on the |piE| bound" if pgrid["on_bound"] else ""), "",
-             f"## 2L1S overall best ({err_note})", *fmt_params(best, err, sig=None), "",
-             "## scores (errors rescaled by K at FSPL)", f"chi2 FSPL = {c2_f!r}", f"chi2 2L1S = {c2_b!r}",
-             f"N = {n}, k FSPL = {6 + sum(2 if i.kind == 'mag' else 1 for i in event.instruments)}, "
-             f"k 2L1S = {9 + sum(2 if i.kind == 'mag' else 1 for i in event.instruments)}", *bic_lines, "",
+             f"## 2L1S overall best ({err_note})", *fmt_params(labels(event, Binary), best, err, sig=None), "",
+             "## scores (errors rescaled by K at FSPL; data-only chi2, the LD prior term excluded)",
+             f"chi2 FSPL = {c2_f!r}", f"chi2 2L1S = {c2_b!r}",
+             f"N = {n}, k FSPL = {len(fspl) + sum(2 if i.kind == 'mag' else 1 for i in event.instruments)}, "
+             f"k 2L1S = {len(best) + sum(2 if i.kind == 'mag' else 1 for i in event.instruments)}", *bic_lines,
+             "LD: " + (", ".join(f"{b} free, prior {m} +/- {sd}" for b, m, sd in event.ld_prior) if event.ld_prior
+                       else "fixed at the config's"), "",
              "## error rescaling", f"K at FSPL: {k_of(k_fspl)}", f"K at 2L1S: {k_of(k_2l1s)}", "",
              "## flux (fs, fb) at the errors above", *flux_lines, "",
              "## crossing vs near miss (source centre crosses a caustic in the data span; Delta = near miss - crossing)",
              overall, "per refined local minimum (grid cell):", *per_min, "",
-             "## modes (best sample per MCMC chain, by chi2)", header, *[row(m) for m in ranked], "",
+             "## modes (best sample per MCMC chain, by chi2; xfrac / psfrac: fraction of samples crossing a caustic / "
+             f"with rho < {RHO_MIN} = point source)", header, *[row(m) for m in ranked], "",
              "## done-checks", *[f"{m[0]}: {m[4]}" for m in modes]]
     (out / "summary.txt").write_text("\n".join(lines) + "\n")
     print(f"saved {out / 'summary.txt'}")
@@ -909,7 +1027,8 @@ if __name__ == "__main__":
             print(f"[refine] loaded cached {out / 'refined.npz'}")
         else:  # both families' best start at every minimum, each with its mirror (session 23)
             starts = [((grid["log_s"][i], grid["log_q"][j]), f, x0) for i, j in minima for f in range(len(FAMILIES))
-                      if np.isfinite(grid["fam_chi2"][i, j, f]) for x0 in refine_starts(grid["fam_theta"][i, j, f])]
+                      if np.isfinite(grid["fam_chi2"][i, j, f])
+                      for x0 in refine_starts(grid["fam_theta"][i, j, f], ld_start(event))]
             refined = sorted(((x, c2, cell, f) for (cell, f, _), (x, c2) in zip(starts, ex.map(refine, [s[2] for s in starts]))),
                              key=lambda r: r[1])
             for f in out.glob("mcmc_mode*"):  # new modes: old chains (resume points, plots) are stale
@@ -917,9 +1036,10 @@ if __name__ == "__main__":
             np.savez(out / "refined.npz", theta=[r[0] for r in refined], chi2=[r[1] for r in refined],
                      cell=[r[2] for r in refined], family=[r[3] for r in refined], key=key, plain=plain)
         trk = track(base, plain.t0)
-        crosses = [(cc := caustic_crossing(trk, Binary(*x))) is not None and cc[0] for x, *_ in refined]
+        crosses = [(cc := caustic_crossing(trk, as_binary(x))) is not None and cc[0] for x, *_ in refined]
         for (x, c2, _, f), cross in zip(refined, crosses):
-            print(f"[refine] chi2={c2:.2f} {FAMILIES[f]} start, {'crossing' if cross else 'near miss'} {Binary(*x)}")
+            print(f"[refine] chi2={c2:.2f} {FAMILIES[f]} start, {'crossing' if cross else 'near miss'} {as_binary(x)}"
+                  + (f" LD {np.round(x[NB:], 3)}" if event.ld_prior else ""))
         modes = distinct_modes(refined, crosses)
         assert modes, "every refined chi2 is inf"
         for f in out.glob("mcmc_mode*"):  # orphans from a run with more modes (globbed by diagnose)
@@ -928,7 +1048,8 @@ if __name__ == "__main__":
         # every mode at once, one thread each, on the one pool: emcee maps only nwalkers/2 walkers at
         # a time and each step waits for its slowest chi2, so a lone mode leaves most cores idle
         with ThreadPoolExecutor(len(modes)) as threads:
-            list(threads.map(lambda kp: run_mcmc(ex, kp[1], out / f"mcmc_mode{kp[0]}_chain.npz", f"mode{kp[0]}"),
+            list(threads.map(lambda kp: run_mcmc(ex, kp[1], out / f"mcmc_mode{kp[0]}_chain.npz", f"mode{kp[0]}",
+                                                 labels(event, Binary)),
                              enumerate(modes)))
     for k in range(len(modes)):
         save_mcmc(out / f"mcmc_mode{k}_chain.npz", out, f"mode{k}")
