@@ -42,6 +42,7 @@ class Event(NamedTuple):
     # (band, mean, sigma) per band whose LD is free (an instrument's optional `ld_sigma`), sorted by band:
     # a fit's LD coefficients follow this order; () = every LD fixed at the config's (session 24)
     ld_prior: tuple = ()
+    tE_max: float = np.inf  # 2L1S tE ceiling, search.TE_FACTOR x the FSPL tE (session 25)
 
 
 def load_instrument(cfg: dict, coords: SkyCoord) -> Instrument:

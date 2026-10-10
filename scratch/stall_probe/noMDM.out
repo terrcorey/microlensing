@@ -1,0 +1,7 @@
+srun: job 4981628 queued and waiting for resources
+srun: job 4981628 has been allocated resources
+[fspl] no parallax: chi2=477.47 FSPL(t0=np.float64(3491.8757517429785), u0=np.float64(0.0017795271328357788), tE=np.float64(41.027941254091886), rho=np.float64(0.0021353766468260476), piE_N=0.0, piE_E=0.0)
+[fspl] parallax (t0_par=3491.8758): chi2=476.59 FSPL(t0=np.float64(3491.875866073113), u0=np.float64(0.0016961552575684657), tE=np.float64(43.010314251246186), rho=np.float64(0.0020406408352708744), piE_N=np.float64(1.552707190116343), piE_E=np.float64(-0.018397220767030452))
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** STEP 4981628.0 ON compute025 CANCELLED AT 2026-10-10T17:12:10 ***
+srun: error: compute025: task 0: Terminated

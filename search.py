@@ -38,6 +38,7 @@ import emcee
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from pebble import ProcessPool
 from scipy.ndimage import median_filter, minimum_filter
 
 from event import (Event, chi2, error_scale, flux_residuals, ld_penalty, load_event, profile_flux, rescale,
@@ -65,6 +66,14 @@ MODE_DCHI2 = 10.0    # refined minima within this of the best get an MCMC
 RHO_MIN = 1e-5
 RHO_MAX = 0.1  # 2L1S ceiling: a huge source is unphysical for a bulge dwarf and slow in VBBL
 PIE_MAX = 5.0        # |piE| bound for every chi2 (was MCMC-only: a refined |piE| > 5 froze its walkers)
+# 2L1S tE ceiling = TE_FACTOR x the parallax-free FSPL tE (Event.tE_max, set in __main__): Cassan starts on
+# a tiny close/wide caustic imply tE ~ 1e3-1e6 d, every point then sits near the caustic at rho ~ RHO_MIN,
+# ~2 s per chi2 -- noMDM did 49 cells in 24 h (session 25). Screen starts past it score inf and are dropped.
+TE_FACTOR = 5.0
+# Wall-clock limit per grid cell (run_grid): VBBL BinaryMag2 never returns at s ~ 10, A ~ 2e4, RelTol 1e-3
+# (0.67 s at s = 8, 4 s at 9; its contour refinement has no iteration cap, session 25). A cell past it
+# is scored inf and its worker killed.
+CELL_TIMEOUT = 1800
 
 
 class FSPL(NamedTuple):
@@ -149,7 +158,7 @@ def chi2_binary(theta, event: Event) -> float:
     """(s, q) confined to the config's grid box: q -> 0 is FSPL again, and walkers drifting
     down it (q ~ 1e-6) burned MCMC time at acceptance ~0.1 (session 21). rho below RHO_MIN -> point source."""
     p = as_binary(theta)
-    if (not np.all(np.isfinite(theta)) or p.tE <= 0 or not 0 <= p.rho <= RHO_MAX
+    if (not np.all(np.isfinite(theta)) or not 0 < p.tE <= event.tE_max or not 0 <= p.rho <= RHO_MAX
             or np.hypot(p.piE_N, p.piE_E) > PIE_MAX or not in_range(p.s, event.grid["log_s"])
             or not in_range(p.q, event.grid["log_q"]) or p.q > 1 or not ld_ok(theta[NB:])):
         return np.inf
@@ -366,7 +375,7 @@ def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
     """(ii) delta-chi2(s, q) map, cached at `path`, + the timing of the cells this run computed."""
     finite = finite_grid(plain)
     # code-side knobs the TOML key can't see, and the K the cells were scored at (a new FSPL moves it)
-    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, finite, *k_fspl])
+    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, finite, TE_FACTOR, *k_fspl])
     fresh = lambda d: (d is not None and "plain" in d and np.allclose(d["plain"], plain)  # cells start from plain
                        and "settings" in d and d["settings"].shape == settings.shape
                        and np.allclose(d["settings"], settings) and "fam_theta" in d)  # pre-session-23: one family
@@ -387,16 +396,24 @@ def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
     todo = [(k, c) for k, c in enumerate(cells) if not done[k]]
     path.with_name("refined.npz").unlink(missing_ok=True)  # refined from the old grid's minima: stale
     t_run, stats = time.perf_counter(), []  # (cell wall s, 99th-percentile call s, longest call s)
-    with pool(event, plain, times, event.grid["n_alpha"], finite) as ex:
-        futures = [ex.submit(grid_cell, kc) for kc in todo]
+    # pebble, not pool(): only it can kill one worker past CELL_TIMEOUT (and respawn it); a dead
+    # worker still fails loud (ProcessExpired), as pool()'s BrokenProcessPool does
+    with ProcessPool(context=get_context("spawn"), initializer=_init,
+                     initargs=(event, plain, times, event.grid["n_alpha"], finite)) as ex:
+        futures = {ex.schedule(grid_cell, (kc,), timeout=CELL_TIMEOUT): kc for kc in todo}
         for fut in as_completed(futures):
             try:
                 k, c, p, st = fut.result()
+                stats.append(st)
+            except TimeoutError:
+                k, (s, q) = futures[fut]
+                c, p = [np.inf] * 2, [Binary(plain.t0, plain.u0, plain.tE, plain.rho, 0, 0, s, q, 0.0)] * 2
+                print(f"[grid] cell (log s, log q) = ({np.log10(s):.2f}, {np.log10(q):.2f}) timed out "
+                      f"after {CELL_TIMEOUT} s: scored inf")
             except BaseException:  # else __exit__ waits for every queued cell, then discards them
-                ex.shutdown(cancel_futures=True)
+                ex.stop()
                 raise
             chi2_map[k], theta[k], done[k] = c, p, True
-            stats.append(st)
             with open(partial.with_suffix(".tmp"), "wb") as f:  # write-then-rename: a kill can't corrupt it
                 np.savez(f, log_s=log_s, log_q=log_q, fam_chi2=chi2_map, fam_theta=theta, done=done, key=key,
                          plain=plain, settings=settings)
@@ -995,6 +1012,7 @@ if __name__ == "__main__":
     base = load_event(args.config)
     out = out_dir(base)
     plain, fspl, base = fit_fspl(base)  # base now carries the parallax offsets at t0_par
+    base = base._replace(tE_max=TE_FACTOR * plain.tE)
     plot_raw(base, plain, out / "raw_lc.png")
     if args.stage == "raw":  # quick look: fit_fspl's two-start parallax fit is enough here
         raise SystemExit

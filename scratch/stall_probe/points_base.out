@@ -1,0 +1,4 @@
+srun: job 4981630 queued and waiting for resources
+srun: job 4981630 has been allocated resources
+[fspl] no parallax: chi2=795.82 FSPL(t0=np.float64(3491.8809298789647), u0=np.float64(0.001236751297724343), tE=np.float64(42.40913829613455), rho=np.float64(0.00010557006798107602), piE_N=0.0, piE_E=0.0)
+[fspl] parallax (t0_par=3491.8809): chi2=790.81 FSPL(t0=np.float64(3491.880973021315), u0=np.float64(0.0010903819653820472), tE=np.float64(48.01183372326334), rho=np.float64(2.2793945504447628e-05), piE_N=np.float64(2.778078979770378), piE_E=np.float64(-0.16105481515093445))

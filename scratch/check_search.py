@@ -10,6 +10,8 @@
    0.5 thetaE off it is a near miss beyond CLOSE.
 5. free LD (session 24): load_event's per-band consistency, with_ld, the prior term, LD bounds,
    the MCMC coordinate round trip and log_prob with LD appended.
+6. session 25: tE above Event.tE_max is inf; run_grid() scores a cell past CELL_TIMEOUT inf and
+   carries on (pebble kills the worker) instead of waiting on it forever.
 """
 import os
 import sys
@@ -30,6 +32,7 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
     for bad in (good._replace(u0=np.nan), good._replace(rho=-1e-3), good._replace(rho=0.2), good._replace(q=1e-7),
                 good._replace(s=20.0), good._replace(piE_N=6.0), good._replace(tE=np.inf)):
         assert search.chi2_binary(bad, event) == np.inf, bad
+    assert search.chi2_binary(good, event._replace(tE_max=50.0)) == np.inf  # tE 60 > ceiling
     point = search.chi2_binary(good._replace(rho=0.0), event)
     assert np.isfinite(point) and search.chi2_binary(good._replace(rho=1e-9), event) == point  # below floor = point
     assert search.chi2_fspl((2848.0, 0.1, 60.0, 1e-15, 0, 0), event) == np.inf
@@ -46,7 +49,8 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
     print("caustic_crossing ok")
 
     with tempfile.TemporaryDirectory() as d:  # ld_sigma on OGLE only: MDM (also I) disagrees -> raise
-        toml = Path("input/O-05-BLG169.toml").read_text()
+        toml = "\n".join(l for l in Path("input/O-05-BLG169.toml").read_text().splitlines()
+                         if not l.startswith("ld_sigma"))  # the config sets it since session 24
         Path(d, "bad.toml").write_text(toml.replace("ld = 0.53", "ld = 0.53\nld_sigma = 0.1", 1))
         try:
             load_event(str(Path(d, "bad.toml")))
@@ -85,3 +89,11 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
         assert c["chain"].shape == (10, 32, 9) and c["log_prob"].shape == (10, 32)
         search.save_mcmc(path, Path(d), "x")
         print("checkpoint + resume ok")
+
+    with tempfile.TemporaryDirectory() as d:  # 2 x 2 point-source cells take ~1 min each: all time out
+        search.CELL_TIMEOUT = 2  # read by run_grid in this process; the workers never see it
+        tiny = event._replace(grid={**event.grid, "log_s": [0.0, 0.05, 0.05], "log_q": [-3.0, -2.75, 0.25]})
+        g = search.run_grid(tiny, search.FSPL(2848.0, 0.1, 60.0, 2e-4, 0.0, 0.0), Path(d) / "grid.npz", "k",
+                            np.ones(len(event.instruments)))
+        assert np.all(g["chi2"] == np.inf), g["chi2"]
+        print("cell timeout ok")

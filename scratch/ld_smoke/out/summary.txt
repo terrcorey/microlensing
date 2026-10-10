@@ -1,0 +1,56 @@
+# ../scratch/ld_smoke/out -- search.py summary
+config: /sharedscratch/gyc1/microlensing/scratch/ld_smoke/O-03-BLG235-ldsmoke.toml
+written: 2026-10-09 16:15, git: 7ccfa88-dirty
+grid: point source cells; 0.02 h elapsed, ~0.00 h left, median cell 44 s, 99% call 2 ms, longest call 0.0 s
+
+## FSPL (parallax)
+t0 = 2847.634068129719
+u0 = 0.2391497064535028
+tE = 43.493983546373144
+rho = 0.0002030642894562999
+piE_N = 0.4759408618100339
+piE_E = -0.3658715907153638
+ld_I = 0.5
+parallax grid: step 0.25, |piE| <= 5.0, both u0 signs; 3 separate minima within Delta chi2 < 11.8: MCMC recommended
+
+## 2L1S overall best (+/- from mode0 (16-84%), MCMC NOT CONVERGED)
+t0 = 2847.9725201522538 +0.11899224556555055 -0.11616932980132333
+u0 = -0.13526795141753242 +0.006781966408224344 -0.006574112263143306
+tE = 58.86466698638944 +3.9053402639032697 -3.032029315686998
+rho = 0.0010178916342334012 +0.00015150101044739703 -0.00013349117947189862
+piE_N = 0.4050068043330477 +0.7089252062804174 -0.6651079277913032
+piE_E = -0.13539044784447768 +0.09494739512071168 -0.11267106590130938
+s = 1.1219826733157754 +0.005239213929445707 -0.005168706784827393
+q = 0.004499761112765687 +0.0007028702780105612 -0.0006781552981656811
+alpha = 137.58612677995455 +1.7895301215439707 -1.8419996729456307 deg
+ld_I = 0.5111540937557459 +0.09470414885082379 -0.09376019702862598
+
+## scores (errors rescaled by K at FSPL; data-only chi2, the LD prior term excluded)
+chi2 FSPL = 1531.9999999999998
+chi2 2L1S = 1100.16607031874
+N = 1535, k FSPL = 10, k 2L1S = 13
+BIC (K at FSPL, conservative): FSPL 1605.36, 2L1S 1195.54, Delta (FSPL - 2L1S) = 409.83
+BIC (K at 2L1S, optimistic): FSPL 2206.98, 2L1S 1627.37, Delta (FSPL - 2L1S) = 579.61
+LD: I free, prior 0.5 +/- 0.1
+
+## error rescaling
+K at FSPL: OGLE=1.424891839144274, MOA=1.1716680167486342
+K at 2L1S: OGLE=1.1929030838440893, MOA=0.9955939708034457
+
+## flux (fs, fb) at the errors above
+FSPL OGLE: fs=0.4343004006958993, fb=-0.13445615487609738 (< 0)
+FSPL MOA: fs=1162.9598611519937
+2L1S OGLE: fs=0.2336729904420643, fb=0.06574491076716107
+2L1S MOA: fs=638.9697022463812
+
+## crossing vs near miss (source centre crosses a caustic in the data span; Delta = near miss - crossing)
+crossing: chi2 1100.2 (mode0, s 1.12, q 0.0045) | near miss: chi2 1425.5 (refined, standard start, s 1.07, q 0.00478, closest > 24227391105 rho) | Delta = 325.3 -> crossing preferred | MCMC crossing fraction: mode0 1.00
+per refined local minimum (grid cell):
+log s +0.05, log q -2.60: crossing: chi2 1247.5 (Cassan start, s 1.12, q 0.00254) | near miss: chi2 1425.5 (standard start, s 1.07, q 0.00478, closest > 24227391105 rho) | Delta = 178.1 -> crossing preferred
+
+## modes (best sample per MCMC chain, by chi2; xfrac / psfrac: fraction of samples crossing a caustic / with rho < 1e-05 = point source)
+mode        chi2       s         q         u0 class xfrac psfrac conv
+mode0     1100.2    1.12    0.0045     -0.135 cross  1.00  0.00 FAIL
+
+## done-checks
+mode0: nsteps/tau=20.8 FAIL, acceptance=0.05 FAIL, chi2 Nelder-Mead=1247.46 vs MCMC best=1100.18 FAIL

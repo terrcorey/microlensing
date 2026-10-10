@@ -105,8 +105,8 @@ python3 search.py --config input/O-05-BLG169.toml --stage=diagnose   # FSPL + pa
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
 srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
-                                        # session-22/23/24 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
-                                        # MCMC coordinate round trip, caustic_crossing(), free LD
+                                        # session-22..25 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
+                                        # MCMC coordinate round trip, caustic_crossing(), free LD, tE ceiling, cell timeout
 ```
 
 ## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
@@ -122,7 +122,7 @@ drop-one sensitivity copies, each its own `short_name` (see dataset_names.txt;
 noOGLE dropped in session 22: without OGLE's baseline parallax is unconstrained
 and pins on the |piE| = 5 bound). `input/O-03-BLG235-fineq.toml` (session 22):
 log q step 0.1 instead of 0.25 -- the 0.25 grid put no cell near Bond's q;
-`input/O-05-BLG169-fineq.toml`, same change, testing whether it finds the published resonant caustic.
+`input/O-05-BLG169-fineq.toml`, same change, testing whether it finds the published resonant caustic. Every config has `log_s = [-0.7, 0.7, 0.05]` (s 0.2-5, session 25; was 0.1-10).
 All six O-05-BLG169 configs have `ld_sigma = 0.1` on every instrument (session 24: free LD); the
 O-03-BLG235 ones keep LD fixed. `scratch/ld_smoke/O-03-BLG235-ldsmoke.toml` is a 3x3-cell free-LD smoke
 config (outputs in scratch/ld_smoke/out/ via `short_name = "../scratch/ld_smoke/out"`).
@@ -211,14 +211,20 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   by > 1, so it stays. Robustness (session 22): every chi2 rejects
   non-finite theta, rho < `RHO_MIN` = 1e-5 in FSPL (in 2L1S 0 <= rho < RHO_MIN is the exact point
   source, rho > `RHO_MAX` = 0.1 rejected),
-  |piE| > `PIE_MAX` = 5, and (s, q) outside the config's grid box -- VBBL
+  |piE| > `PIE_MAX` = 5, (s, q) outside the config's grid box, and (2L1S, session 25) tE above
+  `Event.tE_max` = `TE_FACTOR` (5) x the parallax-free FSPL tE (set in `__main__`; default inf) -- VBBL
   hangs forever on NaN/inf input and segfaulted at rho ~ 1e-15 (the VBBL
   wrappers in lc_models also return NaN on non-finite input);
   `multiprocessing.Pool` respawned segfaulted workers and lost their tasks
   (two jobs hung ~40 h), so every pool is `search.pool()` =
-  `ProcessPoolExecutor` (spawn), which raises `BrokenProcessPool`. A VBBL
-  call on finite input can still stall a mode for tens of minutes (seen on
-  noMDM, no reproducer; checkpoints bound the loss). (v)+(vi) `diagnose()`
+  `ProcessPoolExecutor` (spawn), which raises `BrokenProcessPool` -- except `run_grid()`'s
+  (session 25): a `pebble.ProcessPool` (spawn) that kills a cell past `CELL_TIMEOUT` = 1800 s,
+  scores it inf (logged) and respawns the worker; a dead worker still raises (`ProcessExpired`).
+  VBBL 3.7's `BinaryMag2` has no iteration cap and never returns at s ~ 10, A ~ 2e4, RelTol 1e-3
+  (0.67 s at s = 8, 4 s at 9; RelTol 1e-2 returns), hence O-05-BLG169's s range 0.2-5 (session 25);
+  Cassan starts on a tiny close/wide caustic implied tE ~ 1e3-1e6 d (~2 s per chi2), hence the
+  tE ceiling, which also drops those starts at the screen. Refinement/MCMC have no timeout: a VBBL
+  call there can still stall a mode (checkpoints bound the loss). (v)+(vi) `diagnose()`
   (end of every search, and `--stage=diagnose`: refits FSPL + parallax grid,
   requires a refined.npz with the current key): per mode nsteps/tau > 50,
   acceptance 0.2-0.5 (fraction of steps a walker moved), full-chain MCMC
@@ -295,7 +301,11 @@ per-band limb darkening on O-05-BLG169's session-22 bests -- doesn't remove the 
 `probe_fs_grid.py` (session 23: finite source in the *whole* grid cell, screen included --
 > 15x a point-source cell, rejected), `ld_test.py --scan` / `--free0` (session 24: shared LD scanned
 at fixed 2L1S geometry; per-band LD polish started from 0), `mdm_systematics.py` (session 24:
-MDM night-1 residuals vs airmass / reported error + Lomb-Scargle), `scratchpad.ipynb` (interactive exploration:
+MDM night-1 residuals vs airmass / reported error + Lomb-Scargle), `keck_mu_check.py` (O-05-BLG169
+t* = rho tE per MCMC mode vs Keck's theta*/mu_geo), `noftn_with_ftn.py` (noFTN's best fits against all
+four instruments), `stall_probe.py` / `vbbl_point_probe.py` (session 25: one grid cell in-process with
+every chi2's theta logged before the call / one theta's VBBL calls timed point by point -- find a hang;
+logs in scratch/stall_probe/), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots -- not a pipeline step).
 SLURM job scripts live in `slurm/` (session 16), not `scratch/`: one
 `.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`, `cassan`,
@@ -812,7 +822,8 @@ measuring on already-rescaled errors gives k~1.
   mcmc_fit_2l1s.py, compare_2l1s_fits.py, cross_check_mulensmodel.py,
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
-  compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, mdm_systematics.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
+  compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, mdm_systematics.py, keck_mu_check.py,
+  noftn_with_ftn.py, stall_probe.py, vbbl_point_probe.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in results/ -- when a script graduates into
   the pipeline, move both its code and its output path out at the same

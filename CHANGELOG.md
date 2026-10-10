@@ -2447,3 +2447,72 @@ Confirmed with the user (2026-10-09), in priority order:
 - Stretch: **1L2S** (binary source, no planet) as the alternative to O-05-BLG169's planet -- `/grill-me` to scope.
 - Stretch: the codebase improvement plan (not yet scoped, `/grill-me` first); today's fit-vector refactor
   (`as_binary(...)` throughout diagnose()) is a natural candidate to tidy.
+
+## 2026-10-10 — session 25
+
+### Built
+- **Why the O-05 grids stalled** (diagnosis, no ptrace on compute nodes: `ptrace_scope = 3`, py-spy can't attach):
+  `scratch/stall_probe.py` (one grid cell in-process, every chi2's theta logged before the call) and
+  `scratch/vbbl_point_probe.py` (one theta's VBBL calls timed point by point); logs + `one.py` / `variants*.sh`
+  (single BinaryMag2 call under `timeout`) in `scratch/stall_probe/`. Two causes, see Learned.
+- **Fixes** (user's choice, Claude implemented): every O-05-BLG169 config `log_s = [-0.7, 0.7, 0.05]` (s 0.2-5; was
+  0.1-10 -- also bounds s in refinement/MCMC via the grid box); `Event.tE_max` (default inf) = `TE_FACTOR` (5) x the
+  parallax-free FSPL tE (~210 d), rejected in `chi2_binary` -- Cassan screen starts past it score inf and are dropped
+  before polishing (the "skip absurd-tE starts" fix comes free); `TE_FACTOR` joins the grid's `settings`.
+  `run_grid()` uses `pebble.ProcessPool` (new dependency, 5.2.3): a cell past `CELL_TIMEOUT` = 1800 s is scored inf
+  (logged by (log s, log q)), its worker killed and respawned; a dead worker still raises. Other pools unchanged.
+- `check_search.py` case 6 (tE ceiling; a 2 x 2 grid with a 2 s timeout times out every cell and returns); case 5
+  fixed (broken since session 24: the config's own `ld_sigma` made the test's TOML a duplicate key). Passes.
+- Cancelled (user) every running job: 4967746-49 (O-05 base/noAuckland/noFTN/noMDM, grids stuck at 1015/999/1016/49
+  of 1025 cells), 4967233 (fineq two families + DE: refinement silent 25 h), and the pending 4967735 / 4967742.
+  Backed up each O-05 folder's top-level files to `results/<short>/pre25/`; resubmitted 4981641 (O-05-BLG169),
+  4981642 (noAuckland), 4981643 (noFTN), 4981644 (noMDM), 4981645 (fineq), all on the new code + configs.
+- O-03-BLG235 configs trimmed to s 0.2-5 too (user, at save); backed up to `pre25/`, resubmitted 4981646 (O-03-BLG235),
+  4981647 (-fineq): grids recompute (key + `settings` changed).
+- Read before cancelling: smoke run 4967727 finished end to end with free LD (session 24 goal 1); O-03-BLG235 /
+  -fineq (4967744/45) both land in Bond's basin (s 1.121, q 0.0041/0.0042, rho 0.00095/0.00097, alpha ~224.8 deg),
+  MCMC NOT CONVERGED; not compared further.
+
+### Learned & open questions
+- **Not memory, not a gradual slowdown**: median cell flat (~240-265 s) the whole run, workers flat ~250 MB RSS at
+  99% CPU (state R). Single cells hang; `as_completed` hides them until only they remain, and each one takes a worker
+  for good (noAuckland's middle stretch slowed as workers were lost). Stuck cells were all extreme topologies:
+  s ~ 9-10, or s ~ 0.18-0.25 at large q; noMDM's large rho (2.1e-3) put all 24 workers on close cells at once.
+- **VBBL hang (wide)**: s = 10, q = 5.6e-4, rho 9.7e-5, source ~0.7 rho from the primary (A ~ 2e4): BinaryMag2
+  never returns at RelTol 1e-3 (also 2e-3, 3e-3, 5e-3; Tol up to 1 irrelevant), returns in 0.4 s at 1e-2. Same
+  geometry vs s: 0.055 s (5), 0.19 (7), 0.67 (8), 4.0 (9), hang (10); a little farther from the primary, instant;
+  mirrored to s = 0.1, 0.03 s. Reading (not verified in VBBL's source): the error estimate has a precision floor that
+  grows with s and VBBL 3.7's contour refinement has no iteration cap.
+- **Cassan tE runaway (close)**: noMDM cell (s 0.1, q 0.03): 98% of chi2 calls had tE > 500 d (up to 2.3e6 d), rho
+  pushed to ~RHO_MIN, ~2 s per call -- a tiny caustic crossed in ~1 d implies an enormous tE. Slow, not hung.
+- Not yet probed: the base run's stuck close cells at q = 1 (s ~ 0.18) -- assumed the tE mechanism.
+- Refinement and MCMC have no timeout (a hung VBBL call there still blocks to the 2-day limit); 4967233's silent
+  refinement may have been one.
+- Mistake (Claude): ran `find /` on the login node looking for VBBL's source (stopped after ~2 min).
+
+### Next session
+Confirmed with the user (2026-10-10), in priority order:
+1. **Read the 7 reruns** (4981641-47): any `[grid] ... timed out` cells (which, how many); did any job stall after
+   the grid; O-05-BLG169-fineq = session 23's pass test (resonant-crossing cell a local minimum, refines to <~ 423
+   unaided); free-LD posteriors (leave their priors? trade with rho?); MDM wave; drop-one configs: is the planet still
+   MDM-only with free LD; O-03-BLG235 / -fineq: still Bond's basin (~1100) under the s trim + tE ceiling.
+2. **Keck mu recheck**: `scratch/keck_mu_check.py` on the new outputs (memory: keck-mu-check-pending); if t* still
+   disagrees with Keck's 0.0230 +/- 0.0022 d, the off-by-default proper-motion prior experiment (refinement/MCMC only).
+3. **Timeout for refinement**, only if a rerun stalls after the grid: refine()'s pool to pebble with a per-start
+   timeout (MCMC stays checkpoint-bounded).
+4. **Carry-overs** (sessions 22-24, still open):
+   - finite-source per-cell search (polish budget, screen candidates) if fineq misses the 422 crossing;
+   - MDM: periodogram (`scratch/mdm_systematics.py`) on the 422 crossing; original MDM photometry with seeing
+     (Gould et al. 2006 / Bennett et al. 2015)?; Gould 2006's s, q and does their source cross the caustic?;
+   - proper LD priors: Claret coefficients from the source colour;
+   - convergence part 2: does O-05-BLG169's 2L1S need parallax (refit with it off); 64 walkers / longer chains;
+     dynesty -- `/grill-me` first; O-03-BLG235's MCMC is still NOT CONVERGED;
+   - parallax map's "N separate minima": merge ripples along one valley (require a chi2 barrier); `--stage=probe`;
+   - housekeeping: Claude -- remove `.worktrees/fs-grid/` (needs the user's approval), colour instruments by name in
+     fit_lc.png, uninstall py-spy (useless here: ptrace_scope = 3); user -- commits (sessions 23-25 uncommitted).
+- Stretch: **1L2S** (binary source, no planet) as the alternative to O-05-BLG169's planet -- `/grill-me` to scope.
+- Stretch: the codebase improvement plan (`/grill-me` first; the fit-vector `as_binary(...)` calls in diagnose()
+  are a candidate).
+- Future (session 22): shared source-flux ratios across models (cross-instrument constraint) -- a model change,
+  `/grill-me` first.
+- graphify not refreshed: session 25 changed one function (`run_grid`) and added a field; no architecture change.

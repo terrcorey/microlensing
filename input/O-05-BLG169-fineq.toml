@@ -7,7 +7,7 @@ dec = "-30d43m57.50s"
 [grid]
 n_alpha = 16
 #[l_bound, u_bound, step_size]
-log_s = [-1.0, 1.0, 0.05]
+log_s = [-0.7, 0.7, 0.05]  # s 0.2-5 (session 25): VBBL hangs at s ~ 10, A ~ 2e4 (CHANGELOG)
 log_q = [-6.0, 0.0, 0.1]  # fineq: as O-03-BLG235-fineq, 0.25 can miss a basin between cells (session 22)
 
 # NASA Exoplanet Archive UID 0300030 (Gould et al. 2006); all relative mags, all HJD.
