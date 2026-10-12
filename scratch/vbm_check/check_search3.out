@@ -1,0 +1,32 @@
+guards + MCMC coordinates ok
+caustic_crossing ok
+free LD ok
+dead worker raises ok
+[mcmc x] resuming at step 6
+[mcmc x] acceptance=0.59, nsteps/max(tau)=8.6 (want > 50), tau=[1.1 0.9 0.9 0.9 0.8 1.2 1.  0.9 1. ]
+[mcmc x] t0 = 2848 +0.0087 -0.0072
+[mcmc x] u0 = 0.100017 +9.9e-05 -8.09e-05
+[mcmc x] tE = 59.9989 +0.0346 -0.0394
+[mcmc x] rho = 0.00100027 +2.71e-06 -4e-06
+[mcmc x] piE_N = 1.00197e-05 +0.000695 -0.00125
+[mcmc x] piE_E = 8.59907e-05 +0.00079 -0.000983
+[mcmc x] s = 1.1199 +9.44e-05 -0.000111
+[mcmc x] q = 0.00400028 +6.28e-06 -3.73e-06
+[mcmc x] alpha = 3.90004 +0.000256 -0.000338
+saved /tmp/tmpth6858e6/mcmc_x_corner.png
+checkpoint + resume ok
+[grid] 2 x 2 cells, Cassan times [2788.   2818.   2835.69 2840.75 2842.04 2843.7  2846.52 2848.   2868.59
+ 2878.   2908.  ]
+[grid] cell (log s, log q) = (0.00, -3.00) timed out after 2 s: scored inf
+[grid] cell (log s, log q) = (0.00, -2.75) timed out after 2 s: scored inf
+[grid] cell (log s, log q) = (0.05, -3.00) timed out after 2 s: scored inf
+[grid] cell (log s, log q) = (0.05, -2.75) timed out after 2 s: scored inf
+[grid] 0/4 cells from /tmp/tmpdbjkg3pr/grid.npz, retrying 4 timed out under 3 s
+[grid] 2 x 2 cells, Cassan times [2788.   2818.   2835.69 2840.75 2842.04 2843.7  2846.52 2848.   2868.59
+ 2878.   2908.  ]
+[grid] cell (log s, log q) = (0.00, -3.00) timed out after 3 s: scored inf
+[grid] cell (log s, log q) = (0.00, -2.75) timed out after 3 s: scored inf
+[grid] cell (log s, log q) = (0.05, -3.00) timed out after 3 s: scored inf
+[grid] cell (log s, log q) = (0.05, -2.75) timed out after 3 s: scored inf
+[grid] loading cached /tmp/tmpdbjkg3pr/grid.npz
+cell timeout + retry ok

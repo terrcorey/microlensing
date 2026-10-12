@@ -1,0 +1,24 @@
+guards + MCMC coordinates ok
+caustic_crossing ok
+free LD ok
+dead worker raises ok
+[mcmc x] resuming at step 6
+[mcmc x] acceptance=0.63, nsteps/max(tau)=8.4 (want > 50), tau=[1.2 0.8 1.  0.8 0.9 0.9 0.8 1.2 1. ]
+[mcmc x] t0 = 2848 +0.00392 -0.00757
+[mcmc x] u0 = 0.100025 +8.43e-05 -9.15e-05
+[mcmc x] tE = 60.003 +0.0561 -0.0548
+[mcmc x] rho = 0.00099963 +3.18e-06 -2.37e-06
+[mcmc x] piE_N = 5.31723e-05 +0.00055 -0.000692
+[mcmc x] piE_E = 5.7879e-05 +0.000463 -0.000576
+[mcmc x] s = 1.11994 +9.64e-05 -8.37e-05
+[mcmc x] q = 0.00399952 +6.56e-06 -5.79e-06
+[mcmc x] alpha = 3.90002 +0.000202 -0.00018
+saved /tmp/tmpqn0l9_a2/mcmc_x_corner.png
+checkpoint + resume ok
+[grid] 2 x 2 cells, point source (FSPL rho/|u0| = 0.002), Cassan times [2788.   2818.   2835.69 2840.75 2842.04 2843.7  2846.52 2848.   2868.59
+ 2878.   2908.  ]
+[grid] cell (log s, log q) = (0.00, -3.00) timed out after 2 s: scored inf
+[grid] cell (log s, log q) = (0.00, -2.75) timed out after 2 s: scored inf
+[grid] cell (log s, log q) = (0.05, -3.00) timed out after 2 s: scored inf
+[grid] cell (log s, log q) = (0.05, -2.75) timed out after 2 s: scored inf
+cell timeout ok

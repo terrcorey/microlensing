@@ -2516,3 +2516,82 @@ Confirmed with the user (2026-10-10), in priority order:
 - Future (session 22): shared source-flux ratios across models (cross-instrument constraint) -- a model change,
   `/grill-me` first.
 - graphify not refreshed: session 25 changed one function (`run_grid`) and added a field; no architecture change.
+
+## 2026-10-12 — session 26
+
+### Built
+- **VBBinaryLensing 3.7 -> VBMicrolensing 5.6.1** (grilled; Claude implemented): `lc_models._VBM`,
+  `binary_magnification_vbm` (renamed, one caller), same `RelTol` 1e-3 and ESPL table; requirements pinned;
+  `search.py`'s cache `key` also hashes the VBM version (a backend change recomputes). Gate
+  `scratch/vbm_check.py` (job 4985221): VBBL's s = 10 hang returns in 6.2 s under VBM (identical A at s 5-9);
+  point-source frame vs our numpy solver 1e-11-1e-6; chi2 of the top 3 refined solutions of 5 searches VBM vs
+  VBBL |diff| <= 0.004 (VBBL reproduces the stored chi2 exactly), same speed; check_search passes.
+  VBBinaryLensing then uninstalled (vbm_check.py and stall_probe/one.py no longer run). No refinement timeout
+  (session 25 goal 3): VBM returned on the hang case.
+- **Finite source always on in the grid polish**: `finite_grid()` deleted (the user: finite by default, only
+  active near caustics -- which BinaryMag2 does per point). Under VBM the parallax-free FSPL refit landed on
+  rho 2.7e-5 vs 1.06e-4 (chi2 795.77 vs 795.82), flipping O-05-BLG169 to a point-source grid.
+- `TE_FACTOR` 5 -> 2 (user): a resonant Cassan polish ran ~5 s/call at tE 187 d (< 5 x 42 d) under VBM.
+- `CELL_TIMEOUT` 1800 -> 7200 s; grid caches record `timed_out` per cell and a larger limit retries exactly
+  those cells (pre-26 caches: both families inf = killed at 1800 s). check_search case 6 covers retry + reload.
+- `plot_fit()`: anomaly window centred on the gain-weighted median time (was the single best point -- one OGLE
+  point left of all MDM data); `anomaly=(lo, hi)` override; the FSPL residual row draws 2L1S - FSPL per
+  instrument (black = reference). `zoom_utils.save_fig()`: every plot (18 call sites) stamps "generated <time>".
+- `scratch/drop_one_with_all.py` (generalised from noftn_with_ftn.py): `--dir`, `--xlim`, `--t0-par`, `--polish`
+  (search.refine() on all data, one start); outputs in scratch/drop_one/. `scratch/stall_probe.py` reuses the
+  run's own `plain` and applies the tE ceiling.
+- Jobs: cancelled 4981643/45 (noFTN/fineq, refinement silent 23-33 h). Backed up every results folder to
+  `pre26/`; reran all 7 configs (O-03 4985284/85; O-05 4985286-90, dependency on O-03 dropped). Base and noFTN
+  cancelled after their grids (12 / 16 cells timed out, 5-6 of them in the resonant core) and resubmitted on
+  the retry code: 4985716 (O-05-BLG169), 4985717 (noFTN). Running at save: those two, 4985287 (noAuckland,
+  ~13 h of grid left), 4985290 (fineq, ~5 h of grid left, not yet at the core), self-check 4985704.
+
+### Learned & open questions
+- **VBBL's timeouts sat on the solution**: the session-25 reruns timed out 189 (base) / 445 (fineq) / 196
+  (noFTN) cells, incl. every resonant-core cell around the known crossing. Under VBM + TE_FACTOR 2: base 12,
+  noFTN 16, noMDM 0 -- but the core cells (log s +-0.05, log q -5.25/-5.0) still pass 30 min: slow
+  finite-source resonant calls (longest 50-70 s), not hangs. Hence the 2 h retry.
+- **The resonant family beats the near miss on all data**: noFTN's session-22 solution polished on all four
+  instruments -> chi2 421.35 (s 0.995, q 4.3e-6, rho 3.5e-4, tE 40.0) vs the full run's best 423.78 (near
+  miss, s 0.796, q 4.4e-5). Per instrument (2L1S): OGLE 302.5 / MDM 27.5 / Auckland 73.1 / FTN 18.2 vs
+  304.3 / 32.3 / 73.5 / 13.7. MDM night-1 runs z -3.47 (near miss -4.54): the wave shrinks, not gone.
+- **noAuckland's crossing (s 1.003, q 2.9e-6) removes the MDM wave but Auckland rejects it**: frozen, all data
+  471.2 (MDM 19.1, runs z -0.07; Auckland 133.9/74); polished 437.8 (Auckland 94). Its caustic exit puts a
+  ~0.05 mag shoulder at ~3492.12-3492.18 that Auckland's points run through without following.
+- **Literature** (both papers read): Gould et al. 2006: q = 8e-5, b = 1.02, rho 4.4e-4, tE 42.3, OGLE blend
+  I_b = 19.8 (source ~20.64); Bennett et al. 2015 (HST): s 1.019 / 0.983, q 5.9e-5, I_s = 20.592. Our 2L1S:
+  I_s 20.40, I_b 19.93 (close); our FSPL + parallax: I_s 21.57, I_b 19.04 (far off -- why its alignment
+  differs ~0.04 mag between instruments). **Our resonant q (3-4e-6) is 15-20x below theirs**; their MDM is a
+  1025-image reduction vs our 137 archive points. Both papers plot 1L as the planet model with the planet
+  removed (same t0, u0, tE, rho and fs/fb): one exact curve, no blending conflict.
+- **O-03-BLG235 base (log q step 0.25) missed Bond's basin** this run: s 0.935, q 0.0112, 1107.3 (session 25:
+  Bond's, ~1100.1). -fineq still finds it (s 1.121, q 0.0043, 1101.4). Not diagnosed.
+- noMDM (done): best 2L1S is the resonant family (s 0.991, q 3.2e-6, 424.7), Delta BIC -3.0 / +6.1: still no
+  planet without MDM.
+- Commits 61326d8..9aa909b exist under the user's identity without a Claude trailer; the user says they never
+  committed -- origin unknown (IDE?). `.worktrees/fs-grid/` verified fully superseded by master (only
+  `_fs_cell_test.py` unmerged); removal still needs the user.
+- Mistake (Claude): called the core "free of timeouts" from a grid only half way through (cells run in
+  ascending s). Embedded plots as markdown images (render as [image] for the user; memory saved).
+- At save: fineq 4985290 cancelled mid-grid (680/1769, 10 timed out) and resubmitted on the retry code as
+  4985753 (resumes from grid_partial.npz). Running: 4985716 (base), 4985717 (noFTN), 4985753 (fineq),
+  4985287 (noAuckland, old code, left alone). graphify code graph refreshed (566 nodes, 32 communities;
+  25 community names auto-renamed by hub -- `graphify label` not run).
+
+### Next session
+Confirmed with the user (2026-10-12), in priority order:
+1. **Read the reruns** 4985716 (O-05-BLG169), 4985717 (noFTN), 4985753 (fineq), 4985287 (noAuckland): did
+   the retried core cells finish under 7200 s; **pass test**: the grid finds the ~421 resonant solution
+   (s ~ 0.995, q ~ 4e-6) unaided -- a local minimum refining to <~ 422; free-LD posteriors, MDM wave, and
+   whether the planet is still MDM-only (noMDM: Delta BIC -3.0 / +6.1).
+2. **Plot styles, both kept**: add the papers' convention (residuals vs the 2L1S with the planet removed --
+   same geometry and fs/fb, q -> 0 -- one exact curve) next to today's per-instrument 2L1S - FSPL curves;
+   settle the switch (TOML `[plot]` key vs CLI flag; a TOML key changes the cache key unless excluded).
+- Not pursued (user): the Gould 2006 / Bennett 2015 solutions -- ignore for now. O-03-BLG235 base missing
+  Bond's basin: the known cause (log q step 0.25 too coarse, sessions 21-22), -fineq is the regression test.
+- Carry-overs: Keck mu recheck (memory: keck-mu-check-pending); Claret LD priors from the source colour;
+  convergence part 2 (64 walkers / longer chains / dynesty -- `/grill-me` first; every MCMC still NOT
+  CONVERGED); finite-source per-cell search if fineq misses; MDM original photometry with seeing; parallax
+  map minima merging; housekeeping -- remove `.worktrees/fs-grid/` (user approval), commits (user), uninstall
+  py-spy, colour instruments by name in fit_lc.png.
+- Stretch: 1L2S (binary source, no planet) -- `/grill-me` to scope; the codebase improvement plan.

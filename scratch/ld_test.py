@@ -27,6 +27,7 @@ import numpy as np
 
 from event import flux_residuals, load_event, profile_flux, rescale
 from mcmc_fit import polish
+from zoom_utils import save_fig
 from search import FSPL, Binary, binary_A, binary_steps, chi2_binary, chi2_fspl, fit_fspl, fspl_A, fspl_steps
 
 CONFIG, SUMMARY = "input/O-05-BLG169-fineq.toml", Path("results/O-05-BLG169-fineq/session22/summary.txt")
@@ -122,7 +123,7 @@ def scan(event, best):
     top.legend(fontsize=8)
     fig.tight_layout()
     OUT.mkdir(exist_ok=True)
-    fig.savefig(OUT / "O-05-BLG169_ld_scan.png", dpi=200)
+    save_fig(fig, OUT / "O-05-BLG169_ld_scan.png", dpi=200)
     print(f"saved {OUT / 'O-05-BLG169_ld_scan.png'}")
 
 
@@ -162,5 +163,5 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
     ax.set(xlabel="HJD - 2450000", ylabel="MDM standardized residual", title="O-05-BLG169 MDM, anomaly night")
     ax.legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(OUT / f"O-05-BLG169_mdm_residuals{tag}.png", dpi=200)
+    save_fig(fig, OUT / f"O-05-BLG169_mdm_residuals{tag}.png", dpi=200)
     print(f"saved {OUT / f'O-05-BLG169_mdm_residuals{tag}.png'}")

@@ -28,7 +28,7 @@ from scipy.stats import t as student_t
 from lc_models import ZERO_POINT_MAG, magnification, magnitude, sun_earth_projection, trajectory
 from mcmc_fit import nelder_mead, estimate_mass, fit_parallax_pspl_mcmc, flat_chain, get_t0_par, plot_fit_lc, plot_histograms, save_corner, save_summary
 from preprocess_binary_data import COORDS
-from zoom_utils import plot_fit_panels
+from zoom_utils import plot_fit_panels, save_fig
 
 # short name (see dataset_names.txt) -> (raw OGLE filename, u0_guess, tE_guess)
 # for run_ogle_only_diagnostic(). u0/tE guesses are dataset-specific -- reusing
@@ -60,7 +60,7 @@ def plot_raw():
 
     out_path = f"results/{SHORT_NAME}/pspl/raw_lc.png"
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=600)
+    save_fig(fig, out_path, dpi=600)
     plt.close(fig)
     print(f"saved {out_path}")
 

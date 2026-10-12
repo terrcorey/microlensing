@@ -31,7 +31,7 @@ from concurrent.futures import ProcessPoolExecutor
 from itertools import product
 
 from lc_models import ZERO_POINT_MAG, binary_magnification, binary_trajectory, caustic_curve
-from zoom_utils import find_zoom_window
+from zoom_utils import find_zoom_window, save_fig
 
 SHORT_NAME = "M-19-BLG008"  # see dataset_names.txt
 
@@ -157,7 +157,7 @@ def plot_fit(theta):
 
     Path("scratch").mkdir(exist_ok=True)
     out_path = f"scratch/{SHORT_NAME}_2l1s.png"
-    fig.savefig(out_path, dpi=600)
+    save_fig(fig, out_path, dpi=600)
     print(f"saved {out_path}")
 
 

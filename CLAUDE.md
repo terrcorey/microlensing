@@ -105,8 +105,8 @@ python3 search.py --config input/O-05-BLG169.toml --stage=diagnose   # FSPL + pa
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
 srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
-                                        # session-22..25 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
-                                        # MCMC coordinate round trip, caustic_crossing(), free LD, tE ceiling, cell timeout
+                                        # session-22..26 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
+                                        # MCMC coordinate round trip, caustic_crossing(), free LD, tE ceiling, cell timeout + retry
 ```
 
 ## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
@@ -135,7 +135,7 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   `n_alpha`), and one `[[instruments]]` entry per telescope: `name`, `path`,
   `kind` (`"mag"` -> flux = fs*A + fb; `"dia"` -> flux = fs*(A - 1)), `band`,
   `K` (manual error multiplier, applied to the raw error before mag->flux),
-  `ld` (VBBL's linear `a1`, u convention), optional `ld_sigma` (session 24: LD free in
+  `ld` (VBM's linear `a1`, u convention), optional `ld_sigma` (session 24: LD free in
   refinement + MCMC, one coefficient per band, Gaussian prior mean `ld` / sigma `ld_sigma`,
   bounded [0, 1]; every instrument of a band must agree), `time_fmt` (`"HJD"`,
   `"HJD-2450000"`, or `"Geocentric JD"` -> astropy heliocentric light-travel
@@ -171,18 +171,21 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   600) -- 16/5/600 since session 22, ~2.8x the cost of 8/2/300 per cell, and
   only useful together with a finer log q step; each cell keeps the best of *both* families
   (Cassan, standard) separately (`fam_chi2`/`fam_theta` in grid.npz, `chi2` = their min for the
-  map/minima; session 23, older caches recompute); point source (`rho = 0` -> VBBL
-  `BinaryMag0`, constant cost; refinement starts from FSPL's rho) unless `finite_grid(plain)`
-  (parallax-free FSPL rho >= |u0| / 20: O-05-BLG169 0.085, O-03-BLG235 ~0.001), then every polish
-  in a cell fits rho too (from t_star = plain's rho tE; the Cassan screen stays point source),
-  ~5.5 min/cell, ~5.5x point source -- a point source scored O-05-BLG169's true solutions 400-600
-  worse and the map missed a better resonant basin (session 23; the finite cells still missed one
-  known solution at its exact (s, q), 468.7 vs 424.6 -- per-cell search not validated); parallax off,
+  map/minima; session 23, older caches recompute); the Cassan screen is point source (`rho = 0` ->
+  `BinaryMag0`, constant cost) and every polish in a cell fits rho (from t_star = plain's rho tE) --
+  always, since session 26 (the old `finite_grid(plain)` switch, rho >= |u0| / 20, hung on an
+  unconstrained plain rho and flipped between fits; `BinaryMag2` itself only integrates near a
+  caustic), ~4-5 min/cell on O-05-BLG169, ~5.5x point source -- a point source scored O-05-BLG169's
+  true solutions 400-600 worse and the map missed a better resonant basin (session 23; the finite
+  cells still missed one known solution at its exact (s, q), 468.7 vs 424.6 -- per-cell search not
+  validated); parallax off,
   Cassan abscissae offset half a step off the on-axis cusps (sigma = 0, 0.5),
   cached as `results/<short>/grid.npz` (reused only if config hash `key`,
-  `plain`, the inner-search settings (incl. the finite flag) and K all match; a recompute deletes
-  refined.npz), every finished cell checkpointed to `grid_partial.npz` (a
-  killed run resumes). Finite source in the grid was heavy-tailed: <1% of
+  `plain`, the inner-search settings and K all match; `key` also hashes the VBMicrolensing version;
+  a recompute deletes refined.npz), every finished cell checkpointed to `grid_partial.npz` (a
+  killed run resumes); both record `timed_out` per cell (the `CELL_TIMEOUT` it was killed at, 0 =
+  finished) and a run with a larger `CELL_TIMEOUT` retries exactly those cells from the cache
+  (session 26; pre-26 caches: a cell inf in both families counts as killed at 1800 s). Finite source in the grid was heavy-tailed: <1% of
   calls (trajectories along the axis through cusps, tiny rho) took ~half a
   cell's time, up to 109 s per call; point source ~30-60 s per cell at 8/2/300.
   (iii) `minimum_filter` local minima, best `N_REFINE` = 10 (30 found nothing
@@ -206,24 +209,26 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   unflattened chain + log_prob (+ its `start`) to `mcmc_mode<k>_chain.npz`
   every 200 steps and resumes only the same mode; `save_mcmc()` plots from
   the file in the main thread (pyplot isn't thread-safe). Per-call cost is
-  all inside VBBL `BinaryMag2` (O-03-BLG235 ~10 ms, O-05-BLG169 100-270 ms,
+  all inside VBM `BinaryMag2` (O-03-BLG235 ~10 ms, O-05-BLG169 100-270 ms,
   ~4 ms per MDM point at A ~ 800); `RelTol` 1e-3 -> 2e-3 already moves chi2
   by > 1, so it stays. Robustness (session 22): every chi2 rejects
   non-finite theta, rho < `RHO_MIN` = 1e-5 in FSPL (in 2L1S 0 <= rho < RHO_MIN is the exact point
   source, rho > `RHO_MAX` = 0.1 rejected),
   |piE| > `PIE_MAX` = 5, (s, q) outside the config's grid box, and (2L1S, session 25) tE above
-  `Event.tE_max` = `TE_FACTOR` (5) x the parallax-free FSPL tE (set in `__main__`; default inf) -- VBBL
-  hangs forever on NaN/inf input and segfaulted at rho ~ 1e-15 (the VBBL
-  wrappers in lc_models also return NaN on non-finite input);
+  `Event.tE_max` = `TE_FACTOR` (2 since session 26, was 5: a resonant Cassan polish still ran ~5 s/call
+  at tE 187 d; every 2L1S so far has tE / FSPL tE <= 1.4) x the parallax-free FSPL tE (set in
+  `__main__`; default inf) -- VBBL 3.7 hung forever on NaN/inf input and segfaulted at rho ~ 1e-15
+  (the VBM wrappers in lc_models still return NaN on non-finite input);
   `multiprocessing.Pool` respawned segfaulted workers and lost their tasks
   (two jobs hung ~40 h), so every pool is `search.pool()` =
   `ProcessPoolExecutor` (spawn), which raises `BrokenProcessPool` -- except `run_grid()`'s
-  (session 25): a `pebble.ProcessPool` (spawn) that kills a cell past `CELL_TIMEOUT` = 1800 s,
+  (session 25): a `pebble.ProcessPool` (spawn) that kills a cell past `CELL_TIMEOUT` (7200 s since
+  session 26, was 1800: resonant small-q finite cells at O-05-BLG169's best solution ran past 30 min),
   scores it inf (logged) and respawns the worker; a dead worker still raises (`ProcessExpired`).
-  VBBL 3.7's `BinaryMag2` has no iteration cap and never returns at s ~ 10, A ~ 2e4, RelTol 1e-3
-  (0.67 s at s = 8, 4 s at 9; RelTol 1e-2 returns), hence O-05-BLG169's s range 0.2-5 (session 25);
+  VBBL 3.7's `BinaryMag2` never returned at s ~ 10, A ~ 2e4, RelTol 1e-3 (session 25; VBM 5.6.1 takes
+  6 s there, session 26), hence O-05-BLG169's s range 0.2-5;
   Cassan starts on a tiny close/wide caustic implied tE ~ 1e3-1e6 d (~2 s per chi2), hence the
-  tE ceiling, which also drops those starts at the screen. Refinement/MCMC have no timeout: a VBBL
+  tE ceiling, which also drops those starts at the screen. Refinement/MCMC have no timeout: a slow
   call there can still stall a mode (checkpoints bound the loss). (v)+(vi) `diagnose()`
   (end of every search, and `--stage=diagnose`: refits FSPL + parallax grid,
   requires a refined.npz with the current key): per mode nsteps/tau > 50,
@@ -250,16 +255,21 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   longest-baseline "mag" instrument, OGLE I for both events), other
   instruments aligned onto it with the 2L1S fit (the published-paper
   convention), both models as predicted reference magnitudes; residual rows
-  in mag, each aligned by its own model, shared axis (the fair comparison).
-  Left: peak; right: the anomaly (centred where 2L1S gains most chi2) with a
+  in mag, each aligned by its own model, shared axis (the fair comparison); the FSPL row also
+  draws 2L1S - FSPL per instrument (session 26; black = reference instrument -- the published
+  convention, Gould et al. 2006 / Bennett et al. 2015, is instead the 2L1S with the planet removed,
+  same geometry and fs/fb, one curve: open question, see CHANGELOG session 26).
+  Left: peak; right: the anomaly (centred on the gain-weighted median time of the points where
+  2L1S gains > 10% of the largest gain; `anomaly=(lo, hi)` overrides it) with a
   square caustic inset (caustics, parallax-curved trajectory + arrow, source
   disk at size rho, lenses if in view); a text strip below with the best
   2L1S (+/-, "MCMC NOT CONVERGED" flag), FSPL, chi2 of both, best 6 modes.
   Cross-instrument alignment differs by ~0.04 mag between the two models'
   fits (free fs ratios), see CHANGELOG session 22 "Future developments".
-- Magnification is all VBBinaryLensing (`lc_models.fspl_magnification`,
-  `binary_magnification_vbbl`, one module-level `_VBBL`, `RelTol=1e-3`):
-  its frame matches `binary_trajectory()`'s exactly, ~9 ms per O-03-BLG235
+- Magnification is all VBMicrolensing 5.6.1 (session 26; replaced the unmaintained
+  VBBinaryLensing 3.7 -- chi2 agrees to <= 0.004 on 15 refined solutions, `scratch/vbm_check.py`)
+  (`lc_models.fspl_magnification`, `binary_magnification_vbm`, one module-level `_VBM`,
+  `RelTol=1e-3`): its frame matches `binary_trajectory()`'s exactly, ~9 ms per O-03-BLG235
   light curve vs ~1 s for `binary_magnification_fs` (kept as a cross-check;
   the ~100x is contour integration vs 2-D disk averaging, plus cheaper root
   solves -- session 19).
@@ -302,10 +312,13 @@ per-band limb darkening on O-05-BLG169's session-22 bests -- doesn't remove the 
 > 15x a point-source cell, rejected), `ld_test.py --scan` / `--free0` (session 24: shared LD scanned
 at fixed 2L1S geometry; per-band LD polish started from 0), `mdm_systematics.py` (session 24:
 MDM night-1 residuals vs airmass / reported error + Lomb-Scargle), `keck_mu_check.py` (O-05-BLG169
-t* = rho tE per MCMC mode vs Keck's theta*/mu_geo), `noftn_with_ftn.py` (noFTN's best fits against all
-four instruments), `stall_probe.py` / `vbbl_point_probe.py` (session 25: one grid cell in-process with
-every chi2's theta logged before the call / one theta's VBBL calls timed point by point -- find a hang;
-logs in scratch/stall_probe/), `scratchpad.ipynb` (interactive exploration:
+t* = rho tE per MCMC mode vs Keck's theta*/mu_geo), `drop_one_with_all.py` (session 26, was
+noftn_with_ftn.py: a drop-one run's best fits scored/plotted against all instruments with the full
+run's K; `--polish` refines it on all data, `--xlim` sets the anomaly window, `--t0-par` for pre-23
+outputs; -> scratch/drop_one/), `stall_probe.py` / `vbbl_point_probe.py` (session 25: one grid cell
+in-process with every chi2's theta logged before the call -- `plain` from the run's refined.npz --
+/ one theta's BinaryMag2 calls timed point by point -- find a hang; logs in scratch/stall_probe/),
+`vbm_check.py` (session 26: the VBBL -> VBM gate; needs VBBinaryLensing, now uninstalled), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots -- not a pipeline step).
 SLURM job scripts live in `slurm/` (session 16), not `scratch/`: one
 `.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`, `cassan`,
@@ -823,7 +836,7 @@ measuring on already-rescaled errors gives k~1.
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
   compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, mdm_systematics.py, keck_mu_check.py,
-  noftn_with_ftn.py, stall_probe.py, vbbl_point_probe.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
+  drop_one_with_all.py, stall_probe.py, vbbl_point_probe.py, vbm_check.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in results/ -- when a script graduates into
   the pipeline, move both its code and its output path out at the same
@@ -858,6 +871,9 @@ measuring on already-rescaled errors gives k~1.
   upward). Call these, don't copy them -- they used to be private to
   `mcmc_fit.py` (`_plot_residual_panel`/`_plot_residual_hist`) before being
   promoted here as public functions.
+- `zoom_utils.save_fig(fig, path, **kwargs)` (session 26): `fig.savefig` plus a grey "generated
+  <date time>" stamp in the bottom-right corner. Every plot in the repo saves through it -- never
+  call `fig.savefig` directly.
 - `mcmc_fit.save_corner(samples, labels, truths, out_path)`: the
   corner-plot save. Same rule -- call it, don't copy its 4 lines.
 - `mcmc_fit.plot_fit_lc(...)`: full baseline + auto-zoomed peak with

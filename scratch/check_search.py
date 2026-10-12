@@ -11,11 +11,13 @@
 5. free LD (session 24): load_event's per-band consistency, with_ld, the prior term, LD bounds,
    the MCMC coordinate round trip and log_prob with LD appended.
 6. session 25: tE above Event.tE_max is inf; run_grid() scores a cell past CELL_TIMEOUT inf and
-   carries on (pebble kills the worker) instead of waiting on it forever.
+   carries on (pebble kills the worker) instead of waiting on it forever. Session 26: a larger
+   CELL_TIMEOUT retries exactly those cells from the cached grid; the same one reloads it.
 """
 import os
 import sys
 import tempfile
+import time
 from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
@@ -93,7 +95,14 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
     with tempfile.TemporaryDirectory() as d:  # 2 x 2 point-source cells take ~1 min each: all time out
         search.CELL_TIMEOUT = 2  # read by run_grid in this process; the workers never see it
         tiny = event._replace(grid={**event.grid, "log_s": [0.0, 0.05, 0.05], "log_q": [-3.0, -2.75, 0.25]})
-        g = search.run_grid(tiny, search.FSPL(2848.0, 0.1, 60.0, 2e-4, 0.0, 0.0), Path(d) / "grid.npz", "k",
-                            np.ones(len(event.instruments)))
+        args = (tiny, search.FSPL(2848.0, 0.1, 60.0, 2e-4, 0.0, 0.0), Path(d) / "grid.npz", "k",
+                np.ones(len(event.instruments)))
+        g = search.run_grid(*args)
         assert np.all(g["chi2"] == np.inf), g["chi2"]
-        print("cell timeout ok")
+        search.CELL_TIMEOUT = 3  # larger: all 4 retried (and time out again, now recorded at 3 s)
+        search.run_grid(*args)
+        assert np.all(np.load(Path(d) / "grid.npz")["timed_out"] == 3)
+        t = time.perf_counter()
+        search.run_grid(*args)  # same limit: the cached grid, nothing retried (a retry takes >= 3 s)
+        assert time.perf_counter() - t < 2
+        print("cell timeout + retry ok")

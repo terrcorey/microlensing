@@ -21,7 +21,7 @@ from fit_2l1s import (flux_residuals, plain_pspl, profile_flux,
                       ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err)
 from lc_models import binary_magnification_fs, binary_trajectory, magnification, trajectory
 from preprocess_binary_data import moa_to_magnification, ogle_to_magnification
-from zoom_utils import find_zoom_window
+from zoom_utils import find_zoom_window, save_fig
 from cassan_caustic import OUT_DIR, SHORT_NAME, CassanParams, chi2_cassan, to_standard
 
 def run_pspl(x0):
@@ -111,7 +111,7 @@ def plot_comparison(pspl_theta, cassan_theta):
     out_dir = OUT_DIR.parent / "compare"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{SHORT_NAME}_pspl_vs_2l1s.png"
-    fig.savefig(out_path, dpi=300)
+    save_fig(fig, out_path, dpi=300)
     plt.close(fig)
     print(f"saved {out_path}")
 

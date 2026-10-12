@@ -1,0 +1,29 @@
+[hang] s =  5  VBBinaryLensing  0.000 s  A = 346.066
+[hang] s =  5  VBMicrolensing   0.000 s  A = 346.066
+[hang] s =  7  VBBinaryLensing  0.000 s  A = 579.955
+[hang] s =  7  VBMicrolensing   0.000 s  A = 579.956
+[hang] s =  8  VBBinaryLensing  0.000 s  A = 869.355
+[hang] s =  8  VBMicrolensing   0.000 s  A = 869.347
+[hang] s =  9  VBBinaryLensing  0.000 s  A = 1727.64
+[hang] s =  9  VBMicrolensing   0.000 s  A = 1727.64
+[hang] s = 10  VBBinaryLensing  HANG > 60 s
+[hang] s = 10  VBMicrolensing   6.247 s  A = 20716.2
+[frame] s 1.12 q 0.004: max |VBM / numpy - 1| = 1.22e-11
+[frame] s 0.8 q 4.4e-05: max |VBM / numpy - 1| = 1.35e-08
+[frame] s 1.0 q 3e-06: max |VBM / numpy - 1| = 1.37e-06
+[frame] s 0.3 q 0.03: max |VBM / numpy - 1| = 1.30e-13
+[chi2] O-03-BLG235             s 1.1265 q 0.006 rho 3.27e-05: VBM 1199.808 (0.01 s)  VBBL 1199.809 (0.01 s)  diff -0.001  | stored 1199.809 (VBBL + LD prior 1199.809)
+[chi2] O-03-BLG235             s 1.1181 q 0.00477 rho 1.16e-05: VBM 1203.343 (0.01 s)  VBBL 1203.343 (0.01 s)  diff -0.000  | stored 1203.343 (VBBL + LD prior 1203.343)
+[chi2] O-03-BLG235             s 0.9169 q 0.00536 rho 1e-05: VBM 1252.738 (0.01 s)  VBBL 1252.742 (0.01 s)  diff -0.004  | stored 1252.742 (VBBL + LD prior 1252.742)
+[chi2] O-03-BLG235-fineq       s 1.1237 q 0.00484 rho 0.00106: VBM 1100.394 (0.02 s)  VBBL 1100.390 (0.01 s)  diff +0.004  | stored 1100.390 (VBBL + LD prior 1100.390)
+[chi2] O-03-BLG235-fineq       s 1.1253 q 0.00535 rho 0.0011: VBM 1102.036 (0.02 s)  VBBL 1102.034 (0.01 s)  diff +0.003  | stored 1102.034 (VBBL + LD prior 1102.034)
+[chi2] O-03-BLG235-fineq       s 1.1149 q 0.00269 rho 0.000838: VBM 1104.399 (0.02 s)  VBBL 1104.402 (0.01 s)  diff -0.003  | stored 1104.402 (VBBL + LD prior 1104.402)
+[chi2] O-05-BLG169             s 0.7962 q 4.42e-05 rho 0.00111: VBM 423.781 (0.16 s)  VBBL 423.780 (0.17 s)  diff +0.001  | stored 423.932 (VBBL + LD prior 423.932)
+[chi2] O-05-BLG169             s 0.7952 q 4.67e-05 rho 0.00115: VBM 424.172 (0.17 s)  VBBL 424.172 (0.18 s)  diff -0.000  | stored 424.274 (VBBL + LD prior 424.274)
+[chi2] O-05-BLG169             s 1.2579 q 4.54e-05 rho 0.00114: VBM 424.453 (0.16 s)  VBBL 424.451 (0.17 s)  diff +0.002  | stored 424.608 (VBBL + LD prior 424.608)
+[chi2] O-05-BLG169-noAuckland  s 1.0032 q 3.32e-06 rho 0.00087: VBM 336.716 (0.26 s)  VBBL 336.714 (0.26 s)  diff +0.001  | stored 336.883 (VBBL + LD prior 336.883)
+[chi2] O-05-BLG169-noAuckland  s 1.0033 q 3.36e-06 rho 0.000875: VBM 336.887 (0.26 s)  VBBL 336.885 (0.26 s)  diff +0.002  | stored 337.046 (VBBL + LD prior 337.046)
+[chi2] O-05-BLG169-noAuckland  s 0.8589 q 2.4e-05 rho 0.00096: VBM 347.451 (0.14 s)  VBBL 347.451 (0.15 s)  diff +0.000  | stored 347.681 (VBBL + LD prior 347.681)
+[chi2] O-05-BLG169-noMDM       s 1.2545 q 0.000349 rho 0.000814: VBM 428.795 (0.01 s)  VBBL 428.795 (0.01 s)  diff +0.000  | stored 428.795 (VBBL + LD prior 428.795)
+[chi2] O-05-BLG169-noMDM       s 0.7960 q 0.000311 rho 0.00102: VBM 428.893 (0.02 s)  VBBL 428.893 (0.02 s)  diff +0.000  | stored 428.901 (VBBL + LD prior 428.901)
+[chi2] O-05-BLG169-noMDM       s 1.2707 q 0.000337 rho 0.000811: VBM 428.925 (0.01 s)  VBBL 428.925 (0.01 s)  diff -0.000  | stored 428.926 (VBBL + LD prior 428.926)

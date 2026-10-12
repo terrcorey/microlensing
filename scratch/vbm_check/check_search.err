@@ -1,0 +1,1566 @@
+x:   0%|          | 0/6 [00:00<?, ?it/s]x:  17%|█▋        | 1/6 [00:00<00:01,  3.83it/s]x:  33%|███▎      | 2/6 [00:00<00:01,  3.84it/s]x:  50%|█████     | 3/6 [00:00<00:00,  3.72it/s]x:  67%|██████▋   | 4/6 [00:01<00:00,  3.65it/s]x:  83%|████████▎ | 5/6 [00:01<00:00,  3.61it/s]x: 100%|██████████| 6/6 [00:01<00:00,  3.66it/s]x: 100%|██████████| 6/6 [00:01<00:00,  3.68it/s]
+x:   0%|          | 0/4 [00:00<?, ?it/s]x:  25%|██▌       | 1/4 [00:00<00:00,  3.55it/s]x:  50%|█████     | 2/4 [00:00<00:00,  3.49it/s]x:  75%|███████▌  | 3/4 [00:00<00:00,  3.55it/s]x: 100%|██████████| 4/4 [00:01<00:00,  3.58it/s]x: 100%|██████████| 4/4 [00:01<00:00,  3.56it/s]
+The chain is shorter than 50 times the integrated autocorrelation time for 9 parameter(s). Use this estimate with caution and run a longer chain!
+N/50 = 0;
+tau: [1.19755364 0.76662073 0.96598014 0.80205882 0.89931135 0.89087775
+ 0.80804673 1.15710922 1.01978108]
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=90)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=84)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=86)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=96)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=94)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=102)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=100)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=118)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=98)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=134)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=106)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=112)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=116)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=108)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=114)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=122)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=120)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=110)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=138)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=128)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=136)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=124)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=126)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=148)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=130)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=142)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=132)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=146)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=144)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=150)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=166)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=140)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=156)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=154)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=174)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=164)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=158)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=160)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=152)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=176)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=162)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=168)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=172)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=194)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=170)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=178)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=212)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=198)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=188)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=182)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=206)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=180)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=190)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=196)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=200)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=184)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=186)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=192)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=222)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=202)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=208)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=210)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=204)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=220)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=214)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=216)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=218)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=236)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=232)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=224)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=248)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=250)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=246)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=242)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=234)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=228)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=254)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=238)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=230)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=240)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=244)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=272)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=274)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=268)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=226)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=264)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=252)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=276)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=258)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=260)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=266)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=256)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=262)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=270)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=280)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=290)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=278)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=296)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=286)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=282)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=288)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=284)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=320)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=300)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=298)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=294)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=308)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=304)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=316)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=292)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=318)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=312)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=334)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=326)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=302)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=322)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=310)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=324)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=306)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=328)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=330)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=314)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=342)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=338)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=336)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=344)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=340)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=332)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=348)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=9, pipe_handle=346)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/spawn.py", line 132, in _main
+    self = reduction.pickle.load(from_parent)
+  File "/software/conda/gyc1/conda/lib/python3.14/multiprocessing/synchronize.py", line 117, in __setstate__
+    self._semlock = _multiprocessing.SemLock._rebuild(*state)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory

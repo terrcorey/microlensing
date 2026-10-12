@@ -19,6 +19,7 @@ from astropy.time import Time
 from astropy.timeseries import LombScargle
 
 from event import load_event, profile_flux, rescale
+from zoom_utils import save_fig
 from ld_test import CONFIG, OUT, read_summary, wave
 from search import binary_A, fit_fspl
 
@@ -77,5 +78,5 @@ if __name__ == "__main__":
     fig.suptitle("O-05-BLG169 MDM night 1: residuals at the session-22 2L1S best")
     fig.tight_layout()
     OUT.mkdir(exist_ok=True)
-    fig.savefig(OUT / "O-05-BLG169_mdm_systematics.png", dpi=200)
+    save_fig(fig, OUT / "O-05-BLG169_mdm_systematics.png", dpi=200)
     print(f"saved {OUT / 'O-05-BLG169_mdm_systematics.png'}")

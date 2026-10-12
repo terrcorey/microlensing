@@ -1,10 +1,19 @@
 """Automatically find the time window around a light curve's peak, so plots
 can zoom in without hardcoding a window per dataset."""
 
+from datetime import datetime
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+
+def save_fig(fig, path, **kwargs):
+    """fig.savefig() with a "generated <date time>" stamp in the bottom-right corner -- every plot in
+    the repo saves through this, so a stale PNG is recognisable at a glance (session 26)."""
+    fig.text(0.995, 0.003, f"generated {datetime.now():%Y-%m-%d %H:%M}", ha="right", va="bottom",
+             fontsize=7, color="0.5")
+    fig.savefig(path, **kwargs)
 
 
 def find_zoom_window(time, brightness, error, sigma_threshold=5.0, padding_fraction=0.2):
@@ -143,6 +152,6 @@ def plot_fit_panels(ogle, moa, model_fn, fit_label, out_path):
     ax_zoom.set_title("zoomed on peak (auto-detected)")
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=600)
+    save_fig(fig, out_path, dpi=600)
     plt.close(fig)
     print(f"saved {out_path}")

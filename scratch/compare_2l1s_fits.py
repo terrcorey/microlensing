@@ -24,7 +24,7 @@ plt.rcParams.update({"font.size": 14})
 from fit_2l1s import ogle_time, ogle_mag, ogle_mag_err, moa_time, moa_flux, moa_flux_err, profile_flux
 from lc_models import binary_magnification, binary_trajectory, caustic_curve
 from preprocess_binary_data import moa_to_magnification, ogle_to_magnification
-from zoom_utils import find_zoom_window
+from zoom_utils import find_zoom_window, save_fig
 
 # label, theta=(t0,u0,tE,alpha,s,q), chi2, crosses_caustic -- all pre-parallax, point-source fits,
 # so trajectories below pass piE_N=piE_E=0 (collapses binary_trajectory's parallax terms exactly)
@@ -120,5 +120,5 @@ fig.tight_layout()
 
 Path("scratch").mkdir(exist_ok=True)
 out_path = "scratch/O-03-BLG235_2l1s_comparison.png"
-fig.savefig(out_path, dpi=400)
+save_fig(fig, out_path, dpi=400)
 print(f"saved {out_path}")

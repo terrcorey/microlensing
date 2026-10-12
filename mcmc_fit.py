@@ -10,7 +10,7 @@ from scipy.stats import t as student_t
 from astropy.coordinates import SkyCoord
 
 from lc_models import ZERO_POINT_MAG, flux, plain_flux, magnification, magnitude, plain_magnitude, sun_earth_projection
-from zoom_utils import find_zoom_window, plot_residual_hist, plot_residual_panel
+from zoom_utils import find_zoom_window, plot_residual_hist, plot_residual_panel, save_fig
 
 
 class FitResult(NamedTuple):
@@ -270,7 +270,7 @@ def plot_histograms(results, out_path, bins=50):
         ax.axis("off")
     fig.tight_layout()
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=300)
+    save_fig(fig, out_path, dpi=300)
     plt.close(fig)
     print(f"saved {out_path}")
 
@@ -284,7 +284,7 @@ def plot_raw(time, mag, mag_err, title, out_path):
     ax.set_ylabel("I magnitude")
     ax.set_title(title)
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=300)
+    save_fig(fig, out_path, dpi=300)
     plt.close(fig)
     print(f"saved {out_path}")
 
@@ -343,7 +343,7 @@ def plot_fit_lc(time, mag, mag_err, best_fit, coords, t0_par, dataset_label, out
     plot_residual_hist(ax_zoom_hist, [residuals[in_zoom]])
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=300)
+    save_fig(fig, out_path, dpi=300)
     plt.close(fig)
     print(f"saved {out_path}")
 
@@ -357,7 +357,7 @@ def save_corner(samples, labels, truths, out_path):
     fig = corner.corner(samples, labels=labels, truths=truths, bins=30, smooth=1.0,
                          plot_datapoints=False, fill_contours=True, color="mediumblue")
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=600)
+    save_fig(fig, out_path, dpi=600)
     plt.close(fig)
     print(f"saved {out_path}")
 

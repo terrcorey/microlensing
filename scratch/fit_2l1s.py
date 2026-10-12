@@ -21,7 +21,7 @@ from multiprocessing import get_context, parent_process
 
 from lc_models import binary_magnification_fs, binary_trajectory, caustic_curve, mag_to_flux, sun_earth_projection
 from preprocess_binary_data import load_raw, moa_to_magnification, ogle_to_magnification, fit_joint_pspl, COORDS
-from zoom_utils import find_zoom_window
+from zoom_utils import find_zoom_window, save_fig
 
 class TwoL1SParams(NamedTuple):
     """The 2L1S track's 9 physical parameters, in one canonical order -- every
@@ -327,7 +327,7 @@ def plot_fit(theta, use_ogle=True, *, tag):
     out_dir.mkdir(parents=True, exist_ok=True)
     suffix = ("" if use_ogle else "_moa_only") + tag
     out_path = out_dir / f"{SHORT_NAME}_2l1s{suffix}.png"
-    fig.savefig(out_path, dpi=600)
+    save_fig(fig, out_path, dpi=600)
     print(f"saved {out_path}")
 
 

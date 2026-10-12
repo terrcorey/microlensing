@@ -7,9 +7,9 @@ Stages (session 18 plan, see CHANGELOG):
         u0 signs + refinement: the parallax-only model 2L1S is judged against, as thorough as the
         planet search); per-instrument K derived here too
   (ii)  (s, q) grid from event.grid: Cassan (every caustic) + standard
-        (n_alpha alphas) in each cell, parallax off; point source, or -- when FSPL
-        says the source size shapes the peak -- finite-source polishes with rho
-        fitted per cell (session 23); each cell is checkpointed to grid_partial.npz,
+        (n_alpha alphas) in each cell, parallax off; point-source screen, finite-source
+        polishes with rho fitted per cell (VBM only integrates near a caustic; session 26:
+        always, no per-event switch); each cell is checkpointed to grid_partial.npz,
         so a killed run resumes; the progress line projects the wall-clock
   (iii) distinct local minima of the delta-chi2(s, q) map
   (iv)  refine each minimum with everything free (both u0 signs, both start families: Cassan and
@@ -27,6 +27,7 @@ import argparse
 import hashlib
 import subprocess
 import time
+from importlib.metadata import version
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from datetime import datetime
 from itertools import combinations, product
@@ -43,10 +44,10 @@ from scipy.ndimage import median_filter, minimum_filter
 
 from event import (Event, chi2, error_scale, flux_residuals, ld_penalty, load_event, profile_flux, rescale,
                    to_magnification, with_ld, with_t0_par)
-from lc_models import (ZERO_POINT_MAG, binary_magnification_vbbl, binary_trajectory, cassan_caustic, cassan_to_standard,
+from lc_models import (ZERO_POINT_MAG, binary_magnification_vbm, binary_trajectory, cassan_caustic, cassan_to_standard,
                        caustic_curve, fspl_magnification, lens_position, sun_earth_projection, trajectory)
 from mcmc_fit import nelder_mead, polish, save_corner
-from zoom_utils import find_zoom_window
+from zoom_utils import find_zoom_window, save_fig
 
 FAMILIES = ("Cassan", "standard")  # grid_cell's two start families, refined separately (session 23)
 # Cassan inner grid per caustic: N_SIGMA entry/exit abscissae, best N_POLISH coarse starts get a Nelder-Mead;
@@ -69,11 +70,15 @@ PIE_MAX = 5.0        # |piE| bound for every chi2 (was MCMC-only: a refined |piE
 # 2L1S tE ceiling = TE_FACTOR x the parallax-free FSPL tE (Event.tE_max, set in __main__): Cassan starts on
 # a tiny close/wide caustic imply tE ~ 1e3-1e6 d, every point then sits near the caustic at rho ~ RHO_MIN,
 # ~2 s per chi2 -- noMDM did 49 cells in 24 h (session 25). Screen starts past it score inf and are dropped.
-TE_FACTOR = 5.0
+# 5 -> 2 (session 26): under VBM a resonant Cassan polish still ran ~5 s/call at tE 187 d < 5 x 42 d; every 2L1S
+# found so far has tE / FSPL tE <= 1.4 (O-03-BLG235; O-05-BLG169 0.9-1.1). Also bounds refinement and MCMC.
+TE_FACTOR = 2.0
 # Wall-clock limit per grid cell (run_grid): VBBL BinaryMag2 never returns at s ~ 10, A ~ 2e4, RelTol 1e-3
 # (0.67 s at s = 8, 4 s at 9; its contour refinement has no iteration cap, session 25). A cell past it
-# is scored inf and its worker killed.
-CELL_TIMEOUT = 1800
+# is scored inf and its worker killed. 1800 -> 7200 (session 26): under VBM nothing hangs, but resonant
+# small-q finite-source cells (O-05-BLG169's log s ~ 0, log q ~ -5.3, where its best solution is) ran past
+# 30 min. Raising it retries only the cells killed under a smaller limit (run_grid), not the whole grid.
+CELL_TIMEOUT = 7200
 
 
 class FSPL(NamedTuple):
@@ -134,7 +139,7 @@ def fspl_A(event: Event, theta) -> list[np.ndarray]:
 
 def binary_A(event: Event, theta) -> list[np.ndarray]:
     p, event = as_binary(theta), with_ld(event, theta[NB:])
-    return [binary_magnification_vbbl(binary_trajectory(i.time, p.t0, p.u0, p.tE, p.alpha, p.piE_N, p.piE_E,
+    return [binary_magnification_vbm(binary_trajectory(i.time, p.t0, p.u0, p.tE, p.alpha, p.piE_N, p.piE_E,
                                                         i.dsN, i.dsE), p.s, p.q, p.rho, i.ld)
             for i in event.instruments]
 
@@ -283,15 +288,16 @@ def grid_cell(k_sq):
     """Best parallax-free 2L1S at fixed (s, q), over both families: Cassan (inner grid over entry/exit
     abscissa x candidate times, every caustic, Nelder-Mead the best N_POLISH) and standard (n_alpha
     alphas from FSPL's t0/u0/tE, short Nelder-Mead each). The Cassan screen is always point source
-    (constant cost: finite source near a cusp took minutes per call, sessions 20-21). `finite` (CTX):
-    every polish -- what scores the cell -- fits rho too, from t_star / tE, t_star = plain's rho tE:
-    on O-05-BLG169 a point source scored the true solutions 400-600 worse than a finite one and the map
-    missed a better basin (session 23). Otherwise the polishes are point source and the Binary carries
-    FSPL's rho to start refinement from. Takes (cell index, (s, q)), returns (cell index, [chi2],
+    (constant cost: finite source near a cusp took minutes per call, sessions 20-21). Every polish --
+    what scores the cell -- fits rho too, from t_star / tE, t_star = plain's rho tE: on O-05-BLG169 a
+    point source scored the true solutions 400-600 worse than a finite one and the map missed a better
+    basin (session 23). Always on since session 26: the old switch (plain's rho >= |u0| / 20) hung on an
+    unconstrained rho and flipped between fits; BinaryMag2 itself skips the integration far from a
+    caustic. Takes (cell index, (s, q)), returns (cell index, [chi2],
     [Binary], (wall s, 99th-percentile call s, longest call s)), one chi2/Binary per FAMILIES entry."""
     t_cell = time.perf_counter()
     k, (s, q) = k_sq
-    plain, times, n_alpha, finite = CTX
+    plain, times, n_alpha = CTX
     t_star = plain.rho * plain.tE
     calls = []
 
@@ -302,10 +308,7 @@ def grid_cell(k_sq):
         return c
 
     def polish(f, x0, step, maxfev, tE0):
-        """Nelder-Mead over x0 (+ rho from t_star / tE0 when finite) -> (chi2, x, rho)."""
-        if not finite:
-            x, c = nelder_mead(f, x0, step, maxfev=maxfev)
-            return c, x, plain.rho
+        """Nelder-Mead over x0 + rho (from t_star / tE0) -> (chi2, x, rho)."""
         rho0 = t_star / tE0
         x, c = nelder_mead(lambda x: f(x[:-1], x[-1]), (*x0, rho0), (*step, 0.2 * rho0), maxfev=maxfev)
         return c, x[:-1], x[-1]
@@ -364,50 +367,50 @@ def pool(*initargs):
     return ProcessPoolExecutor(mp_context=get_context("spawn"), initializer=_init, initargs=initargs)
 
 
-def finite_grid(plain: FSPL) -> bool:
-    """Does the source size shape the peak (parallax-free FSPL rho >= |u0| / 20)? Then grid cells are
-    scored with a finite source (grid_cell). O-05-BLG169 0.085 (|u0| / 10 missed it), O-03-BLG235 ~0.001;
-    a finite-source cell costs ~5.5x a point-source one (session 23)."""
-    return plain.rho >= abs(plain.u0) / 20
-
-
 def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
     """(ii) delta-chi2(s, q) map, cached at `path`, + the timing of the cells this run computed."""
-    finite = finite_grid(plain)
     # code-side knobs the TOML key can't see, and the K the cells were scored at (a new FSPL moves it)
-    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, finite, TE_FACTOR, *k_fspl])
+    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, TE_FACTOR, *k_fspl])
     fresh = lambda d: (d is not None and "plain" in d and np.allclose(d["plain"], plain)  # cells start from plain
                        and "settings" in d and d["settings"].shape == settings.shape
                        and np.allclose(d["settings"], settings) and "fam_theta" in d)  # pre-session-23: one family
-    if fresh(d := cached(path, key)):
-        print(f"[grid] loading cached {path}")
-        return d
     log_s, log_q = axis(event.grid["log_s"]), axis(event.grid["log_q"])
-    times = sorted(anomaly_times(event, plain) + list(plain.t0 + plain.tE * np.linspace(-1, 1, 5)))
-    print(f"[grid] {log_s.size} x {log_q.size} cells, {'finite' if finite else 'point'} source "
-          f"(FSPL rho/|u0| = {plain.rho / abs(plain.u0):.3g}), Cassan times {np.round(times, 2)}")
     cells = [(10 ** a, 10 ** b) for a, b in product(log_s, log_q)]
     chi2_map, theta = np.empty((len(cells), 2)), np.empty((len(cells), 2, len(Binary._fields)))
-    done = np.zeros(len(cells), bool)
+    done, timed_out = np.zeros(len(cells), bool), np.zeros(len(cells))  # timed_out: limit a cell was killed at
     partial = path.with_name("grid_partial.npz")  # every finished cell, so a killed run resumes
-    if fresh(d := cached(partial, key)):
-        chi2_map, theta, done = d["fam_chi2"], d["fam_theta"], d["done"]
-        print(f"[grid] resuming: {done.sum()}/{len(cells)} cells from {partial}")
+    src = path if fresh(d := cached(path, key)) else partial if fresh(d := cached(partial, key)) else None
+    if src:
+        chi2_map, theta = d["fam_chi2"].reshape(-1, 2), d["fam_theta"].reshape(len(cells), 2, -1)
+        done = d["done"] if src == partial else np.ones(len(cells), bool)
+        # pre-session-26 caches don't record timeouts: a cell inf in both families was killed at 1800 s
+        timed_out = d["timed_out"] if "timed_out" in d else np.where(np.isinf(chi2_map).all(1), 1800.0, 0.0)
+        retry = (timed_out > 0) & (timed_out < CELL_TIMEOUT)  # killed under a smaller limit than today's
+        done &= ~retry
+        if src == path and not retry.any():
+            print(f"[grid] loading cached {path}")
+            return d
+        print(f"[grid] {done.sum()}/{len(cells)} cells from {src}, retrying {retry.sum()} timed out under "
+              f"{CELL_TIMEOUT} s")
+    times = sorted(anomaly_times(event, plain) + list(plain.t0 + plain.tE * np.linspace(-1, 1, 5)))
+    print(f"[grid] {log_s.size} x {log_q.size} cells, Cassan times {np.round(times, 2)}")
     todo = [(k, c) for k, c in enumerate(cells) if not done[k]]
     path.with_name("refined.npz").unlink(missing_ok=True)  # refined from the old grid's minima: stale
     t_run, stats = time.perf_counter(), []  # (cell wall s, 99th-percentile call s, longest call s)
     # pebble, not pool(): only it can kill one worker past CELL_TIMEOUT (and respawn it); a dead
     # worker still fails loud (ProcessExpired), as pool()'s BrokenProcessPool does
     with ProcessPool(context=get_context("spawn"), initializer=_init,
-                     initargs=(event, plain, times, event.grid["n_alpha"], finite)) as ex:
+                     initargs=(event, plain, times, event.grid["n_alpha"])) as ex:
         futures = {ex.schedule(grid_cell, (kc,), timeout=CELL_TIMEOUT): kc for kc in todo}
         for fut in as_completed(futures):
             try:
                 k, c, p, st = fut.result()
                 stats.append(st)
+                timed_out[k] = 0.0
             except TimeoutError:
                 k, (s, q) = futures[fut]
                 c, p = [np.inf] * 2, [Binary(plain.t0, plain.u0, plain.tE, plain.rho, 0, 0, s, q, 0.0)] * 2
+                timed_out[k] = CELL_TIMEOUT
                 print(f"[grid] cell (log s, log q) = ({np.log10(s):.2f}, {np.log10(q):.2f}) timed out "
                       f"after {CELL_TIMEOUT} s: scored inf")
             except BaseException:  # else __exit__ waits for every queued cell, then discards them
@@ -416,14 +419,14 @@ def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
             chi2_map[k], theta[k], done[k] = c, p, True
             with open(partial.with_suffix(".tmp"), "wb") as f:  # write-then-rename: a kill can't corrupt it
                 np.savez(f, log_s=log_s, log_q=log_q, fam_chi2=chi2_map, fam_theta=theta, done=done, key=key,
-                         plain=plain, settings=settings)
+                         plain=plain, settings=settings, timed_out=timed_out)
             partial.with_suffix(".tmp").replace(partial)
             if done.sum() % 50 == 0:
                 print(f"[grid] {done.sum()}/{len(cells)} | {grid_timing(t_run, stats, len(cells) - done.sum())}")
     d = dict(log_s=log_s, log_q=log_q, chi2=chi2_map.min(1).reshape(log_s.size, log_q.size),
              fam_chi2=chi2_map.reshape(log_s.size, log_q.size, 2), fam_theta=theta.reshape(log_s.size, log_q.size, 2, -1))
     d["timing"] = grid_timing(t_run, stats, 0)
-    np.savez(path, **d, key=key, plain=plain, settings=settings)
+    np.savez(path, **d, key=key, plain=plain, settings=settings, timed_out=timed_out)
     partial.unlink(missing_ok=True)
     return d
 
@@ -637,7 +640,7 @@ def plot_raw(event: Event, plain: FSPL, path: Path):
     axes[0].set_title(f"{event.short_name}: full baseline")
     axes[1].set_title("peak")
     fig.tight_layout()
-    fig.savefig(path, dpi=200)
+    save_fig(fig, path, dpi=200)
     plt.close(fig)
     print(f"saved {path}")
 
@@ -705,7 +708,7 @@ def plot_caustic_inset(ax, event: Event, best: Binary, t0_par: float, tc: float)
     ins.set_title(r"source plane ($\theta_E$)", fontsize=7)
 
 
-def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text):  # fit vectors (LD appended when free)
+def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=None):  # fit vectors (LD appended when free)
     """Every instrument in the reference instrument's magnitude system (the longest-baseline "mag"
     instrument -- OGLE's calibrated I for both current events), the convention of published
     microlensing light curves. Other instruments have their own zero points and bands, so they can
@@ -714,19 +717,24 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text):  # fit 
     same fluxes with A differing ~4x on O-05-BLG169). Top row: data aligned with the 2L1S fit, both
     models as predicted reference-instrument magnitudes (exact for the reference instrument's own
     points). Residual rows: data aligned with that row's own model minus it, in mag, shared axis --
-    the fair per-model comparison. Left: peak; right: the anomaly, centred on the point where 2L1S
-    lowers chi2 most, half-width 1.5x the median distance of the points gaining > 10% as much (median:
-    a few wing points also gain and would stretch a min-max span). The anomaly panel carries the
-    caustic inset; `text` (three lists of lines, from diagnose()) fills a strip below."""
+    the fair per-model comparison; the FSPL row also draws 2L1S - FSPL per instrument (black: reference). Left: peak; right: the anomaly, centred on the gain-weighted median time of the points
+    where 2L1S lowers chi2 by > 10% of the largest gain (not the single best point: on O-05-BLG169 that was
+    one OGLE point left of all the MDM data, session 26), half-width 1.5x their median distance from it
+    (median: a few wing points also gain and would stretch a min-max span). The anomaly panel carries the
+    caustic inset; `text` (three lists of lines, from diagnose()) fills a strip below. `anomaly` = (lo, hi)
+    overrides the anomaly window (scratch/drop_one_with_all.py --xlim)."""
     A_f, A_b = fspl_A(event, fspl), binary_A(event, best)
     mags = [n for n, i in enumerate(event.instruments) if i.kind == "mag"]
     k = max(mags or range(len(event.instruments)), key=lambda k: np.ptp(event.instruments[k].time))
     ref = event.instruments[k]
     t = np.concatenate([i.time for i in event.instruments])
     gain = flux_residuals(event, A_f) ** 2 - flux_residuals(event, A_b) ** 2
-    tc = t[np.argmax(gain)]
-    half = max(1.5 * np.median(np.abs(t[gain > 0.1 * gain.max()] - tc)), 0.05)
-    windows = (find_zoom_window(ref.time, ref.flux, ref.flux_err), (tc - half, tc + half))  # model-free window
+    big = gain > 0.1 * gain.max()
+    o = np.argsort(t[big])
+    cw = np.cumsum(gain[big][o])
+    tc = t[big][o][np.searchsorted(cw, cw[-1] / 2)]
+    half = max(1.5 * np.median(np.abs(t[big] - tc)), 0.05)
+    windows = (find_zoom_window(ref.time, ref.flux, ref.flux_err), anomaly or (tc - half, tc + half))  # model-free window
 
     def to_mag(F):  # ref-instrument flux -> its magnitude (mag_to_flux's inverse); F <= 0 -> NaN
         return ZERO_POINT_MAG - 2.5 * np.log10(np.where(F > 0, F, np.nan))
@@ -754,6 +762,17 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text):  # fit 
                 F, F_err, F_mod, _ = aligned(i, Am, Aref)
                 axes[row, col].errorbar(i.time[m], (to_mag(F) - to_mag(F_mod))[m], (1.0857 * F_err / F)[m], fmt=".",
                                         ms=3, elinewidth=0.5, color=f"C{n}")
+            # 2L1S - FSPL on the FSPL row, per instrument over its own data span: instrument i's 2L1S flux mapped
+            # through the same FSPL alignment as its points (fs/fb differ by model, ~0.04 mag between instruments)
+            lo, hi = max(xlim[0], i.time.min()), min(xlim[1], i.time.max())
+            if lo < hi:
+                tg = np.linspace(lo, hi, 500)
+                g = on_grid(event, i, tg, t0_par)
+                (cb, cf), Ag_b, Ag_f = (profile_flux(i, A)[0] for A in (Ab, Af)), binary_A(g, best)[0], fspl_A(g, fspl)[0]
+                A2 = (cb[0] * Ag_b + cb[1] - cf[1]) / cf[0] if i.kind == "mag" else 1 + cb[0] * (Ag_b - 1) / cf[0]
+                fs_r, fb_r = aligned(ref, A_f[k], A_f[k])[3]
+                axes[1, col].plot(tg, to_mag(fs_r * A2 + fb_r) - to_mag(fs_r * Ag_f + fb_r), color="k" if n == k else f"C{n}",
+                                  lw=1.2 if n == k else 0.8, zorder=3)
         tg = np.linspace(*xlim, 2000)
         g = on_grid(event, ref, tg, t0_par)
         for name, Ag, Aref, style in (("2L1S", binary_A(g, best)[0], A_b[k], "k-"),
@@ -765,6 +784,7 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text):  # fit 
         for row, (name, color) in ((1, ("FSPL + parallax", "r")), (2, ("2L1S", "k"))):
             axes[row, col].axhline(0, color=color, lw=0.8)
             axes[row, col].set_ylabel(f"data - {name} (mag)")
+        axes[1, col].set_ylabel("data - FSPL + parallax (mag)\nlines: 2L1S - FSPL", fontsize=9)
         axes[2, col].set_xlabel("HJD - 2450000")
         axes[2, col].ticklabel_format(axis="x", useOffset=False)
     axes[1, 0].invert_yaxis()  # brighter up, as in the light curve (shared by both residual rows)
@@ -778,7 +798,7 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text):  # fit 
     for x, lines in zip((0.0, 0.36, 0.62), text):
         strip.text(x, 1.0, "\n".join(lines), va="top", family="monospace", fontsize=9, transform=strip.transAxes)
     fig.tight_layout()
-    fig.savefig(path, dpi=200)
+    save_fig(fig, path, dpi=200)
     plt.close(fig)
     print(f"saved {path}")
 
@@ -791,7 +811,7 @@ def plot_trace(chain, names, path: Path):
         ax.set_ylabel(label)
     axes[-1].set_xlabel("step")
     fig.tight_layout()
-    fig.savefig(path, dpi=120)
+    save_fig(fig, path, dpi=120)
     plt.close(fig)
     print(f"saved {path}")
 
@@ -906,7 +926,7 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
     commit = subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, text=True).stdout.strip()
     k_of = lambda ks: ", ".join(f"{i.name}={float(k)!r}" for i, k in zip(event.instruments, ks))
     g = np.load(out / "grid.npz") if (out / "grid.npz").exists() else {}
-    grid_line = (f"grid: {'finite' if g['settings'][3] else 'point'} source cells; {g['timing']}" if "timing" in g
+    grid_line = (f"grid: {g['timing']}" if "timing" in g
                  else "grid: pre-session-23 cache (point source, no timing)")
     lines = [f"# {event.short_name} -- search.py summary", f"config: {config}",
              f"written: {datetime.now():%Y-%m-%d %H:%M}, git: {commit or 'unknown'}", grid_line, "",
@@ -942,7 +962,7 @@ def plot_map(grid, minima, path: Path):
     ax.set(xlabel=r"$\log_{10} s$", ylabel=r"$\log_{10} q$", title=r"2L1S $\Delta\chi^2(s, q)$, parallax off")
     ax.legend(loc="lower right")
     fig.tight_layout()
-    fig.savefig(path, dpi=200)
+    save_fig(fig, path, dpi=200)
     plt.close(fig)
     print(f"saved {path}")
 
@@ -983,7 +1003,7 @@ def plot_parallax_map(pgrid, k_fspl, fspl: FSPL, c2_f: float, best: Binary, c2_b
     fig.text(0.02, 0.02, f"chi2 parallax-only = {c2_f:.1f}    chi2 2L1S = {c2_b:.1f}    Delta = {c2_f - c2_b:.1f}"
              f"    (errors rescaled by K at FSPL)\nlocal minima: x (Delta chi2 < 25)    {verdict}"
              + ("    WARNING: best on the |piE| bound" if pgrid["on_bound"] else ""), family="monospace", fontsize=9)
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    save_fig(fig, path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"saved {path}")
     return verdict
@@ -1025,7 +1045,8 @@ if __name__ == "__main__":
     # one key for every cache below: a config edit (instruments, K, n_alpha, grid...) invalidates them all;
     # run_grid() also checks `plain` (code changes move it without touching the TOML: RHO_MIN, session 22).
     # ponytail: hashes the TOML, not the data files it points to -- edit data in place => delete the caches
-    key = hashlib.sha256(Path(args.config).read_bytes()).hexdigest()
+    # + the magnification backend's version: a VBM upgrade (or the session-26 VBBL -> VBM swap) recomputes
+    key = hashlib.sha256(Path(args.config).read_bytes() + version("VBMicrolensing").encode()).hexdigest()
     if args.stage == "diagnose":
         diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config)
         raise SystemExit

@@ -1,0 +1,13 @@
+[polish] start chi2 471.16
+[polish] chi2 + LD prior 439.28
+FSPL: OGLE 339.7/341, MDM 133.7/137, Auckland 72.1/74, FTN 31.6/31
+2L1S: OGLE 304.5/341, MDM 21.1/137, Auckland 94.0/74, FTN 18.2/31
+2L1S chi2 all = 437.81 (full run's best: see results/O-05-BLG169/summary.txt)  Binary(t0=np.float64(3491.8777658824365), u0=np.float64(-0.0014066218833937434), tE=np.float64(40.13009119167765), rho=np.float64(0.0007495939543160776), piE_N=np.float64(0.40720717283556995), piE_E=np.float64(-0.14199955414262935), s=np.float64(1.0048813156867562), q=np.float64(2.7005249437861048e-06), alpha=np.float64(-2.792533918662219))
+LD ['I=0.507', 'R=0.637', 'clear=0.482']
+2L1S residuals     N  runs z  lag-1 chi2/pt
+OGLE             341   +1.14  -0.07    0.89
+MDM              137   -2.43  +0.32    0.15
+Auckland          74   +0.01  +0.11    1.27
+FTN               31   -0.54  -0.24    0.59
+MDM night 1      127   -2.16  +0.23    0.11
+saved scratch/drop_one/O-05-BLG169-noAuckland_with_all_polished.png
