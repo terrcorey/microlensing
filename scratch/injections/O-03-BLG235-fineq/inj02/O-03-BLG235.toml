@@ -1,0 +1,27 @@
+full_name = "OGLE-2003-BLG-235"
+short_name = "../scratch/injections/O-03-BLG235-fineq/inj02/out_O-03-BLG235"
+ra = "18h01m16.35s"
+dec = "-28d53m42.00s"
+
+[grid]
+n_alpha = 16
+log_s = [-0.7, 0.7, 0.05]
+log_q = [-6.0, 0.0, 0.25]
+
+[[instruments]]
+name = "OGLE"
+path = "scratch/injections/O-03-BLG235-fineq/inj02/OGLE.dat"
+kind = "mag"
+band = "I"
+K = 1.0
+ld = 0.5
+time_fmt = "HJD-2450000"
+
+[[instruments]]
+name = "MOA"
+path = "scratch/injections/O-03-BLG235-fineq/inj02/MOA.dat"
+kind = "dia"
+band = "I"
+K = 1.0
+ld = 0.5
+time_fmt = "HJD-2450000"

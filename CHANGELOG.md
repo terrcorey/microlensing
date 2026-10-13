@@ -2595,3 +2595,81 @@ Confirmed with the user (2026-10-12), in priority order:
   map minima merging; housekeeping -- remove `.worktrees/fs-grid/` (user approval), commits (user), uninstall
   py-spy, colour instruments by name in fit_lc.png.
 - Stretch: 1L2S (binary source, no planet) -- `/grill-me` to scope; the codebase improvement plan.
+
+## 2026-10-13 — session 27
+
+### Built
+- **Read session 26's reruns** (all finished): 4985716 base, 4985717 noFTN, 4985753 fineq, 4985287 noAuckland
+  (old 1800 s code: 309 timeouts, its grid incomplete). Retried core cells: base 5 of 12 timed out again (edges),
+  noFTN 7 of 16 (one core cell, log s +0.05 / log q -5.25), fineq 13 incl. the four core cells at log s +-0.05,
+  log q -5.4 / -5.3 -- where the known solution sits.
+- **Grid rho start** (user wrote, Claude reviewed): `T_STAR` = 0.03 d replaces plain's rho tE in `grid_cell()`'s
+  polish, in the grid `settings` (every grid cache recomputes). The comment on `T_STAR` is still empty.
+  `scratch/stall_probe.py` gained an optional t_star argument (now overrides `search.T_STAR`).
+- **`plot_fit(planet_removed=True)`** (session 26 goal 2, Claude): `fit_lc_noplanet.png` next to `fit_lc.png` from
+  every diagnose -- the papers' convention, 2L1S-aligned data minus the 2L1S with the planet removed, one curve
+  for the planet's signal; no TOML/CLI switch. Regenerated for O-05-BLG169 (4989460).
+- **2L1S explorer** in `scratch/scratchpad.ipynb` (grilled; Claude): ipywidgets sliders (redraw on release) over
+  t0, u0, tE, rho, piE_N/E, s, q, alpha, LD, fs, fb + point-source toggle + instrument dropdown; `CONFIG` /
+  `SHOW_DATA`; starts at the run's best refined 2L1S; full (+-1.5 tE, or a short instrument's own span) / peak
+  zoom / source plane; residual strips; chi2 (chosen instrument at the slider fs/fb, all instruments profiled,
+  config errors -- reproduces refined.npz's 426.79 to 0.02 on the search's K). `ipywidgets` 8.1.9 in .venv only.
+- **Injection-recovery** (grilled; Claude): `search.py --stage=refine` (stop after (iv), + fspl.npz);
+  `scratch/inject.py` make / tally. Batch 1: O-03-BLG235-fineq's best single lens, 16 planets (log s -0.5..0.5,
+  log q -5..-1.5, alpha uniform, noise-free Delta chi2 >= 50: 16 of 59 draws, all q >= 7e-4) + 4 nulls, noise =
+  errors x K at 2L1S (not K at FSPL as first agreed: that carries the real planet's misfit), each searched on
+  the 0.25 and 0.1 log q grids: 40 jobs 4990114-53, running at save.
+- **Sensitivity map** (grilled; Claude, not yet run): `scratch/sensitivity.py` + `slurm/sensitivity.sbatch` --
+  Delta chi2 (FSPL + parallax refit vs noise-free 2L1S) over log s -0.7..0.7 (0.05) x log q -6..-1 (0.1) x 24
+  alphas, median over alpha with contours, the user's choice over a detected/not efficiency map.
+
+### Learned & open questions
+- **The pass test failed**: no run's grid found the ~421 resonant solution unaided. Base 422.6 / fineq 422.9 are
+  near misses (s ~0.81-0.83, q ~3e-5); the resonant crossing appears only as an MCMC mode (423.6-423.7).
+  noFTN (397.9, s 0.996, q 3.0e-6, Delta 5.8 "close") and noAuckland (334.7, s 1.003, q 3.2e-6, crossing preferred
+  by 11) do find it. Free LD: posteriors = the priors (+-0.09-0.10), data don't constrain it. MDM's K at 2L1S
+  0.50-0.64 vs 1.29 at FSPL: the 2L1S fits MDM better than its error bars (overfitting MDM, or MDM errors too big).
+- **The s = 1.00 grid row is 50-130 worse than its +-0.05 neighbours** in every run (490-560 vs ~430), though the
+  solution (s 0.995) is inside that cell. **Rho start**: plain's rho is 2.7e-5 in base/noFTN (13x below the
+  solution's 3.5e-4), 7.8e-4 in noAuckland -- the run that found the crossing. Probe (one cell in-process, base
+  K): log q -5.5 standard family 527.7 (old) -> 456.5 (t* 0.014 d) -> 456.6 (0.03 d); log q -5.25 532.4 -> 491.3
+  -> 490.0. A better rho start helps by 40-70 but the row stays ~25 above its neighbours, polishes end at rho ~1e-3
+  (3x the solution's), and a cell costs 6-8x (329 s -> 2573 s at 0.03 d). **Don't rerun grids on T_STAR yet.**
+- **Refinement stops early**: Nelder-Mead minima 3-9 above the MCMC best of the same mode (426.8 vs 423.4).
+  Cassan-family refinements score 5000-38000 (bad starts, not minima). Refined minima pile up at s ~0.87 / 1.15
+  (s <-> 1/s twins of one near miss).
+- **Direction change (user)**: the per-symptom knobs (TE_FACTOR, CELL_TIMEOUT, s range, log q step, N_SIGMA,
+  T_STAR) were tuning the search toward one known answer -- not self-sufficient. Knobs are judged by
+  injection-recovery rates from now on (memory: blind-search-no-literature-seeds updated).
+- **Injections, first 5 runs (0.25 grid)**: 3 found, 2 missed, 2 detected (Delta BIC > 10). inj01/02 (wide,
+  Delta chi2 149/54 noise-free): the search beats the truth by 20-24 elsewhere (s ~1.1-1.26, q ~1e-4) and Delta BIC
+  ~ -10: undetected -- the noise-free Delta chi2 vs the planet *removed* overstates detectability (the refit FSPL
+  absorbs it). inj05 (s 0.87, q 0.022, Delta chi2 6549) **missed by 1082**, found at the s = 5 box edge, Delta BIC
+  -200 (the 2L1S below the FSPL). inj03 (s 0.97, q 0.013) missed by 11.
+- **Literature sensitivity maps**: the method is Gaudi & Sackett 2000 / Rhie et al. 2000; OGLE-III 2003-08 maps
+  (arXiv:1602.02519, OGLE data only, Delta chi2 25/50/100); O-05-BLG169 in Gould et al. 2010 (arXiv:1001.0572,
+  per-event efficiencies; Gould 2006: ~complete for Neptune q at s 0.6-1.6). Ours differ in data: validation only.
+- **Sensitivity cost**: the timing test (2 cells x 24 alphas, srun) ran > 25 min without finishing: an FSPL
+  `polish()` refit is > 30 s, a full map > 300 CPU-h. Needs a cheaper refit (one pass / smaller maxfev, or refit
+  only above a Delta chi2 floor) before submitting.
+- Someone/something staged the session's files (`git status`: A), incl. every injection output (npz, data) and the
+  ~25k-line stall_probe logs -- gitignore scratch/injections/*/inj*/out_* and the logs before committing (user).
+- graphify not refreshed: one new stage, two scratch scripts, no architecture change.
+
+### Next session
+Confirmed with the user (2026-10-13), in priority order:
+1. **Read the O-03-BLG235 injection batch** (4990114-53): `scratch/inject.py tally scratch/injections/O-03-BLG235-fineq`;
+   recovery on the 0.25 vs 0.1 log q grid; diagnose the failures (inj05: found at the s = 5 box edge, Delta BIC
+   -200 -- the 2L1S scoring worse than the FSPL).
+2. **Make the sensitivity map affordable, then run it on O-03-BLG235**: one Nelder-Mead pass / smaller maxfev /
+   fewer alphas (the timing test, background srun at save, ran > 25 min for 2 cells); and switch inject.py's
+   Delta chi2 >= 50 cut from "vs the planet removed" to "vs a refit FSPL" (inj01/02: the former overstates it).
+3. **O-05-BLG169 injection batch** (low q, which O-03-BLG235 can't test) once goal 1 shows the harness works:
+   ~8 planets + 2 nulls (~15x the cost per injection).
+4. **Knobs judged by recovery rate**, one O-03-BLG235 injection batch each, `/grill-me` first: `T_STAR` vs the old
+   plain-rho start; the refinement optimiser (Levenberg-Marquardt or a short MCMC burn vs Nelder-Mead) -- ordered by
+   what goal 1's failures point to.
+- Carry-overs: user -- the empty `T_STAR` comment, gitignore injection outputs + stall_probe logs, commits; Claude --
+  Keck mu recheck (memory: keck-mu-check-pending), Claret LD priors, MCMC convergence (every mode still NOT
+  CONVERGED), MDM original photometry with seeing, remove `.worktrees/fs-grid/` (user approval), uninstall py-spy.
+- Stretch: 1L2S (binary source) -- `/grill-me` to scope; the codebase improvement plan.

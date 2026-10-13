@@ -107,6 +107,12 @@ python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline
 srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
                                         # session-22..26 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
                                         # MCMC coordinate round trip, caustic_crossing(), free LD, tE ceiling, cell timeout + retry
+srun --partition=small-short --mem=4G --time=00:15:00 .venv/bin/python scratch/inject.py make \
+    input/O-03-BLG235-fineq.toml --grids input/O-03-BLG235.toml input/O-03-BLG235-fineq.toml
+                                        # session 27 injection-recovery -> scratch/injections/<short>/inj<NN>/, then from slurm/:
+                                        #   for f in ../scratch/injections/<short>/inj*/*.toml; do sbatch search.sbatch $f refine; done
+.venv/bin/python scratch/inject.py tally scratch/injections/<short>   # found/close/missed + Delta BIC (light)
+(cd slurm && sbatch sensitivity.sbatch ../input/<short>.toml)   # Delta chi2 sensitivity map -> scratch/sensitivity/
 ```
 
 ## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
@@ -172,7 +178,9 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   only useful together with a finer log q step; each cell keeps the best of *both* families
   (Cassan, standard) separately (`fam_chi2`/`fam_theta` in grid.npz, `chi2` = their min for the
   map/minima; session 23, older caches recompute); the Cassan screen is point source (`rho = 0` ->
-  `BinaryMag0`, constant cost) and every polish in a cell fits rho (from t_star = plain's rho tE) --
+  `BinaryMag0`, constant cost) and every polish in a cell fits rho (from t_star = `T_STAR` = 0.03 d,
+  session 27 -- was plain's rho tE, which the FSPL barely constrains: 2.7e-5 on O-05-BLG169 under VBM,
+  13x below the known solution; costs 6-8x per resonant cell, NOT yet used by any grid rerun) --
   always, since session 26 (the old `finite_grid(plain)` switch, rho >= |u0| / 20, hung on an
   unconstrained plain rho and flipped between fits; `BinaryMag2` itself only integrates near a
   caustic), ~4-5 min/cell on O-05-BLG169, ~5.5x point source -- a point source scored O-05-BLG169's
@@ -256,9 +264,11 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   instruments aligned onto it with the 2L1S fit (the published-paper
   convention), both models as predicted reference magnitudes; residual rows
   in mag, each aligned by its own model, shared axis (the fair comparison); the FSPL row also
-  draws 2L1S - FSPL per instrument (session 26; black = reference instrument -- the published
-  convention, Gould et al. 2006 / Bennett et al. 2015, is instead the 2L1S with the planet removed,
-  same geometry and fs/fb, one curve: open question, see CHANGELOG session 26).
+  draws 2L1S - FSPL per instrument (session 26; black = reference instrument).
+  `planet_removed=True` (session 27, `fit_lc_noplanet.png`, both written by every diagnose) is the
+  published convention (Gould et al. 2006 / Bennett et al. 2015) instead: that row is the 2L1S-aligned
+  data minus the 2L1S with the planet removed (its t0, u0, tE, rho, piE, LD and fs/fb through `fspl_A`,
+  lens at the COM), one curve = the planet's signal; the top row adds it dotted.
   Left: peak; right: the anomaly (centred on the gain-weighted median time of the points where
   2L1S gains > 10% of the largest gain; `anomaly=(lo, hi)` overrides it) with a
   square caustic inset (caustics, parallax-curved trajectory + arrow, source
@@ -276,7 +286,8 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
 - Outputs: `results/<short>/` (raw_lc.png -- every instrument in magnification via its fs/fb
   profiled at the parallax-free FSPL, `event.to_magnification()`; also `--stage=raw` alone --, grid.npz,
   delta_chi2_map.png, refined.npz, mcmc_mode*_corner.png/_chain.npz/_trace.png, fit_lc.png,
-  fspl_parallax_map.png, summary.txt). `slurm/search.sbatch` takes the config path as `$1` and an
+  fit_lc_noplanet.png, fspl_parallax_map.png, summary.txt; `--stage=refine` stops before the MCMC and
+  writes fspl.npz -- the FSPL + parallax fit, its chi2, K, key -- instead of the plots/summary). `slurm/search.sbatch` takes the config path as `$1` and an
   optional `--stage` as `$2`, 24 CPUs (32 hits `QOSMaxCpuPerJobLimit` on small-short), BLAS pinned
   to one thread per worker; diagnose jobs override to 8 CPUs on the command line.
 - `mcmc_fit.nelder_mead(f, x0, step)` (moved from search.py in session 22): Nelder-Mead from an
@@ -317,9 +328,19 @@ noftn_with_ftn.py: a drop-one run's best fits scored/plotted against all instrum
 run's K; `--polish` refines it on all data, `--xlim` sets the anomaly window, `--t0-par` for pre-23
 outputs; -> scratch/drop_one/), `stall_probe.py` / `vbbl_point_probe.py` (session 25: one grid cell
 in-process with every chi2's theta logged before the call -- `plain` from the run's refined.npz --
-/ one theta's BinaryMag2 calls timed point by point -- find a hang; logs in scratch/stall_probe/),
-`vbm_check.py` (session 26: the VBBL -> VBM gate; needs VBBinaryLensing, now uninstalled), `scratchpad.ipynb` (interactive exploration:
-caustic explorer, finite-source sample-point plots -- not a pipeline step).
+/ one theta's BinaryMag2 calls timed point by point -- find a hang; logs in scratch/stall_probe/;
+stall_probe's optional 6th argument overrides `search.T_STAR`, session 27),
+`vbm_check.py` (session 26: the VBBL -> VBM gate; needs VBBinaryLensing, now uninstalled),
+`inject.py` (session 27: injection-recovery -- `make` draws planets into a real run's best single lens on its
+timestamps and errors x K at 2L1S, Delta chi2 >= 50 noise-free, + nulls, one TOML per `--grids` config in
+scratch/injections/<short>/inj<NN>/; `tally` scores each `--stage=refine` run: found / close / missed vs the
+truth's chi2 under the search's K, Delta BIC; `base_event()` is shared with sensitivity.py),
+`sensitivity.py` (session 27: Delta chi2 sensitivity map -- noise-free 2L1S over (log s, log q) x 24 alphas
+vs an FSPL + parallax refit, median over alpha with contours -> scratch/sensitivity/<short>.{npz,png};
+`slurm/sensitivity.sbatch`; a `.npz` argument re-plots only), `scratchpad.ipynb` (interactive exploration:
+caustic explorer, finite-source sample-point plots, session 27's 2L1S explorer -- ipywidgets sliders over every
+2L1S + parallax + LD + fs/fb parameter, data overlay from a config, peak zoom, residuals, chi2; `ipywidgets` is
+in .venv but not requirements.txt -- not a pipeline step).
 SLURM job scripts live in `slurm/` (session 16), not `scratch/`: one
 `.sbatch` per job (`pspl_086`, `pspl_235`, `2l1s_fit`, `cassan`,
 `cross_checks` and `compare` (both also `afterok` on `cassan`, whose chain
@@ -836,7 +857,8 @@ measuring on already-rescaled errors gives k~1.
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
   compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, mdm_systematics.py, keck_mu_check.py,
-  drop_one_with_all.py, stall_probe.py, vbbl_point_probe.py, vbm_check.py, scratchpad.ipynb; 2L1S outputs under `scratch/2l1s/<method>/`). If a script
+  drop_one_with_all.py, stall_probe.py, vbbl_point_probe.py, vbm_check.py, inject.py, sensitivity.py, scratchpad.ipynb;
+  2L1S outputs under `scratch/2l1s/<method>/`, injections under `scratch/injections/`, maps under `scratch/sensitivity/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in results/ -- when a script graduates into
   the pipeline, move both its code and its output path out at the same

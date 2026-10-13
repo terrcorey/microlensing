@@ -66,6 +66,7 @@ MODE_DCHI2 = 10.0    # refined minima within this of the best get an MCMC
 # source (session 23): a polish pushing rho down to the floor is modelled as a point, never rejected.
 RHO_MIN = 1e-5
 RHO_MAX = 0.1  # 2L1S ceiling: a huge source is unphysical for a bulge dwarf and slow in VBBL
+T_STAR = 0.03 #
 PIE_MAX = 5.0        # |piE| bound for every chi2 (was MCMC-only: a refined |piE| > 5 froze its walkers)
 # 2L1S tE ceiling = TE_FACTOR x the parallax-free FSPL tE (Event.tE_max, set in __main__): Cassan starts on
 # a tiny close/wide caustic imply tE ~ 1e3-1e6 d, every point then sits near the caustic at rho ~ RHO_MIN,
@@ -289,7 +290,7 @@ def grid_cell(k_sq):
     abscissa x candidate times, every caustic, Nelder-Mead the best N_POLISH) and standard (n_alpha
     alphas from FSPL's t0/u0/tE, short Nelder-Mead each). The Cassan screen is always point source
     (constant cost: finite source near a cusp took minutes per call, sessions 20-21). Every polish --
-    what scores the cell -- fits rho too, from t_star / tE, t_star = plain's rho tE: on O-05-BLG169 a
+    what scores the cell -- fits rho too, from t_star / tE, t_star is a constant: on O-05-BLG169 a
     point source scored the true solutions 400-600 worse than a finite one and the map missed a better
     basin (session 23). Always on since session 26: the old switch (plain's rho >= |u0| / 20) hung on an
     unconstrained rho and flipped between fits; BinaryMag2 itself skips the integration far from a
@@ -298,7 +299,6 @@ def grid_cell(k_sq):
     t_cell = time.perf_counter()
     k, (s, q) = k_sq
     plain, times, n_alpha = CTX
-    t_star = plain.rho * plain.tE
     calls = []
 
     def c2(t0, u0, tE, alpha, rho=0.0):
@@ -309,7 +309,7 @@ def grid_cell(k_sq):
 
     def polish(f, x0, step, maxfev, tE0):
         """Nelder-Mead over x0 + rho (from t_star / tE0) -> (chi2, x, rho)."""
-        rho0 = t_star / tE0
+        rho0 = T_STAR / tE0
         x, c = nelder_mead(lambda x: f(x[:-1], x[-1]), (*x0, rho0), (*step, 0.2 * rho0), maxfev=maxfev)
         return c, x[:-1], x[-1]
 
@@ -370,7 +370,7 @@ def pool(*initargs):
 def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
     """(ii) delta-chi2(s, q) map, cached at `path`, + the timing of the cells this run computed."""
     # code-side knobs the TOML key can't see, and the K the cells were scored at (a new FSPL moves it)
-    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, TE_FACTOR, *k_fspl])
+    settings = np.array([N_SIGMA, N_POLISH, STD_MAXFEV, TE_FACTOR, T_STAR, *k_fspl])
     fresh = lambda d: (d is not None and "plain" in d and np.allclose(d["plain"], plain)  # cells start from plain
                        and "settings" in d and d["settings"].shape == settings.shape
                        and np.allclose(d["settings"], settings) and "fam_theta" in d)  # pre-session-23: one family
@@ -708,7 +708,7 @@ def plot_caustic_inset(ax, event: Event, best: Binary, t0_par: float, tc: float)
     ins.set_title(r"source plane ($\theta_E$)", fontsize=7)
 
 
-def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=None):  # fit vectors (LD appended when free)
+def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=None, planet_removed=False):  # fit vectors (LD appended when free)
     """Every instrument in the reference instrument's magnitude system (the longest-baseline "mag"
     instrument -- OGLE's calibrated I for both current events), the convention of published
     microlensing light curves. Other instruments have their own zero points and bands, so they can
@@ -722,8 +722,14 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=
     one OGLE point left of all the MDM data, session 26), half-width 1.5x their median distance from it
     (median: a few wing points also gain and would stretch a min-max span). The anomaly panel carries the
     caustic inset; `text` (three lists of lines, from diagnose()) fills a strip below. `anomaly` = (lo, hi)
-    overrides the anomaly window (scratch/drop_one_with_all.py --xlim)."""
-    A_f, A_b = fspl_A(event, fspl), binary_A(event, best)
+    overrides the anomaly window (scratch/drop_one_with_all.py --xlim). `planet_removed`: the middle row
+    is instead the papers' convention (Gould et al. 2006, Bennett et al. 2015) -- data aligned by the 2L1S
+    minus the 2L1S with the planet removed (same t0, u0, tE, rho, piE, LD and fs/fb: one exact model, one
+    curve), session 27."""
+    # ponytail: the planet-removed lens sits at the COM, q s / (1 + q) from the primary -- ~4e-6 thetaE on
+    # O-05-BLG169, ~0.004 on O-03-BLG235 (q 0.004); move it to the primary if that ever shows
+    nop = [*best[:3], max(best[3], RHO_MIN), *best[4:NF], *best[NB:]]  # rho = 0 (point source) -> ESPL floor
+    A_f, A_b, A_n = fspl_A(event, fspl), binary_A(event, best), fspl_A(event, nop)
     mags = [n for n, i in enumerate(event.instruments) if i.kind == "mag"]
     k = max(mags or range(len(event.instruments)), key=lambda k: np.ptp(event.instruments[k].time))
     ref = event.instruments[k]
@@ -753,19 +759,20 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=
         axes[1, col] = fig.add_subplot(gs[1, col], sharex=axes[0, col])
         axes[2, col] = fig.add_subplot(gs[2, col], sharex=axes[0, col], sharey=axes[1, col])  # same residual scale
     for col, xlim in enumerate(windows):
-        for n, (i, Af, Ab) in enumerate(zip(event.instruments, A_f, A_b)):
+        for n, (i, Af, Ab, An) in enumerate(zip(event.instruments, A_f, A_b, A_n)):
             m = (i.time >= xlim[0]) & (i.time <= xlim[1])
             F, F_err, _, _ = aligned(i, Ab, A_b[k])
             axes[0, col].errorbar(i.time[m], to_mag(F)[m], (1.0857 * F_err / F)[m], fmt=".", ms=3, elinewidth=0.5,
                                   color=f"C{n}", label=f"{i.name} ({i.band})" + ("" if n == k else ", aligned by 2L1S"))
-            for row, Am, Aref in ((1, Af, A_f[k]), (2, Ab, A_b[k])):
-                F, F_err, F_mod, _ = aligned(i, Am, Aref)
-                axes[row, col].errorbar(i.time[m], (to_mag(F) - to_mag(F_mod))[m], (1.0857 * F_err / F)[m], fmt=".",
-                                        ms=3, elinewidth=0.5, color=f"C{n}")
+            # (row, model aligning the data, its ref-instrument A, model subtracted)
+            for row, Am, Aref, Amod in ((1, Ab, A_b[k], An) if planet_removed else (1, Af, A_f[k], Af), (2, Ab, A_b[k], Ab)):
+                F, F_err, _, (fs_r, fb_r) = aligned(i, Am, Aref)
+                axes[row, col].errorbar(i.time[m], (to_mag(F) - to_mag(fs_r * Amod + fb_r))[m], (1.0857 * F_err / F)[m],
+                                        fmt=".", ms=3, elinewidth=0.5, color=f"C{n}")
             # 2L1S - FSPL on the FSPL row, per instrument over its own data span: instrument i's 2L1S flux mapped
             # through the same FSPL alignment as its points (fs/fb differ by model, ~0.04 mag between instruments)
             lo, hi = max(xlim[0], i.time.min()), min(xlim[1], i.time.max())
-            if lo < hi:
+            if lo < hi and not planet_removed:
                 tg = np.linspace(lo, hi, 500)
                 g = on_grid(event, i, tg, t0_par)
                 (cb, cf), Ag_b, Ag_f = (profile_flux(i, A)[0] for A in (Ab, Af)), binary_A(g, best)[0], fspl_A(g, fspl)[0]
@@ -775,16 +782,24 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=
                                   lw=1.2 if n == k else 0.8, zorder=3)
         tg = np.linspace(*xlim, 2000)
         g = on_grid(event, ref, tg, t0_par)
-        for name, Ag, Aref, style in (("2L1S", binary_A(g, best)[0], A_b[k], "k-"),
-                                      ("FSPL + parallax", fspl_A(g, fspl)[0], A_f[k], "r--")):
+        Ag_b, Ag_n = binary_A(g, best)[0], fspl_A(g, nop)[0]
+        curves = [("2L1S best fit", Ag_b, A_b[k], "k-"), ("FSPL + parallax best fit", fspl_A(g, fspl)[0], A_f[k], "r--")]
+        if planet_removed:
+            curves.append(("2L1S without planet", Ag_n, A_b[k], "k:"))
+        for name, Ag, Aref, style in curves:
             _, _, _, (fs_r, fb_r) = aligned(ref, Aref, Aref)
-            axes[0, col].plot(tg, to_mag(fs_r * Ag + fb_r), style, lw=1.2, label=f"{name} best fit")
+            axes[0, col].plot(tg, to_mag(fs_r * Ag + fb_r), style, lw=1.2, label=name)
         axes[0, col].set(xlim=xlim, ylabel=f"{ref.name} {ref.band} magnitude")
         axes[0, col].invert_yaxis()
-        for row, (name, color) in ((1, ("FSPL + parallax", "r")), (2, ("2L1S", "k"))):
+        for row, color in ((1, "0.5" if planet_removed else "r"), (2, "k")):
             axes[row, col].axhline(0, color=color, lw=0.8)
-            axes[row, col].set_ylabel(f"data - {name} (mag)")
-        axes[1, col].set_ylabel("data - FSPL + parallax (mag)\nlines: 2L1S - FSPL", fontsize=9)
+        axes[2, col].set_ylabel("data - 2L1S (mag)")
+        if planet_removed:
+            fs_r, fb_r = aligned(ref, A_b[k], A_b[k])[3]
+            axes[1, col].plot(tg, to_mag(fs_r * Ag_b + fb_r) - to_mag(fs_r * Ag_n + fb_r), "k", lw=1.2, zorder=3)
+            axes[1, col].set_ylabel("data - 2L1S without planet (mag)\nline: the planet's signal", fontsize=9)
+        else:
+            axes[1, col].set_ylabel("data - FSPL + parallax (mag)\nlines: 2L1S - FSPL", fontsize=9)
         axes[2, col].set_xlabel("HJD - 2450000")
         axes[2, col].ticklabel_format(axis="x", useOffset=False)
     axes[1, 0].invert_yaxis()  # brighter up, as in the light curve (shared by both residual rows)
@@ -921,6 +936,7 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
                                                        f"Delta chi2 = {c2_f - c2_b:.1f}", f"N = {n}"],
             [header] + [row(m) for m in ranked[:6]] + ([f"+{len(ranked) - 6} more, see summary.txt"] if len(ranked) > 6 else []))
     plot_fit(event, fspl, best, t0_par, out / "fit_lc.png", text)
+    plot_fit(event, fspl, best, t0_par, out / "fit_lc_noplanet.png", text, planet_removed=True)
     verdict = plot_parallax_map(pgrid, k_fspl, as_fspl(fspl), c2_f, as_binary(best), c2_b, out / "fspl_parallax_map.png")
 
     commit = subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, text=True).stdout.strip()
@@ -1025,8 +1041,9 @@ def out_dir(event: Event) -> Path:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Config-driven FSPL vs 2L1S search.")
     parser.add_argument("--config", required=True, help="path to the event's TOML")
-    parser.add_argument("--stage", choices=["raw", "search", "diagnose"], default="search",
+    parser.add_argument("--stage", choices=["raw", "search", "refine", "diagnose"], default="search",
                         help="raw: FSPL fit + calibrated light curve only (~minutes; srun, not the login node). "
+                             "refine: stop after (iv), no MCMC, + fspl.npz (injection-recovery, scratch/inject.py). "
                              "diagnose: FSPL fit + (vi) on a finished search's saved outputs")
     args = parser.parse_args()
     base = load_event(args.config)
@@ -1079,6 +1096,9 @@ if __name__ == "__main__":
         for (x, c2, _, f), cross in zip(refined, crosses):
             print(f"[refine] chi2={c2:.2f} {FAMILIES[f]} start, {'crossing' if cross else 'near miss'} {as_binary(x)}"
                   + (f" LD {np.round(x[NB:], 3)}" if event.ld_prior else ""))
+        if args.stage == "refine":  # the FSPL side of the comparison too: summary.txt is diagnose()'s
+            np.savez(out / "fspl.npz", theta=fspl, chi2=chi2_fspl(fspl, event), k=k_fspl, key=key)
+            raise SystemExit
         modes = distinct_modes(refined, crosses)
         assert modes, "every refined chi2 is inf"
         for f in out.glob("mcmc_mode*"):  # orphans from a run with more modes (globbed by diagnose)
