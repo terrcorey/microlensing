@@ -111,8 +111,12 @@ srun --partition=small-short --mem=4G --time=00:15:00 .venv/bin/python scratch/i
     input/O-03-BLG235-fineq.toml --grids input/O-03-BLG235.toml input/O-03-BLG235-fineq.toml
                                         # session 27 injection-recovery -> scratch/injections/<short>/inj<NN>/, then from slurm/:
                                         #   for f in ../scratch/injections/<short>/inj*/*.toml; do sbatch search.sbatch $f refine; done
-.venv/bin/python scratch/inject.py tally scratch/injections/<short>   # found/close/missed + Delta BIC (light)
+srun --partition=small-short --mem=8G --time=00:45:00 .venv/bin/python scratch/inject.py tally scratch/injections/<short> [--plot]
+                                        # outcome per run + tally_<grid>.npz; --plot: fit_lc.png / fit_lc_truth.png per run
+srun --partition=small-short --mem=8G --time=00:15:00 .venv/bin/python scratch/inject.py montage scratch/injections/<short>
+                                        # session 28: one outcome-framed image per grid -> <short>/montage_<grid>.png
 (cd slurm && sbatch sensitivity.sbatch ../input/<short>.toml)   # Delta chi2 sensitivity map -> scratch/sensitivity/
+.venv/bin/python scratch/sensitivity.py scratch/sensitivity/<short>.npz   # re-plot only (+ tally outcomes), login-safe
 ```
 
 ## Config-driven pipeline (session 19, M1-M5 written, M3-M5 not yet validated)
@@ -224,8 +228,11 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   source, rho > `RHO_MAX` = 0.1 rejected),
   |piE| > `PIE_MAX` = 5, (s, q) outside the config's grid box, and (2L1S, session 25) tE above
   `Event.tE_max` = `TE_FACTOR` (2 since session 26, was 5: a resonant Cassan polish still ran ~5 s/call
-  at tE 187 d; every 2L1S so far has tE / FSPL tE <= 1.4) x the parallax-free FSPL tE (set in
-  `__main__`; default inf) -- VBBL 3.7 hung forever on NaN/inf input and segfaulted at rho ~ 1e-15
+  at tE 187 d; every 2L1S so far has tE / FSPL tE <= 1.4) x the parallax-free FSPL tE -- or, when max k at
+  FSPL > `K_MAX` = 2 (session 28: a dominant anomaly broke the blind FSPL -- injection inj05, plain tE 0.92 d vs
+  57.8, every refinement pinned at the 1.84 d ceiling), x the reference instrument's `find_zoom_window` width
+  (`reference()`: the longest-baseline "mag" instrument, shared with `plot_fit()`) (set in `__main__` after
+  k_fspl; default inf) -- VBBL 3.7 hung forever on NaN/inf input and segfaulted at rho ~ 1e-15
   (the VBM wrappers in lc_models still return NaN on non-finite input);
   `multiprocessing.Pool` respawned segfaulted workers and lost their tasks
   (two jobs hung ~40 h), so every pool is `search.pool()` =
@@ -331,13 +338,21 @@ in-process with every chi2's theta logged before the call -- `plain` from the ru
 / one theta's BinaryMag2 calls timed point by point -- find a hang; logs in scratch/stall_probe/;
 stall_probe's optional 6th argument overrides `search.T_STAR`, session 27),
 `vbm_check.py` (session 26: the VBBL -> VBM gate; needs VBBinaryLensing, now uninstalled),
-`inject.py` (session 27: injection-recovery -- `make` draws planets into a real run's best single lens on its
-timestamps and errors x K at 2L1S, Delta chi2 >= 50 noise-free, + nulls, one TOML per `--grids` config in
-scratch/injections/<short>/inj<NN>/; `tally` scores each `--stage=refine` run: found / close / missed vs the
-truth's chi2 under the search's K, Delta BIC; `base_event()` is shared with sensitivity.py),
+`inject.py` (session 27: injection-recovery -- `make` draws planets (`--log-s`/`--log-q` box, saved in truth.npz)
+into a real run's best single lens on its timestamps and errors x max(1, K at 2L1S) (floor: session 28, O-05-BLG169's
+MDM K 0.64), kept if noise-free Delta chi2 >= 50 vs an FSPL + parallax refit (`dchi2()`, session 28; was vs the
+planet removed, which a refit absorbs ~94% of), + nulls, one TOML per `--grids` config in
+scratch/injections/<short>/inj<NN>/; `tally` scores each `--stage=refine` run by `outcome()`: claimed = Delta BIC >
+10; found / wrong fit (right planet = s or 1/s within `S_TOL` 0.15 dex, q `Q_TOL` 0.2, |u0| `U0_TOL` 0.2, alpha
+`ALPHA_TOL` 20 deg vs -alpha when u0 flipped -- the (-u0, -alpha) mirror) / missed (truth detectable) / not
+claimed / null ok / false positive, colours in `OUTCOMES`; writes tally_<grid>.npz; `--plot` adds per-run
+fit_lc.png + fit_lc_truth.png; `montage` tiles them per grid framed by outcome; `base_event()` is shared with
+sensitivity.py),
 `sensitivity.py` (session 27: Delta chi2 sensitivity map -- noise-free 2L1S over (log s, log q) x 24 alphas
-vs an FSPL + parallax refit, median over alpha with contours -> scratch/sensitivity/<short>.{npz,png};
-`slurm/sensitivity.sbatch`; a `.npz` argument re-plots only), `scratchpad.ipynb` (interactive exploration:
+vs an FSPL + parallax refit (`inject.dchi2()`), median over alpha with contours -> scratch/sensitivity/<short>.{npz,png},
+cells below SKIP = 10 (un-refit upper bounds) one floor colour; one panel per tally_<grid>.npz with every injection
+marked by outcome (session 28); `slurm/sensitivity.sbatch` (~12 min on 24 CPUs for O-03-BLG235, est. 1.5-3 h for
+O-05-BLG169); a `.npz` argument re-plots only), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots, session 27's 2L1S explorer -- ipywidgets sliders over every
 2L1S + parallax + LD + fs/fb parameter, data overlay from a config, peak zoom, residuals, chi2; `ipywidgets` is
 in .venv but not requirements.txt -- not a pipeline step).

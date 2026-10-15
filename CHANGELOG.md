@@ -2619,7 +2619,7 @@ Confirmed with the user (2026-10-12), in priority order:
   log q -5..-1.5, alpha uniform, noise-free Delta chi2 >= 50: 16 of 59 draws, all q >= 7e-4) + 4 nulls, noise =
   errors x K at 2L1S (not K at FSPL as first agreed: that carries the real planet's misfit), each searched on
   the 0.25 and 0.1 log q grids: 40 jobs 4990114-53, running at save.
-- **Sensitivity map** (grilled; Claude, not yet run): `scratch/sensitivity.py` + `slurm/sensitivity.sbatch` --
+- **Sensitivity map** (grilled; Claude; job 4990451 at save): `scratch/sensitivity.py` + `slurm/sensitivity.sbatch` --
   Delta chi2 (FSPL + parallax refit vs noise-free 2L1S) over log s -0.7..0.7 (0.05) x log q -6..-1 (0.1) x 24
   alphas, median over alpha with contours, the user's choice over a detected/not efficiency map.
 
@@ -2649,9 +2649,9 @@ Confirmed with the user (2026-10-12), in priority order:
 - **Literature sensitivity maps**: the method is Gaudi & Sackett 2000 / Rhie et al. 2000; OGLE-III 2003-08 maps
   (arXiv:1602.02519, OGLE data only, Delta chi2 25/50/100); O-05-BLG169 in Gould et al. 2010 (arXiv:1001.0572,
   per-event efficiencies; Gould 2006: ~complete for Neptune q at s 0.6-1.6). Ours differ in data: validation only.
-- **Sensitivity cost**: the timing test (2 cells x 24 alphas, srun) ran > 25 min without finishing: an FSPL
-  `polish()` refit is > 30 s, a full map > 300 CPU-h. Needs a cheaper refit (one pass / smaller maxfev, or refit
-  only above a Delta chi2 floor) before submitting.
+- **Sensitivity cost** (corrected after save): the timing test's > 25 min was srun queue wait. One cell (24 alphas)
+  at the real planet's (s, q): 24.6 s, median Delta chi2 305 vs the planet removed, 218 vs the refit FSPL (the refit
+  absorbs ~30%); log q -6: 0.1 s (all below SKIP). Full map ~10 CPU-h: submitted at save.
 - Someone/something staged the session's files (`git status`: A), incl. every injection output (npz, data) and the
   ~25k-line stall_probe logs -- gitignore scratch/injections/*/inj*/out_* and the logs before committing (user).
 - graphify not refreshed: one new stage, two scratch scripts, no architecture change.
@@ -2661,9 +2661,9 @@ Confirmed with the user (2026-10-13), in priority order:
 1. **Read the O-03-BLG235 injection batch** (4990114-53): `scratch/inject.py tally scratch/injections/O-03-BLG235-fineq`;
    recovery on the 0.25 vs 0.1 log q grid; diagnose the failures (inj05: found at the s = 5 box edge, Delta BIC
    -200 -- the 2L1S scoring worse than the FSPL).
-2. **Make the sensitivity map affordable, then run it on O-03-BLG235**: one Nelder-Mead pass / smaller maxfev /
-   fewer alphas (the timing test, background srun at save, ran > 25 min for 2 cells); and switch inject.py's
-   Delta chi2 >= 50 cut from "vs the planet removed" to "vs a refit FSPL" (inj01/02: the former overstates it).
+2. **Read the O-03-BLG235 sensitivity map** (submitted at save; already affordable, ~25 s per cell) against the
+   injections and the literature (OGLE-III maps); switch inject.py's Delta chi2 >= 50 cut from "vs the planet
+   removed" to "vs a refit FSPL" (inj01/02: the former overstates it).
 3. **O-05-BLG169 injection batch** (low q, which O-03-BLG235 can't test) once goal 1 shows the harness works:
    ~8 planets + 2 nulls (~15x the cost per injection).
 4. **Knobs judged by recovery rate**, one O-03-BLG235 injection batch each, `/grill-me` first: `T_STAR` vs the old
@@ -2673,3 +2673,70 @@ Confirmed with the user (2026-10-13), in priority order:
   Keck mu recheck (memory: keck-mu-check-pending), Claret LD priors, MCMC convergence (every mode still NOT
   CONVERGED), MDM original photometry with seeing, remove `.worktrees/fs-grid/` (user approval), uninstall py-spy.
 - Stretch: 1L2S (binary source) -- `/grill-me` to scope; the codebase improvement plan.
+
+## 2026-10-15 — session 28
+
+### Built
+- **Read session 27's O-03-BLG235 injection batch** (40 jobs, all done) and its sensitivity map (job 4990451).
+- **tE ceiling trigger** (grilled; user wrote, Claude tidied): `search.K_MAX` = 2 -- when max k at FSPL exceeds it,
+  `Event.tE_max` = `TE_FACTOR` x the reference instrument's `find_zoom_window` width instead of x plain's tE (set
+  after k_fspl now). `search.reference()` (longest-baseline "mag" instrument) shared with `plot_fit()`. Fires only
+  on inj05 (k 2.66, ceiling 1.84 -> 206.8 d) and inj14 (k 4.43, 13 661 -> 203.7 d); every other run <= 1.51, so no
+  real result or cache changes. Reruns 4 refine-stage jobs: 5014005 (inj05), 5014006 (inj14), old fine-grid outputs
+  moved to `out_pre28_O-03-BLG235-fineq/`.
+- **`inject.py`**: `dchi2()` (noise-free Delta chi2 vs the planet removed and vs an FSPL + parallax refit, shared with
+  sensitivity.py -- reproduces the stored map exactly); `make` keeps draws by the refit (goal 2), records
+  dchi2_removed, `--log-s` / `--log-q` (saved in truth.npz with the seed); noise = errors x max(1, K at 2L1S)
+  (O-05-BLG169's MDM K 0.64). `tally`: `outcome()` (found / wrong fit / missed / not claimed / null ok / false
+  positive, see Learned), truth Delta BIC, `tally_<grid>.npz`, `--plot` (fit_lc.png = search best, fit_lc_truth.png
+  = injected, planet-removed view); `montage` (one image per grid, tiles framed by `OUTCOMES` colour, injected and
+  found s, q, alpha in each title).
+- **`sensitivity.py`**: one panel per tally file with every injection marked by outcome (wrong fits: a line to the
+  found (s, q)); cells below SKIP drawn as one floor colour.
+- `plot_fit()`: magnitude error bars as |1.0857 sigma_F / F| -- a fit with negative fs (inj01's search best) crashed it.
+- `T_STAR` comment (user's carry-over, Claude wrote); `.gitignore`: injection outputs, sensitivity npz, stall_probe logs.
+- **O-05-BLG169 sensitivity map** (grilled, base = O-05-BLG169-fineq, K floor 1): timing 32-180 s/cell (O-03-BLG235
+  25 s), job 5014294 submitted (est. 1.5-3 h on 24 CPUs).
+
+### Learned & open questions
+- **inj05's miss was a pipeline bug**: a dominant anomaly (noise-free Delta chi2 6549) broke the blind FSPL (plain
+  u0 21, tE 0.92 d vs 57.8; FSPL + parallax rho 5.9, |piE| on the bound), so the tE ceiling (1.84 d) pinned every
+  refinement; K at FSPL 2.66 also flattens the landscape -- not fixed (scope: ceiling only). inj14 broke the other way
+  (plain tE 6831 d) and was found anyway.
+- **Outcomes** (final rule: claimed = Delta BIC > 10; right planet = s or 1/s within 0.15 dex, q 0.2, |u0| 0.2, alpha
+  20 deg vs -alpha when u0 flipped): fine grid 6 found, 1 wrong fit (inj11, q 0.23 dex off at the detection limit), 7
+  not claimed, 0 missed (inj05, inj14 pending); coarse 5 found, 3 wrong fits (inj03, inj11, inj12), 7 not claimed, 1
+  missed (inj05); nulls 0 / 4 false positives on both. **The fine grid characterises better**.
+- **The "false discoveries" are single-lens mimics**: wide planets (s 2-3) the refit FSPL absorbs (truth Delta BIC -12
+  to -34) "found" as close binaries (inj09: s 0.43, q 0.67) beating the truth by 15-25 on noise; Delta BIC rejects all.
+  session 27's "found" verdict (chi2 only) overstated recovery -- outcome() replaces it.
+- **The (-u0, -alpha) mirror is real**: inj03 (both grids), inj12 coarse, inj04 flip u0 sign with alpha within 0-9 deg
+  of -alpha; same-sign fits sit within 4 deg of alpha.
+- **The map predicts the injections**: at each injection's (s, q, alpha) cell, every detected planet has map Delta chi2
+  55-2700 vs the refit, every undetectable one 0-12; the refit absorbs a median 94% of Delta chi2 vs the planet
+  removed (cells > 50). Detection ~ Delta chi2 32 vs the refit (Delta BIC 10 + 3 params x ln 1535). O-03-BLG235 has the
+  Gaudi & Sackett wedge: Delta chi2 50 reaches log q -3.2 at s = 1, ~+-0.3 dex in s at q 0.01, no planetary-caustic
+  sensitivity in the alpha median. The session-27 map's sharp lower-right edge was the SKIP cut, not physics.
+- Literature comparison (OGLE-III maps, Gould et al. 2010) still qualitative only: their numbers not pulled.
+- Mistakes (Claude): carried "remove `.worktrees/fs-grid/`" forward for 5 sessions -- it was deleted long ago, dropped
+  now. Set Q_TOL 0.5 to pass inj12 (tuning the criterion toward an answer, user caught it). A stale editor buffer
+  overwrote the T_STAR comment and deleted search.py's refine branch (restored from HEAD).
+- **At save, git's index stages every tracked file as deleted** (a `git rm -r --cached .` without the `git add .`):
+  `git add .` before committing (user).
+- graphify not refreshed: one helper in search.py, scratch scripts only.
+- Running at save: 5014005 (inj05 rerun, grid ~1 h left), 5014006 (inj14), 5014294 (O-05-BLG169 map).
+
+### Next session
+Confirmed with the user (2026-10-15), in priority order:
+1. **Read the inj05 / inj14 reruns** (5014005/06): does the tE ceiling recover inj05? `inject.py tally --plot`,
+   `montage`, `sensitivity.py <npz>` replot. If still missed: K at FSPL 2.66 from the broken blind FSPL is next --
+   a robust FSPL for dominant anomalies (out of scope today; `/grill-me` first).
+2. **O-05-BLG169 injection batch**: read the map (5014294) against Gould et al. 2010 / 2006; round 2 of the grill --
+   the draw box (sensitivity edge vs deep inside); `make` 8 planets + 2 nulls on O-05-BLG169-fineq, 10 fine-grid
+   refine jobs (~10-15 h each on 24 CPUs).
+3. **Knobs by recovery rate** (O-03-BLG235 batch each, `/grill-me` first): the refinement optimiser (LM or a short
+   MCMC burn vs restarted Nelder-Mead -- today's failures are characterisation, not detection) and `T_STAR`.
+- Carry-overs (checked 2026-10-15): user -- `git add .` before committing (index stages everything deleted), commit;
+  Claude -- Keck mu recheck (memory: keck-mu-check-pending), Claret LD priors, MCMC convergence (every mode NOT
+  CONVERGED), MDM original photometry with seeing, uninstall py-spy (0.4.2 still in .venv).
+- Stretch: 1L2S (binary source) -- `/grill-me` to scope.

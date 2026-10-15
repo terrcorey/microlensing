@@ -10,6 +10,12 @@ data/
 results/
 # scratch/ mixes one-time scripts with their own plot output -- only ignore the plots
 *.png
+# scratch search/probe output: injection runs (inputs + truth.npz stay tracked), sensitivity maps, stall_probe logs
+scratch/injections/*/inj*/out_*/
+scratch/sensitivity/*.npz
+scratch/stall_probe/*.log
+scratch/stall_probe/*.out
+scratch/stall_probe/*.err
 
 # SLURM job logs (slurm/submit_all.sh)
 slurm/output/

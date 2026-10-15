@@ -66,14 +66,24 @@ MODE_DCHI2 = 10.0    # refined minima within this of the best get an MCMC
 # source (session 23): a polish pushing rho down to the floor is modelled as a point, never rejected.
 RHO_MIN = 1e-5
 RHO_MAX = 0.1  # 2L1S ceiling: a huge source is unphysical for a bulge dwarf and slow in VBBL
-T_STAR = 0.03 #
+# Source crossing time t_star = rho tE (days) that every grid-cell polish starts rho from (rho0 = T_STAR / tE),
+# replacing plain's rho tE, which the FSPL barely constrains: 2.7e-5 on O-05-BLG169 under VBM, 13x below the
+# known solution (session 27). 0.03 d ~ a bulge dwarf (theta_* ~ 0.5 uas, mu ~ 5 mas/yr). In the grid
+# `settings` (a change recomputes every grid cache); 6-8x per resonant cell -- no grid rerun uses it yet,
+# to be judged by injection recovery against the old start.
+T_STAR = 0.03
 PIE_MAX = 5.0        # |piE| bound for every chi2 (was MCMC-only: a refined |piE| > 5 froze its walkers)
-# 2L1S tE ceiling = TE_FACTOR x the parallax-free FSPL tE (Event.tE_max, set in __main__): Cassan starts on
-# a tiny close/wide caustic imply tE ~ 1e3-1e6 d, every point then sits near the caustic at rho ~ RHO_MIN,
+# 2L1S tE ceiling = TE_FACTOR x the parallax-free FSPL tE, or x the event window if K_MAX trips (Event.tE_max, set
+# in __main__): Cassan starts on a tiny close/wide caustic imply tE ~ 1e3-1e6 d, every point then sits near the
+# caustic at rho ~ RHO_MIN,
 # ~2 s per chi2 -- noMDM did 49 cells in 24 h (session 25). Screen starts past it score inf and are dropped.
 # 5 -> 2 (session 26): under VBM a resonant Cassan polish still ran ~5 s/call at tE 187 d < 5 x 42 d; every 2L1S
 # found so far has tE / FSPL tE <= 1.4 (O-03-BLG235; O-05-BLG169 0.9-1.1). Also bounds refinement and MCMC.
 TE_FACTOR = 2.0
+# max k at FSPL above this = a dominant anomaly broke the blind FSPL (inj05: plain tE 0.92 d vs 57.8 injected,
+# every refinement pinned at the 1.84 d ceiling; k 2.66, inj14 4.43, every other run <= 1.51; session 28):
+# the ceiling is then TE_FACTOR x the reference instrument's find_zoom_window width (~1.4-2.6 tE), not plain's tE
+K_MAX = 2.0
 # Wall-clock limit per grid cell (run_grid): VBBL BinaryMag2 never returns at s ~ 10, A ~ 2e4, RelTol 1e-3
 # (0.67 s at s = 8, 4 s at 9; its contour refinement has no iteration cap, session 25). A cell past it
 # is scored inf and its worker killed. 1800 -> 7200 (session 26): under VBM nothing hangs, but resonant
@@ -730,8 +740,7 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=
     # O-05-BLG169, ~0.004 on O-03-BLG235 (q 0.004); move it to the primary if that ever shows
     nop = [*best[:3], max(best[3], RHO_MIN), *best[4:NF], *best[NB:]]  # rho = 0 (point source) -> ESPL floor
     A_f, A_b, A_n = fspl_A(event, fspl), binary_A(event, best), fspl_A(event, nop)
-    mags = [n for n, i in enumerate(event.instruments) if i.kind == "mag"]
-    k = max(mags or range(len(event.instruments)), key=lambda k: np.ptp(event.instruments[k].time))
+    k = reference(event)
     ref = event.instruments[k]
     t = np.concatenate([i.time for i in event.instruments])
     gain = flux_residuals(event, A_f) ** 2 - flux_residuals(event, A_b) ** 2
@@ -762,12 +771,12 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=
         for n, (i, Af, Ab, An) in enumerate(zip(event.instruments, A_f, A_b, A_n)):
             m = (i.time >= xlim[0]) & (i.time <= xlim[1])
             F, F_err, _, _ = aligned(i, Ab, A_b[k])
-            axes[0, col].errorbar(i.time[m], to_mag(F)[m], (1.0857 * F_err / F)[m], fmt=".", ms=3, elinewidth=0.5,
+            axes[0, col].errorbar(i.time[m], to_mag(F)[m], np.abs(1.0857 * F_err / F)[m], fmt=".", ms=3, elinewidth=0.5,
                                   color=f"C{n}", label=f"{i.name} ({i.band})" + ("" if n == k else ", aligned by 2L1S"))
             # (row, model aligning the data, its ref-instrument A, model subtracted)
             for row, Am, Aref, Amod in ((1, Ab, A_b[k], An) if planet_removed else (1, Af, A_f[k], Af), (2, Ab, A_b[k], Ab)):
                 F, F_err, _, (fs_r, fb_r) = aligned(i, Am, Aref)
-                axes[row, col].errorbar(i.time[m], (to_mag(F) - to_mag(fs_r * Amod + fb_r))[m], (1.0857 * F_err / F)[m],
+                axes[row, col].errorbar(i.time[m], (to_mag(F) - to_mag(fs_r * Amod + fb_r))[m], np.abs(1.0857 * F_err / F)[m],
                                         fmt=".", ms=3, elinewidth=0.5, color=f"C{n}")
             # 2L1S - FSPL on the FSPL row, per instrument over its own data span: instrument i's 2L1S flux mapped
             # through the same FSPL alignment as its points (fs/fb differ by model, ~0.04 mag between instruments)
@@ -1032,6 +1041,12 @@ def bic(c2, n_model, event: Event):
     return c2 + k * np.log(n)
 
 
+def reference(event: Event) -> int:
+    """Index of the longest-baseline "mag" instrument: plot_fit()'s magnitude system and the tE window's source."""
+    mags = [n for n, i in enumerate(event.instruments) if i.kind == "mag"]
+    return max(mags or range(len(event.instruments)), key=lambda k: np.ptp(event.instruments[k].time))
+
+
 def out_dir(event: Event) -> Path:
     path = Path("results") / event.short_name
     path.mkdir(parents=True, exist_ok=True)
@@ -1049,7 +1064,6 @@ if __name__ == "__main__":
     base = load_event(args.config)
     out = out_dir(base)
     plain, fspl, base = fit_fspl(base)  # base now carries the parallax offsets at t0_par
-    base = base._replace(tE_max=TE_FACTOR * plain.tE)
     plot_raw(base, plain, out / "raw_lc.png")
     if args.stage == "raw":  # quick look: fit_fspl's two-start parallax fit is enough here
         raise SystemExit
@@ -1057,6 +1071,14 @@ if __name__ == "__main__":
         fspl, pgrid = parallax_search(base, plain, fspl, ex)
     k_fspl = error_scale(base, fspl_A(base, fspl))
     assert np.all(np.isfinite(k_fspl)), f"error rescaling k = {k_fspl}"
+    if max(k_fspl) > K_MAX:
+        ref = base.instruments[reference(base)]
+        lo, hi = find_zoom_window(ref.time, ref.flux, ref.flux_err)
+        base = base._replace(tE_max=TE_FACTOR * (hi - lo))
+        print(f"[fspl] max k {max(k_fspl):.2f} > {K_MAX}: tE ceiling {TE_FACTOR} x window {hi - lo:.1f} d"
+              f" = {base.tE_max:.1f} d (not {TE_FACTOR} x plain tE)")
+    else:
+        base = base._replace(tE_max=TE_FACTOR * plain.tE)
     event = rescale(base, k_fspl)  # the search runs on FSPL-rescaled errors
     print(f"[fspl] error rescaling k = {np.round(k_fspl, 4)}")
     # one key for every cache below: a config edit (instruments, K, n_alpha, grid...) invalidates them all;
