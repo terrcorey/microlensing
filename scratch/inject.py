@@ -40,7 +40,7 @@ from search import (FSPL, NB, NF, Binary, bic, binary_A, chi2_binary, chi2_fspl,
 MIN_DCHI2 = 50.0
 # default draw box (make --log-s / --log-q), inside every config's grid box (log s +-0.7, log q -6..0)
 LOG_S, LOG_Q = (-0.5, 0.5), (-5.0, -1.5)
-FOUND, CLOSE, DETECT = 1.0, 10.0, 10.0  # refined - truth chi2; Delta BIC (FSPL - 2L1S)
+DETECT = 10.0  # Delta BIC (FSPL - 2L1S)
 SKIP = 10.0  # dchi2(): planet vs planet removed below this gets no refit (a refit can only lower it)
 # outcome(): the found planet is the injected one if s (or its close/wide twin 1/s), q, |u0| (dex) and alpha
 # (degrees; vs -alpha when u0 flipped sign -- the (-u0, -alpha) mirror) all lie within these. Session 28: good fits
@@ -56,19 +56,25 @@ OUTCOMES = {"found": ("limegreen", "planet claimed, right (s, q)"),
             "null ok": ("royalblue", "no claim on a null")}
 
 
+def mismatch(true, found):
+    """true / found = (u0, s, q, alpha) -> the failed right-planet checks (S_TOL ...), e.g. ["q -0.39 dex"];
+    [] = the injected planet. s: the nearer of s and its close/wide twin 1/s; alpha: vs -alpha when u0 flipped."""
+    (u_t, s_t, q_t, a_t), (u_f, s_f, q_f, a_f) = true, found
+    ls_t, ls_f = np.log10(s_t), np.log10(s_f)
+    da = np.degrees(a_f - (a_t if np.sign(u_f) == np.sign(u_t) else -a_t))
+    checks = (("s", min(ls_f - ls_t, ls_f + ls_t, key=abs), S_TOL, "dex"), ("q", np.log10(q_f / q_t), Q_TOL, "dex"),
+              ("|u0|", np.log10(abs(u_f / u_t)), U0_TOL, "dex"), ("alpha", (da + 180) % 360 - 180, ALPHA_TOL, "deg"))
+    return [f"{n} {v:+.{2 if u == 'dex' else 0}f} {u}" for n, v, tol, u in checks if abs(v) > tol]
+
+
 def outcome(planet, true, found, dbic, dbic_true):
-    """true / found = (u0, s, q, alpha). Detected (Delta BIC > DETECT) and the injected planet (S_TOL ...) ->
+    """true / found = (u0, s, q, alpha). Detected (Delta BIC > DETECT) and the injected planet (no mismatch()) ->
     found, else wrong fit; not detected -> not claimed if the truth itself isn't detectable (its own Delta BIC vs the
     FSPL <= DETECT), else missed."""
     if not planet:
         return "false positive" if dbic > DETECT else "null ok"
-    (u_t, s_t, q_t, a_t), (u_f, s_f, q_f, a_f) = true, found
-    ls_t, ls_f = np.log10(s_t), np.log10(s_f)
-    da = np.degrees(a_f - (a_t if np.sign(u_f) == np.sign(u_t) else -a_t))
-    right = (min(abs(ls_f - ls_t), abs(ls_f + ls_t)) <= S_TOL and abs(np.log10(q_f / q_t)) <= Q_TOL
-             and abs(np.log10(abs(u_f / u_t))) <= U0_TOL and abs((da + 180) % 360 - 180) <= ALPHA_TOL)
     if dbic > DETECT:
-        return "found" if right else "wrong fit"
+        return "wrong fit" if mismatch(true, found) else "found"
     return "missed" if dbic_true > DETECT else "not claimed"
 
 
@@ -167,8 +173,8 @@ def make(args):
 
 def tally(args):
     print(f"{'inj':5s} {'grid':22s} {'kind':6s} {'dchi2':>7s} {'s':>6s} {'q':>9s} {'s found':>7s} {'q found':>9s} "
-          f"{'found-true':>10s} {'search':>7s} {'dBIC':>7s} {'truth dBIC':>10s} outcome")
-    score, rows = {}, {}
+          f"{'found-true':>10s} {'dBIC':>7s} {'truth dBIC':>10s} outcome")
+    rows = {}
     for dr in sorted(Path(args.root).glob("inj*")):
         t = np.load(dr / "truth.npz")
         th, planet = t["theta"], str(t["kind"]) == "planet"
@@ -186,24 +192,17 @@ def tally(args):
             x, gap = r["theta"][k], r["chi2"][k] - truth
             evp = with_t0_par(ev, float(r["plain"][0]))  # the search's own t0_par
             dbic = bic(float(f["chi2"]), len(f["theta"]), ev) - bic(chi2_binary(x, evp), len(x), ev)
-            verdict = "found" if gap <= FOUND else "close" if gap <= CLOSE else "missed"
             dbic_t = bic(float(f["chi2"]), len(f["theta"]), ev) - bic(c2t, len(th), ev) if planet else 0.0
             ut, st, qt, at = (th[1], *th[6:9]) if planet else (np.nan,) * 4
             o = outcome(planet, (ut, st, qt, at), (x[1], *x[6:9]), dbic, dbic_t)
             rows.setdefault(toml.stem, []).append((dr.name, planet, st, qt, at, ut, x[6], x[7], x[8], x[1], dbic,
                                                    dbic_t, o))
-            s = score.setdefault(toml.stem, {"found": 0, "close": 0, "missed": 0, "detected": 0, "planets": 0,
-                                             "false+": 0, "nulls": 0})
-            s["planets" if planet else "nulls"] += 1
-            s["detected" if planet else "false+"] += dbic > DETECT
-            if planet:
-                s[verdict] += 1
             print(f"{dr.name:5s} {toml.stem:22s} {t['kind']!s:6s} {float(t['dchi2']):7.0f} "
                   + (f"{th[6]:6.3f} {th[7]:9.2e}" if planet else f"{'-':>6s} {'-':>9s}")
-                  + f" {x[6]:7.3f} {x[7]:9.2e} {gap:10.1f} {verdict if planet else '-':>7s} {dbic:7.1f} "
+                  + f" {x[6]:7.3f} {x[7]:9.2e} {gap:10.1f} {dbic:7.1f} "
                   + (f"{dbic_t:10.1f}" if planet else f"{'-':>10s}") + f" {o}")
             if args.plot:
-                text = ([f"search best 2L1S ({verdict if planet else 'null'})"] + fmt_params(labels(ev, Binary), x),
+                text = ([f"search best 2L1S ({o})"] + fmt_params(labels(ev, Binary), x),
                         [f"injected {'planet' if planet else 'null (no planet)'}"]
                         + fmt_params(labels(ev, Binary if planet else FSPL), th),
                         [f"{dr.name} on {toml.stem}", f"chi2 found {r['chi2'][k]:.1f}, truth {truth:.1f}, "
@@ -213,9 +212,7 @@ def tally(args):
                 plot_fit(evp, f["theta"], x, float(r["plain"][0]), out / "fit_lc.png", text)
                 if planet:
                     plot_fit(evt, f["theta"], th, float(t["t0_par"]), out / "fit_lc_truth.png", text, planet_removed=True)
-    for g, s in score.items():
-        print(f"[{g}] planets: {s['found']} found, {s['close']} close, {s['missed']} missed of {s['planets']}, "
-              f"{s['detected']} detected (dBIC > {DETECT:g}); nulls: {s['false+']} false positives of {s['nulls']}")
+    for g in rows:
         outs = [r[-1] for r in rows[g]]
         print(f"[{g}] outcomes: " + ", ".join(f"{outs.count(c)} {c}" for c in OUTCOMES if c in outs))
         name, planet, *num, o = zip(*rows[g])
@@ -234,12 +231,11 @@ def montage(args):
     rows = -(-len(drs) // per_row)
     for toml in sorted(drs[0].glob("*.toml")):
         tf = root / f"tally_{toml.stem}.npz"
-        t = np.load(tf) if tf.exists() else {k: [] for k in ("name", "outcome", "s_true", "q_true", "alpha_true",
-                                                               "s_found", "q_found", "alpha_found")}
+        par = [f"{p}_{w}" for w in ("true", "found") for p in ("u0", "s", "q", "alpha")]
+        t = np.load(tf) if tf.exists() else {k: [] for k in ("name", "outcome", *par)}
         verdict = dict(zip(t["name"], t["outcome"]))
-        sqa = {nm: ((st, qt, at), (sf, qf, af)) for nm, st, qt, at, sf, qf, af in  # (injected, found) s, q, alpha
-               zip(t["name"], t["s_true"], t["q_true"], t["alpha_true"], t["s_found"], t["q_found"], t["alpha_found"])}
-        fig, axes = plt.subplots(rows, 2 * per_row, figsize=(10 * per_row, 5.2 * rows))
+        usqa = {nm: (v[:4], v[4:]) for nm, *v in zip(t["name"], *(t[k] for k in par))}  # (injected, found) u0 s q alpha
+        fig, axes = plt.subplots(rows, 2 * per_row, figsize=(10 * per_row, 5.6 * rows))
         for ax in axes.flat:
             ax.axis("off")
         for n, dr in enumerate(drs):
@@ -258,8 +254,10 @@ def montage(args):
                         sp.set(color=OUTCOMES[o][0], linewidth=8)
                     title += f" [{o}]"
                     if not (j and null):  # search tile: the found (s, q, alpha); injected tile: the injected one
-                        sv, qv, av = sqa[dr.name][1 - j]
+                        uv, sv, qv, av = usqa[dr.name][1 - j]
                         title += f"\ns {sv:.3f}, q {qv:.2e}, " + r"$\alpha$" + f" {np.degrees(av) % 360:.0f}" + r"$^\circ$"
+                    if j == 0 and o == "wrong fit":  # which right-planet checks it failed
+                        title += "\nwrong: " + ", ".join(mismatch(*usqa[dr.name]))
                 ax.set_title(title, fontsize=14, color="k" if o is None else OUTCOMES[o][0], fontweight="bold")
         step = tomllib.loads(toml.read_text())["grid"]["log_q"][2]
         fig.suptitle(f"{root.name} injections searched on {toml.stem} (log q step {step})", fontsize=22)

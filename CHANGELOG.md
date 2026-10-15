@@ -2740,3 +2740,57 @@ Confirmed with the user (2026-10-15), in priority order:
   Claude -- Keck mu recheck (memory: keck-mu-check-pending), Claret LD priors, MCMC convergence (every mode NOT
   CONVERGED), MDM original photometry with seeing, uninstall py-spy (0.4.2 still in .venv).
 - Stretch: 1L2S (binary source) -- `/grill-me` to scope.
+
+## 2026-10-15 — session 29
+
+### Built
+- **Scored the inj05 / inj14 fine-grid reruns** (5014005/06, session 28's tE-ceiling fix): `inject.py tally --plot`
+  (srun 5015460, log in `scratch/injections/O-03-BLG235-fineq/tally_s29.log`), `montage`, map replot.
+- **`inject.py mismatch()`** (uncommitted at session start, not in session 28's entry): `outcome()`'s right-planet
+  checks split out, returning the failed ones (e.g. "q -0.39 dex"); montage wrong-fit tiles print them; tally npz
+  carries u0 true/found.
+- **O-05-BLG169 sensitivity map read** (5014294, `scratch/sensitivity/O-05-BLG169-fineq.png`).
+- **O-05-BLG169 injection batch** (grilled: draw box = the low-q edge): `make input/O-05-BLG169-fineq.toml --grids
+  input/O-05-BLG169-fineq.toml --n 8 --nulls 2 --log-s -0.3 0.3 --log-q -5.5 -3.5` (8 kept of 23 draws): s 0.56-1.16,
+  q 1.25e-5 - 2.4e-4, Delta chi2 vs the refit 73-1405 (inj03 80, inj04 78, inj06 73 at q 1.25e-5 sit on the cut);
+  inj08/09 nulls. 10 refine jobs 5015489-98 (fine grid only), queued at save.
+- **Coarse-grid inj05 rerun** on current code (5015641, old output -> `out_pre28_O-03-BLG235/`).
+- **`tally` reports only `outcome()`** (Claude, user-approved): the session-27 chi2-only verdict (found / close /
+  missed, FOUND / CLOSE) deleted -- the "search" column, its summary line, and fit_lc.png's text strip now say the
+  outcome. py-spy uninstalled.
+
+### Learned & open questions
+- **inj05 is now detected but a wrong fit** (fine grid): Delta BIC 847 (was missed by 1082 at the s = 5 box edge),
+  found s 0.966 / q 0.0104 / u0 -0.122 / tE 77 / rho 6.1e-3 / piE_N 0.99 vs truth 0.872 / 0.0219 / +0.144 / 57.8 /
+  1.9e-5 / 0.01 -- right morphology (two-crossing trough), but 35.5 above the truth: parallax and a 300x rho
+  compensate the wrong geometry. The ceiling fixed detection; what's left is refinement (goal 3) and the still-broken
+  FSPL + parallax (rho 5.9, |piE| on the bound, K 2.66 -- a box-shaped "FSPL" in the plot). inj14 fine: found
+  (Delta BIC 1235, 0.4 below truth).
+- **O-03-BLG235 tally**: fine grid 7 found, 2 wrong fit (inj05, inj11), 0 missed, 7 not claimed, 4 null ok; coarse 5
+  found, 3 wrong fit, 1 missed (inj05 -- **still the pre-28 output**, only fine-grid inj05/14 were rerun), 7 not
+  claimed, 4 null ok.
+- **O-05-BLG169 map**: Gaudi-Sackett wedge, Delta chi2 50 reaches log q ~ -5.0 at s ~ 1, log s ~ -0.32..+0.2 at log
+  q -4 (qualitatively consistent with Gould 2006's "~complete for Neptune q at s 0.6-1.6"). The real planet (log q
+  -4.5, s 0.83) sits just inside the 50 contour -- at the event's own detection limit.
+- **A notch at exactly log s = 0** on the O-05-BLG169 map: at log q -4.5, refit Delta chi2 137 / 32 / 222 at log s
+  -0.05 / 0 / +0.05 (log q -4: 899 / 405 / 993), while vs the planet removed it drops only ~25% -- the refit FSPL
+  absorbs more at s = 1. Plausibly physical (a symmetric resonant caustic a fatter FSPL mimics), but the same s =
+  1.00 row has scored 50-130 worse in every grid since session 27: worth one check before trusting either.
+- Wide side drops sharply at log s ~ 0.35-0.4 for every q: Delta chi2 vs planet removed in the millions, refit
+  absorbs ~all (a wide companion = rescaled single lens). Not investigated.
+- graphify not refreshed: scratch-only changes.
+- Running at save: 5015489-98 (O-05-BLG169 injections, ~10-15 h each), 5015641 (coarse inj05, ~2 h).
+
+### Next session
+Confirmed with the user (2026-10-15), in priority order:
+1. **Read the O-05-BLG169 injection batch** (5015489-98): `inject.py tally --plot scratch/injections/O-05-BLG169-fineq`,
+   `montage`, `sensitivity.py scratch/sensitivity/O-05-BLG169-fineq.npz` replot; low-q recovery vs the map.
+   Re-tally O-03-BLG235 too (coarse inj05 rerun 5015641; existing fit_lc.png strips predate the outcome() label).
+2. **Refinement optimiser by recovery rate** (`/grill-me` first): LM or a short MCMC burn vs restarted Nelder-Mead,
+   judged on an O-03-BLG235 batch (wrong fits: inj05 fine 35.5 above truth, inj11; coarse inj03/inj12); then a robust
+   FSPL for dominant anomalies. Goal 1's O-05-BLG169 failures may reorder this.
+3. **The log s = 0 notch**: one sensitivity cell at log s = 0 vs +-0.01 (and the s = 1.00 grid row) -- smooth physics
+   or a sharp artefact at exactly s = 1, where the real planet sits.
+- Carry-overs: user -- `git add .` and commit; Claude -- Keck mu recheck (memory: keck-mu-check-pending), Claret LD
+  priors, MCMC convergence (every mode NOT CONVERGED), MDM original photometry with seeing.
+- Stretch: 1L2S (binary source) -- `/grill-me` to scope.

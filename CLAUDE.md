@@ -344,10 +344,11 @@ MDM K 0.64), kept if noise-free Delta chi2 >= 50 vs an FSPL + parallax refit (`d
 planet removed, which a refit absorbs ~94% of), + nulls, one TOML per `--grids` config in
 scratch/injections/<short>/inj<NN>/; `tally` scores each `--stage=refine` run by `outcome()`: claimed = Delta BIC >
 10; found / wrong fit (right planet = s or 1/s within `S_TOL` 0.15 dex, q `Q_TOL` 0.2, |u0| `U0_TOL` 0.2, alpha
-`ALPHA_TOL` 20 deg vs -alpha when u0 flipped -- the (-u0, -alpha) mirror) / missed (truth detectable) / not
-claimed / null ok / false positive, colours in `OUTCOMES`; writes tally_<grid>.npz; `--plot` adds per-run
-fit_lc.png + fit_lc_truth.png; `montage` tiles them per grid framed by outcome; `base_event()` is shared with
-sensitivity.py),
+`ALPHA_TOL` 20 deg vs -alpha when u0 flipped -- the (-u0, -alpha) mirror; `mismatch()` lists the failed checks) /
+missed (truth detectable) / not claimed / null ok / false positive, colours in `OUTCOMES`; writes tally_<grid>.npz;
+`--plot` adds per-run fit_lc.png + fit_lc_truth.png; `montage` tiles them per grid framed by outcome (wrong-fit tiles
+name their failed checks); `base_event()` is shared with sensitivity.py; batches so far: O-03-BLG235-fineq (16 + 4
+nulls, both grids) and O-05-BLG169-fineq (session 29: 8 + 2 nulls, `--log-s -0.3 0.3 --log-q -5.5 -3.5`, fine grid only)),
 `sensitivity.py` (session 27: Delta chi2 sensitivity map -- noise-free 2L1S over (log s, log q) x 24 alphas
 vs an FSPL + parallax refit (`inject.dchi2()`), median over alpha with contours -> scratch/sensitivity/<short>.{npz,png},
 cells below SKIP = 10 (un-refit upper bounds) one floor colour; one panel per tally_<grid>.npz with every injection
