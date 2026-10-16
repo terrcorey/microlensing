@@ -39,7 +39,7 @@ class TwoL1SParams(NamedTuple):
 
 SHORT_NAME = "O-03-BLG235"
 
-# Raw flux, not the old data/processed/*_magnification.dat -- those froze fs/fb from a
+# Raw flux, not the old data/processed/*_magnification.dat -- those froze fs/fb from a 
 # one-time PSPL point estimate that's since been shown biased for a real caustic-crossing
 # trajectory (see CHANGELOG session 5). chi2() below re-solves fs/fb per trial instead.
 K_OGLE, K_MOA = 1.1894704390708772, 1.0014620074784661 # Estimated error rescaling at the Cassan finite-source best fit (χ² = 1650.06), no floor needed 

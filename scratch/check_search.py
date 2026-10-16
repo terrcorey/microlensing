@@ -14,6 +14,9 @@
    carries on (pebble kills the worker) instead of waiting on it forever. Session 26: a larger
    CELL_TIMEOUT retries exactly those cells from the cached grid; the same one reloads it.
 7. session 30: resid_binary() squares to chi2_binary(); --refine's lm() and burn() never worsen their start.
+8. session 31: sky_basis() -- the equatorial pole gives the old basis, the ecliptic one astropy's ecliptic
+   north; --param: both MCMC round trips, omega_E's pi_E >= 0 bound, and its prior is flat in Dominik's set
+   (density / pi_E's = 1 / (pi_E tE^2) over Gould's fields); display()'s shape and derived columns.
 """
 import os
 import sys
@@ -23,10 +26,13 @@ from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import astropy.units as u
 import numpy as np
+from astropy.coordinates import BarycentricMeanEcliptic, SkyCoord
 
 import search
 from event import ld_penalty, load_event, with_ld
+from lc_models import sky_basis
 
 if __name__ == "__main__":  # spawned pool workers re-import this file
     event = load_event("input/O-03-BLG235.toml")
@@ -83,6 +89,35 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
     search._init(event)
     print("free LD ok")
 
+    n, e = sky_basis(event.coords)  # 8. session 31: ecliptic frame, --param omega_E
+    n0, e0 = sky_basis(event.coords, pole=(0, 0, 1))
+    ra, dec = event.coords.ra.rad, event.coords.dec.rad
+    assert np.allclose(n0, (-np.sin(dec) * np.cos(ra), -np.sin(dec) * np.sin(ra), np.cos(dec)))  # = the old basis
+    assert np.allclose(e0, (-np.sin(ra), np.cos(ra), 0))
+    ecl = event.coords.transform_to(BarycentricMeanEcliptic())
+    pa = event.coords.position_angle(SkyCoord(ecl.lon, ecl.lat + 0.01 * u.deg, frame=BarycentricMeanEcliptic())).rad
+    assert abs(np.angle(np.exp(1j * (np.arctan2(n @ e0, n @ n0) - pa)))) < 1e-5, (n @ e0, pa)  # astropy's ecliptic N
+    th = np.array([*good._replace(u0=-0.1, piE_N=0.3, piE_E=-0.2), 0.7])
+    for param in search.PARAMS:
+        assert np.allclose(search.from_mcmc(search.to_mcmc(th, param), param), th), param
+    search._init(ev)
+    x = search.to_mcmc(th, "omega_E")
+    assert np.isfinite(search.log_prob(x, good.alpha, "omega_E"))
+    assert search.log_prob(x * np.r_[1, 1, 1, 1, -1, np.ones(len(x) - 5)], good.alpha, "omega_E") == -np.inf  # pi_E < 0
+
+    def density(param):
+        """log_prob + log|det d to_mcmc / d theta|: the prior x likelihood over Gould's fields."""
+        h = 1e-6 * np.maximum(1, np.abs(th))
+        jac = [(search.to_mcmc(th + dh, param) - search.to_mcmc(th - dh, param)) / (2 * hk) for dh, hk in zip(np.diag(h), h)]
+        return search.log_prob(search.to_mcmc(th, param), good.alpha, param) + np.linalg.slogdet(jac)[1]
+    p_e = np.hypot(th[4], th[5])
+    assert np.isclose(density("omega_E") - density("pi_E"), -np.log(p_e * good.tE ** 2), atol=1e-4)  # flat in Dominik's set
+    shown = search.display(np.stack([[th, th]]), "omega_E")
+    assert shown.shape == (1, 2, len(search.display_labels(search.labels(ev, search.Binary), "omega_E")))
+    assert np.allclose(shown[0, 0, -3:-1], (th[1], th[2])) and np.isclose(shown[0, 0, -1], np.arctan2(-0.2, 0.3))
+    search._init(event)
+    print("ecliptic frame + omega_E ok")
+
     with search.pool(event) as ex:
         try:
             list(ex.map(os._exit, [1]))
@@ -98,6 +133,9 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
         c = np.load(path)
         assert c["chain"].shape == (10, 32, 9) and c["log_prob"].shape == (10, 32)
         search.save_mcmc(path, Path(d), "x")
+        search.save_mcmc(path, Path(d), "x", "omega_E")
+        search.run_mcmc(ex, good._replace(piE_N=0.3), Path(d) / "mcmc_y_chain.npz", "y", param="omega_E", nsteps=3, every=3)
+        assert np.all(np.isfinite(np.load(Path(d) / "mcmc_y_chain.npz")["log_prob"]))
         print("checkpoint + resume ok")
 
     with tempfile.TemporaryDirectory() as d:  # 2 x 2 point-source cells take ~1 min each: all time out

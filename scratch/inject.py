@@ -35,7 +35,7 @@ from event import ld_penalty, load_event, profile_flux, rescale, with_t0_par
 from lc_models import ZERO_POINT_MAG
 from mcmc_fit import polish
 from search import (FSPL, NB, NF, Binary, bic, binary_A, chi2_binary, chi2_fspl, fmt_params, fspl_A, fspl_steps,
-                    labels, plot_fit, REFINERS, refined_name)
+                    labels, param_dir, plot_fit, REFINERS, refined_name)
 
 MIN_DCHI2 = 50.0
 # default draw box (make --log-s / --log-q), inside every config's grid box (log s +-0.7, log q -6..0)
@@ -105,7 +105,7 @@ def base_event(path):
     res = Path("results") / real.short_name
     r = np.load(res / "refined.npz")
     best, t0_par = r["theta"][np.argmin(r["chi2"])], float(r["plain"][0])
-    line = next(l for l in (res / "summary.txt").read_text().splitlines() if l.startswith("K at 2L1S:"))
+    line = next(l for l in (param_dir(res) / "summary.txt").read_text().splitlines() if l.startswith("K at 2L1S:"))
     k2 = dict((n, float(k)) for n, k in (x.strip().split("=") for x in line.split(":", 1)[1].split(",")))
     real = with_t0_par(real, t0_par)
     fsfb = [profile_flux(i, A)[0] for i, A in zip(real.instruments, binary_A(real, best))]

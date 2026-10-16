@@ -19,8 +19,8 @@ Stages (session 18 plan, see CHANGELOG):
   (vi)  diagnostics on the saved outputs (also --stage=diagnose, nothing refit):
         MCMC convergence + trace plots, Nelder-Mead vs MCMC chi2, fs/fb, fit plot
 
-Outputs go to results/<short_name>/. The grid is cached there as grid.npz
-(delete it to recompute). Heavy -- run via slurm/search.sbatch, never on the
+Outputs go to results/<short_name>/ (the MCMC's, plots and summary.txt to its --param subdir). The grid
+is cached there as grid.npz (delete it to recompute). Heavy -- run via slurm/search.sbatch, never on the
 login node.
 """
 import argparse
@@ -596,45 +596,87 @@ def refine(x0, method="nm"):
     return polish(lambda x: chi2_binary(x, EVENT) + ld_penalty(EVENT, x[NB:]), REFINERS[method](x0), theta_steps)
 
 
-def to_mcmc(theta):
-    """MCMC coordinates (fit vectors, (..., NB + n_ld)): t_eff = u0 tE and t_star = rho tE, what a
-    high-magnification peak measures (corr(u0, tE) = -0.94 on O-05-BLG169, session 23), and log s, log q
+# --param (session 31): the MCMC's coordinates + prior. pi_E: Gould (2004) (t0, u0, tE, piE_N, piE_E), flat in
+# those -- flat in the piE *vector* is a prior ~ pi_E on its size, which carried O-05-BLG169's weak parallax
+# (posterior pi_E 1.7 -> 0.57 reweighted). omega_E: Dominik (2009), parallax a scalar and proper motion the
+# vector: (t0, t_w = u0 tE, omega_E = (cos psi, sin psi) / tE, pi_E >= 0), flat in those. The grid, refinement
+# and every saved chain stay in Gould's fields; omega_E only changes the sampler and what's reported.
+PARAMS = ("omega_E", "pi_E")
+JACOBIAN = {"pi_E": 2, "omega_E": 1}  # log_prob's -k log tE: t_star = rho tE (both), t_eff = u0 tE (pi_E only)
+OMEGA_FIELDS = ("t0", "t_w", "omega_E_N", "omega_E_E", "piE", "rho", "s", "q", "alpha")
+
+
+def to_mcmc(theta, param="pi_E"):
+    """MCMC coordinates (fit vectors, (..., NB + n_ld)): t_eff = u0 tE (t_w for omega_E) and t_star = rho tE,
+    what a high-magnification peak measures (corr(u0, tE) = -0.94 on O-05-BLG169, session 23), and log s, log q
     (q spanned two decades); LD unchanged. Flat in log s, log q = log-uniform priors on s, q; log_prob
     undoes t_eff/t_star's Jacobian."""
     theta = np.asarray(theta, float)
     t0, u0, tE, rho, piE_N, piE_E, s, q, alpha = np.moveaxis(theta[..., :NB], -1, 0)
-    return np.concatenate([np.stack([t0, u0 * tE, tE, rho * tE, piE_N, piE_E, np.log10(s), np.log10(q), alpha], -1),
-                           theta[..., NB:]], -1)
+    psi = np.arctan2(piE_E, piE_N)
+    head = ([u0 * tE, np.cos(psi) / tE, np.sin(psi) / tE, np.hypot(piE_N, piE_E)] if param == "omega_E"
+            else [u0 * tE, tE, piE_N, piE_E])
+    return np.concatenate([np.stack([t0, *head, rho * tE, np.log10(s), np.log10(q), alpha], -1), theta[..., NB:]], -1)
 
 
-def from_mcmc(x):
+def from_mcmc(x, param="pi_E"):
     x = np.asarray(x, float)
-    t0, t_eff, tE, t_star, piE_N, piE_E, log_s, log_q, alpha = np.moveaxis(x[..., :NB], -1, 0)
-    return np.concatenate([np.stack([t0, t_eff / tE, tE, t_star / tE, piE_N, piE_E, 10**log_s, 10**log_q, alpha], -1),
+    t0, a, b, c, d, t_star, log_s, log_q, alpha = np.moveaxis(x[..., :NB], -1, 0)
+    if param == "omega_E":  # a, b, c, d = t_w, omega_E_N, omega_E_E, pi_E
+        tE = 1 / np.hypot(b, c)
+        piE_N, piE_E = d * b * tE, d * c * tE
+    else:  # t_eff, tE, piE_N, piE_E
+        tE, piE_N, piE_E = b, c, d
+    return np.concatenate([np.stack([t0, a / tE, tE, t_star / tE, piE_N, piE_E, 10**log_s, 10**log_q, alpha], -1),
                            x[..., NB:]], -1)
 
 
-def log_prob(x, alpha0):
-    """In to_mcmc() coordinates: Gaussian likelihood; priors flat in (t0, u0, tE, rho, piE, alpha) --
-    -2 log tE is the Jacobian of (u0, rho) -> (t_eff, t_star), else the prior goes as tE^2 -- and in
-    log s, log q (chi2_binary's bounds); Gaussian in each free LD, truncated to [0, 1] (session 24).
+def display(theta, param, psi0=0.0):
+    """Fit vectors (any leading shape) -> what `param` reports: unchanged for pi_E; for omega_E OMEGA_FIELDS,
+    LD, then the derived u0, tE, psi (psi = omega_E's position angle, wrapped to within pi of psi0 so
+    percentiles don't straddle the cut)."""
+    theta = np.asarray(theta, float)
+    if param == "pi_E":
+        return theta
+    p, x = as_binary(np.moveaxis(theta, -1, 0)), to_mcmc(theta, "omega_E")
+    psi = psi0 + (np.arctan2(p.piE_E, p.piE_N) - psi0 + np.pi) % (2 * np.pi) - np.pi
+    return np.concatenate([x[..., :5], np.stack([p.rho, p.s, p.q, p.alpha], -1), theta[..., NB:],
+                           np.stack([p.u0, p.tE, psi], -1)], -1)
+
+
+def psi_of(theta) -> float:
+    """Position angle of the piE vector (= omega_E's), rad east of (ecliptic) north."""
+    p = as_binary(theta)
+    return float(np.arctan2(p.piE_E, p.piE_N))
+
+
+def display_labels(names, param):
+    """display()'s column names, from a fit vector's labels()."""
+    return list(names) if param == "pi_E" else [*OMEGA_FIELDS, *names[NB:], "u0", "tE", "psi"]
+
+
+def log_prob(x, alpha0, param="pi_E"):
+    """In to_mcmc() coordinates: Gaussian likelihood; priors flat in (t0, u0, tE, rho, piE, alpha) for pi_E,
+    (t0, t_w, omega_E, pi_E >= 0, rho, alpha) for omega_E -- -JACOBIAN[param] log tE undoes t_star (and t_eff)
+    -- and in log s, log q (chi2_binary's bounds); Gaussian in each free LD, truncated to [0, 1] (session 24).
     alpha is bounded to one period around the mode's start alpha0: the likelihood is 2pi-periodic, so an
     unbounded flat prior is improper and walkers drifted through whole periods (+/-80000 deg on
     O-05-BLG169-noMDM, session 23)."""
-    theta = from_mcmc(x)
+    theta = from_mcmc(x, param)
     p = as_binary(theta)
-    if not alpha0 - np.pi < p.alpha <= alpha0 + np.pi:
-        return -np.inf
+    if not alpha0 - np.pi < p.alpha <= alpha0 + np.pi or (param == "omega_E" and x[4] < 0):
+        return -np.inf  # pi_E < 0 is the pi_E > 0 point mirrored: a second copy of every Gould theta
     c2 = chi2_binary(theta, EVENT)
-    return -0.5 * (c2 + ld_penalty(EVENT, theta[NB:])) - 2 * np.log(p.tE) if np.isfinite(c2) else -np.inf
+    return -0.5 * (c2 + ld_penalty(EVENT, theta[NB:])) - JACOBIAN[param] * np.log(p.tE) if np.isfinite(c2) else -np.inf
 
 
-def run_mcmc(ex, best, path: Path, tag: str, names=Binary._fields, nwalkers=32, nsteps=12000, every=200, seed=42):
+def run_mcmc(ex, best, path: Path, tag: str, names=Binary._fields, param="pi_E", nwalkers=32, nsteps=12000, every=200,
+             seed=42):
     """emcee around a refined minimum, checkpointed to `path` (chain + log_prob, unflattened) every
     `every` steps and resumed from it: a 48 h wall-clock kill used to lose every mode (session 22).
     nsteps: the Cassan chain had tau ~ 230 steps (session 19), so 3000 was only ~13 tau; 12000 aims
     at the ~50 tau emcee recommends. `ex` is shared by every mode at once (see __main__). `best`: a fit
-    vector (LD appended when free), `names` its labels (saved with the chain)."""
+    vector (LD appended when free), `names` its labels (saved with the chain); `param`: to_mcmc()'s coordinates."""
     best = np.asarray(best, float)
     chain, lp = np.empty((0, nwalkers, len(best))), np.empty((0, nwalkers))
     if path.exists() and "start" in (d := np.load(path)) and np.allclose(d["start"], best):  # same mode, not index
@@ -645,20 +687,20 @@ def run_mcmc(ex, best, path: Path, tag: str, names=Binary._fields, nwalkers=32, 
         best + 0.01 * np.array(theta_steps(best)) * rng.standard_normal((nwalkers, len(best))))
     # DE moves (emcee docs' mix): stretch alone left tau ~500-1200 on *every* parameter of O-03-BLG235 with no
     # burn-in drift or stuck walkers -- a curved posterior it can only cross along walker-to-walker lines (session 23)
-    sampler = emcee.EnsembleSampler(nwalkers, len(best), log_prob, pool=ex, args=(as_binary(best).alpha,),
+    sampler = emcee.EnsembleSampler(nwalkers, len(best), log_prob, pool=ex, args=(as_binary(best).alpha, param),
                                     moves=[(emcee.moves.DEMove(), 0.8), (emcee.moves.DESnookerMove(), 0.2)])
 
     def save():  # saved physical, log_prob = -(chi2 + LD prior)/2 (diagnose reads chi2 off it): MCMC coordinates stay in here
         c, l = sampler.get_chain(), sampler.get_log_prob()
         assert c is not None and l is not None  # emcee's getters are inferred Optional
-        c = from_mcmc(c)
-        l = l + 2 * np.log(c[..., Binary._fields.index("tE")])
+        c = from_mcmc(c, param)
+        l = l + JACOBIAN[param] * np.log(c[..., Binary._fields.index("tE")])
         with open(path.with_suffix(".tmp"), "wb") as f:  # write-then-rename, as run_grid()
             np.savez(f, chain=np.concatenate([chain, c]), log_prob=np.concatenate([lp, l]), labels=list(names),
                      start=best)
         path.with_suffix(".tmp").replace(path)
 
-    for _ in sampler.sample(to_mcmc(p0), iterations=nsteps - len(chain), skip_initial_state_check=len(chain) > 0,
+    for _ in sampler.sample(to_mcmc(p0, param), iterations=nsteps - len(chain), skip_initial_state_check=len(chain) > 0,
                             progress=True, progress_kwargs={"desc": tag}):
         if sampler.iteration % every == 0:
             save()
@@ -671,10 +713,12 @@ def acceptance(chain):
     return np.mean(np.any(np.diff(chain, axis=0) != 0, axis=2))
 
 
-def save_mcmc(path: Path, out: Path, tag: str):
-    """Summary + corner from a finished chain file (main thread: pyplot isn't thread-safe)."""
+def save_mcmc(path: Path, out: Path, tag: str, param="pi_E"):
+    """Summary + corner from a finished chain file (main thread: pyplot isn't thread-safe), in display(param)."""
     d = np.load(path)
-    chain, lp, names = d["chain"], d["log_prob"], list(d["labels"])
+    chain, lp = d["chain"], d["log_prob"]
+    best = chain[np.unravel_index(np.argmax(lp), lp.shape)]
+    chain, names = display(chain, param, psi_of(best)), display_labels(list(d["labels"]), param)
     tau = emcee.autocorr.integrated_time(chain, quiet=True)  # warns (not raises) when nsteps < 50 tau
     print(f"[mcmc {tag}] acceptance={acceptance(chain):.2f}, "
           f"nsteps/max(tau)={len(chain) / np.max(tau):.1f} (want > 50), tau={np.round(tau, 1)}")
@@ -721,16 +765,16 @@ def on_grid(event: Event, inst, t, t0_par):
 
 def fmt_params(names, p, err=None, sig=3):
     """'name = value +hi -lo' per field, shared by fit_lc.png (sig figures) and summary.txt (sig=None:
-    full precision). alpha in degrees [0, 360); t0 to 1e-4 d (3 sig figs of 3491.9 say nothing)."""
+    full precision). alpha, psi in degrees [0, 360); t0 to 1e-4 d (3 sig figs of 3491.9 say nothing)."""
     out = []
     for name, v in zip(names, p, strict=True):
         e = err[name] if err else None
-        if name == "alpha":
+        if name in ("alpha", "psi"):
             v, e = np.degrees(v) % 360, e and np.degrees(e)
         f = ((lambda x: repr(float(x))) if sig is None else (lambda x: f"{x:.4f}") if name == "t0"
              else (lambda x: f"{x:#.{sig}g}".rstrip(".")))  # "#": 48.0 not 48; rstrip: 120 not "120."
         out.append(f"{name} = {f(v)}" + (f" +{f(e[0])} -{f(e[1])}" if e is not None else "")
-                   + (" deg" if name == "alpha" else ""))
+                   + (" deg" if name in ("alpha", "psi") else ""))
     return out
 
 
@@ -816,8 +860,8 @@ def plot_fit(event: Event, fspl, best, t0_par: float, path: Path, text, anomaly=
         A_data, A_err = to_magnification(i, A_i)
         return fs_r * A_data + fb_r, fs_r * A_err, fs_r * A_i + fb_r, (fs_r, fb_r)
 
-    fig = plt.figure(figsize=(15, 13))
-    gs = fig.add_gridspec(4, 2, height_ratios=[4, 1.5, 1.5, 1.7])
+    fig = plt.figure(figsize=(15, 14))
+    gs = fig.add_gridspec(4, 2, height_ratios=[4, 1.5, 1.5, 2.1])
     axes = np.empty((3, 2), dtype=object)
     for col in range(2):
         axes[0, col] = fig.add_subplot(gs[0, col])
@@ -896,14 +940,17 @@ def plot_trace(chain, names, path: Path):
     print(f"saved {path}")
 
 
-def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: str, config: str, method="nm"):
+def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: str, config: str, method="nm",
+             param="pi_E"):
     """(vi) Session 20's done-checks: per MCMC mode nsteps/tau > 50, acceptance 0.2-0.5, its best
     sample within ~1 of the Nelder-Mead chi2 it started from, trace plot; the overall best 2L1S
     (refined[0] or any chain's best sample: the MCMC regularly beats Nelder-Mead, session 21), its +/-
     from the 16-84% of the chain of the mode nearest it (modes aren't pooled: close/wide would merge);
     BIC under K at FSPL (conservative) and K at 2L1S; per instrument fs/fb (fb < 0 flagged: expected
-    for FTN's offset scale, suspicious elsewhere). Writes fit_lc.png and summary.txt (session 22)."""
+    for FTN's offset scale, suspicious elsewhere). Writes fit_lc.png and summary.txt (session 22). Reads grid.npz +
+    refined.npz from `out`, the chains from (and writes everything to) out / param, the 2L1S in display(param)."""
     event = rescale(base, k_fspl)  # the search's footing
+    sub = out / param
     ok = lambda c: "ok" if c else "FAIL"
     refined = cached(out / refined_name(method), key)
     if refined is None or "family" not in refined:
@@ -911,7 +958,7 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
     trk = track(base, t0_par)
     modes = []  # (tag, best chi2, best sample, chain, done-check line, converged, caustic_crossing(), crossing
     #              fraction, point-source fraction)
-    for f in sorted(out.glob("mcmc_mode*_chain.npz"), key=lambda f: int(f.stem.split("_")[1].removeprefix("mode"))):
+    for f in sorted(sub.glob("mcmc_mode*_chain.npz"), key=lambda f: int(f.stem.split("_")[1].removeprefix("mode"))):
         tag = f.stem.removeprefix("mcmc_").removesuffix("_chain")
         d = np.load(f)
         chain, lp, names = d["chain"], d["log_prob"], list(d["labels"])  # (nsteps, nwalkers, ndim), (nsteps, nwalkers)
@@ -931,7 +978,7 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
         frac = np.mean([(cc := caustic_crossing(trk, as_binary(x))) is not None and cc[0] for x in smp])
         ps = np.mean(chain[len(chain) // 4:, :, Binary._fields.index("rho")] < RHO_MIN)  # sampled as a point source
         modes.append((tag, best, chain[i], chain, check, conv, caustic_crossing(trk, as_binary(chain[i])), frac, ps))
-        plot_trace(chain, names, out / f"mcmc_{tag}_trace.png")
+        plot_trace(display(chain, param, psi_of(chain[i])), display_labels(names, param), sub / f"mcmc_{tag}_trace.png")
 
     cands = [(refined["chi2"][0], refined["theta"][0])] + [(m[1], m[2]) for m in modes]  # chi2 + LD prior
     best = min(cands, key=lambda c: c[0])[1]
@@ -941,10 +988,12 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
     if not np.isfinite(c2_b):
         print("[diag] WARNING: best is outside the current bounds (pre-session-22 outputs?): rerun the search")
     err, err_note = None, "no MCMC chains"
+    names, shown = display_labels(labels(event, Binary), param), display(best, param, psi_of(best))
     if modes:
         tag, _, _, chain, _, conv, *_ = min(modes, key=lambda m: np.linalg.norm((m[2] - best) / theta_steps(best)))
-        lo, med, hi = np.percentile(chain[len(chain) // 4:].reshape(-1, chain.shape[2]), [16, 50, 84], axis=0)
-        err = {name: (h - m, m - l) for name, l, m, h in zip(labels(event, Binary), lo, med, hi, strict=True)}
+        smp = display(chain[len(chain) // 4:].reshape(-1, chain.shape[2]), param, psi_of(best))
+        lo, med, hi = np.percentile(smp, [16, 50, 84], axis=0)
+        err = {name: (h - m, m - l) for name, l, m, h in zip(names, lo, med, hi, strict=True)}
         err_note = f"+/- from {tag} (16-84%)" + ("" if conv else ", MCMC NOT CONVERGED")
 
     k_2l1s = error_scale(base, binary_A(base, best))
@@ -996,13 +1045,15 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
     row = lambda m: (f"{m[0]:7s} {m[1]:8.1f} {as_binary(m[2]).s:7.3g} {as_binary(m[2]).q:9.3g} {as_binary(m[2]).u0:+10.3g} {kind(m):>5s} {m[7]:5.2f} "
                      f"{m[8]:5.2f} {ok(m[5])}")
     header = f"{'mode':7s} {'chi2':>8s} {'s':>7s} {'q':>9s} {'u0':>10s} {'class':>5s} {'xfrac':>5s} {'psfrac':>5s} conv"
-    text = (["2L1S overall best", f"({err_note})"] + fmt_params(labels(event, Binary), best, err),
+    frame = f"t0_par = {t0_par:.4f}, ecliptic N/E"
+    text = ([f"2L1S overall best ({param})", f"({err_note})"] + fmt_params(names, shown, err) + [frame],
             ["FSPL (parallax)"] + fmt_params(labels(event, FSPL), fspl) + ["", f"chi2 FSPL  = {c2_f:.1f}", f"chi2 2L1S  = {c2_b:.1f}",
                                                        f"Delta chi2 = {c2_f - c2_b:.1f}", f"N = {n}"],
             [header] + [row(m) for m in ranked[:6]] + ([f"+{len(ranked) - 6} more, see summary.txt"] if len(ranked) > 6 else []))
-    plot_fit(event, fspl, best, t0_par, out / "fit_lc.png", text)
-    plot_fit(event, fspl, best, t0_par, out / "fit_lc_noplanet.png", text, planet_removed=True)
-    verdict = plot_parallax_map(pgrid, k_fspl, as_fspl(fspl), c2_f, as_binary(best), c2_b, out / "fspl_parallax_map.png")
+    plot_fit(event, fspl, best, t0_par, sub / "fit_lc.png", text)
+    plot_fit(event, fspl, best, t0_par, sub / "fit_lc_noplanet.png", text, planet_removed=True)
+    verdict = plot_parallax_map(pgrid, k_fspl, as_fspl(fspl), c2_f, as_binary(best), c2_b, frame,
+                                sub / "fspl_parallax_map.png")
 
     commit = subprocess.run(["git", "describe", "--always", "--dirty"], capture_output=True, text=True).stdout.strip()
     k_of = lambda ks: ", ".join(f"{i.name}={float(k)!r}" for i, k in zip(event.instruments, ks))
@@ -1010,11 +1061,13 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
     grid_line = (f"grid: {g['timing']}" if "timing" in g
                  else "grid: pre-session-23 cache (point source, no timing)")
     lines = [f"# {event.short_name} -- search.py summary", f"config: {config}",
-             f"written: {datetime.now():%Y-%m-%d %H:%M}, git: {commit or 'unknown'}", grid_line, "",
+             f"written: {datetime.now():%Y-%m-%d %H:%M}, git: {commit or 'unknown'}", grid_line,
+             f"t0_par = {t0_par!r} (HJD - 2450000); piE_N/E, omega_E_N/E: ecliptic north/east; MCMC: --param {param}",
+             "",
              "## FSPL (parallax)", *fmt_params(labels(event, FSPL), fspl, sig=None),
              f"parallax grid: step {PIE_STEP}, |piE| <= {PIE_MAX}, both u0 signs; {verdict}"
              + ("; WARNING: best on the |piE| bound" if pgrid["on_bound"] else ""), "",
-             f"## 2L1S overall best ({err_note})", *fmt_params(labels(event, Binary), best, err, sig=None), "",
+             f"## 2L1S overall best ({err_note})", *fmt_params(names, shown, err, sig=None), "",
              "## scores (errors rescaled by K at FSPL; data-only chi2, the LD prior term excluded)",
              f"chi2 FSPL = {c2_f!r}", f"chi2 2L1S = {c2_b!r}",
              f"N = {n}, k FSPL = {len(fspl) + sum(2 if i.kind == 'mag' else 1 for i in event.instruments)}, "
@@ -1028,8 +1081,8 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
              "## modes (best sample per MCMC chain, by chi2; xfrac / psfrac: fraction of samples crossing a caustic / "
              f"with rho < {RHO_MIN} = point source)", header, *[row(m) for m in ranked], "",
              "## done-checks", *[f"{m[0]}: {m[4]}" for m in modes]]
-    (out / "summary.txt").write_text("\n".join(lines) + "\n")
-    print(f"saved {out / 'summary.txt'}")
+    (sub / "summary.txt").write_text("\n".join(lines) + "\n")
+    print(f"saved {sub / 'summary.txt'}")
 
 
 # ---- (v) map + BIC ----------------------------------------------------------------------------
@@ -1048,7 +1101,7 @@ def plot_map(grid, minima, path: Path):
     print(f"saved {path}")
 
 
-def plot_parallax_map(pgrid, k_fspl, fspl: FSPL, c2_f: float, best: Binary, c2_b: float, path: Path):
+def plot_parallax_map(pgrid, k_fspl, fspl: FSPL, c2_f: float, best: Binary, c2_b: float, frame: str, path: Path):
     """Parallax-only Delta chi2(piE_N, piE_E), one panel per u0 sign, at the K-at-FSPL errors (cells'
     per-instrument chi2 / k^2: fit parameters stay at their base-error optimum, a small approximation).
     Contours at the 1/2/3-sigma levels for 2 parameters; local minima within Delta chi2 < 25 marked;
@@ -1077,7 +1130,7 @@ def plot_parallax_map(pgrid, k_fspl, fspl: FSPL, c2_f: float, best: Binary, c2_b
             ax.plot(fspl.piE_N, fspl.piE_E, "r*", ms=16, mec="k", label="parallax-only best")
         ax.plot(best.piE_N, best.piE_E, "D", color="orange", mec="k", ms=8,
                 label=f"2L1S best (u0 {'>' if best.u0 > 0 else '<'} 0)")
-        ax.set(title=f"FSPL + parallax, {label}", xlabel=r"$\pi_{E,N}$", aspect="equal")
+        ax.set(title=f"FSPL + parallax, {label} ({frame})", xlabel=r"$\pi_{E,N}$", aspect="equal")
         ax.legend(loc="lower left", fontsize=8)
     axes[0].set_ylabel(r"$\pi_{E,E}$")
     fig.colorbar(mesh, ax=axes, label=r"$\log_{10}(1 + \Delta\chi^2)$ vs parallax-only best", shrink=0.8)
@@ -1109,6 +1162,12 @@ def out_dir(event: Event) -> Path:
     return path
 
 
+def param_dir(out: Path) -> Path:
+    """For readers of a finished run (scratch/): its first --param subdir in PARAMS order, else `out` itself
+    (pre-session-31 and archived runs: chains + summary.txt next to refined.npz). K lines are the same in both."""
+    return next((out / p for p in PARAMS if (out / p).is_dir()), out)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Config-driven FSPL vs 2L1S search.")
     parser.add_argument("--config", required=True, help="path to the event's TOML")
@@ -1119,9 +1178,14 @@ if __name__ == "__main__":
     parser.add_argument("--refine", choices=REFINERS, default="nm",
                         help="(iv)'s optimiser before the restarted Nelder-Mead: nm (none), lm (bounded LM), mcmc "
                              "(short emcee burn); non-nm results go to refined_<method>.npz")
+    parser.add_argument("--param", choices=PARAMS, default="omega_E",
+                        help="MCMC coordinates + prior (see PARAMS): omega_E (Dominik 2009) or pi_E (Gould 2004); "
+                             "chains, plots and summary.txt go to results/<short>/<param>/, grid + refinement shared")
     args = parser.parse_args()
     base = load_event(args.config)
     out = out_dir(base)
+    sub = out / args.param
+    sub.mkdir(exist_ok=True)
     plain, fspl, base = fit_fspl(base)  # base now carries the parallax offsets at t0_par
     plot_raw(base, plain, out / "raw_lc.png")
     if args.stage == "raw":  # quick look: fit_fspl's two-start parallax fit is enough here
@@ -1146,7 +1210,7 @@ if __name__ == "__main__":
     # + the magnification backend's version: a VBM upgrade (or the session-26 VBBL -> VBM swap) recomputes
     key = hashlib.sha256(Path(args.config).read_bytes() + version("VBMicrolensing").encode()).hexdigest()
     if args.stage == "diagnose":
-        diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config, args.refine)
+        diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config, args.refine, args.param)
         raise SystemExit
 
     grid = run_grid(event, plain, out / "grid.npz", key, k_fspl)
@@ -1169,7 +1233,7 @@ if __name__ == "__main__":
                       for x0 in refine_starts(grid["fam_theta"][i, j, f], ld_start(event))]
             refined = sorted(((x, c2, cell, f) for (cell, f, _), (x, c2) in zip(starts, ex.map(partial(refine, method=args.refine), [s[2] for s in starts]))),
                              key=lambda r: r[1])
-            for f in out.glob("mcmc_mode*"):  # new modes: old chains (resume points, plots) are stale
+            for f in out.glob("*/mcmc_mode*"):  # new modes: every param's old chains (resume points, plots) are stale
                 f.unlink()
             np.savez(rpath, theta=[r[0] for r in refined], chi2=[r[1] for r in refined],
                      cell=[r[2] for r in refined], family=[r[3] for r in refined], key=key, plain=plain)
@@ -1183,16 +1247,16 @@ if __name__ == "__main__":
             raise SystemExit
         modes = distinct_modes(refined, crosses)
         assert modes, "every refined chi2 is inf"
-        for f in out.glob("mcmc_mode*"):  # orphans from a run with more modes (globbed by diagnose)
+        for f in sub.glob("mcmc_mode*"):  # orphans from a run with more modes (globbed by diagnose)
             if int(f.name.split("_")[1].removeprefix("mode")) >= len(modes):
                 f.unlink()
         # every mode at once, one thread each, on the one pool: emcee maps only nwalkers/2 walkers at
         # a time and each step waits for its slowest chi2, so a lone mode leaves most cores idle
         with ThreadPoolExecutor(len(modes)) as threads:
-            list(threads.map(lambda kp: run_mcmc(ex, kp[1], out / f"mcmc_mode{kp[0]}_chain.npz", f"mode{kp[0]}",
-                                                 labels(event, Binary)),
+            list(threads.map(lambda kp: run_mcmc(ex, kp[1], sub / f"mcmc_mode{kp[0]}_chain.npz", f"mode{kp[0]}",
+                                                 labels(event, Binary), args.param),
                              enumerate(modes)))
     for k in range(len(modes)):
-        save_mcmc(out / f"mcmc_mode{k}_chain.npz", out, f"mode{k}")
+        save_mcmc(sub / f"mcmc_mode{k}_chain.npz", sub, f"mode{k}", args.param)
 
-    diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config, args.refine)
+    diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config, args.refine, args.param)

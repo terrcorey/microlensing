@@ -17,7 +17,7 @@ import numpy as np
 sys.path.insert(0, "/sharedscratch/gyc1/microlensing")
 from event import flux_residuals, load_event, rescale, with_t0_par
 import search
-from search import FSPL, NB, Binary, binary_A, chi2_binary, fspl_A, labels, plot_fit
+from search import FSPL, NB, Binary, binary_A, chi2_binary, fspl_A, labels, param_dir, plot_fit
 
 sys.path.insert(0, "/sharedscratch/gyc1/microlensing/scratch")
 from ld_test import wave
@@ -51,14 +51,14 @@ def on_all(model, d):
     return [*(d[f] for f in model._fields), *(d.get(f"ld_{b}", m) for b, m, _ in event.ld_prior)]
 
 
-fspl, _ = summary(out / "summary.txt", "## FSPL (parallax)")
-_, k_full = summary(Path(f"results/{full}/summary.txt"), "## FSPL (parallax)")
+fspl, _ = summary(param_dir(out) / "summary.txt", "## FSPL (parallax)")
+_, k_full = summary(param_dir(Path(f"results/{full}")) / "summary.txt", "## FSPL (parallax)")
 event = rescale(event, [k_full[i.name] for i in event.instruments])
 
 # overall best = refined[0] or any chain's best sample (as diagnose() does)
 r = np.load(out / "refined.npz")
 cands = [(r["chi2"][0], dict(zip(labels(drop, Binary), r["theta"][0])))]
-for f in out.glob("mcmc_mode*_chain.npz"):
+for f in param_dir(out).glob("mcmc_mode*_chain.npz"):
     d = np.load(f)
     i = np.unravel_index(np.argmax(d["log_prob"]), d["log_prob"].shape)
     cands.append((-2 * d["log_prob"][i], dict(zip(d["labels"], d["chain"][i]))))

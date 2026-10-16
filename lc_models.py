@@ -359,13 +359,25 @@ def binary_magnification_fs(zeta, s, q, rho, n=4000, gate=5):
     return A if np.ndim(zeta) else A[0]
     
 
+# Ecliptic north pole in ICRS-aligned Cartesian (IAU 2006 obliquity at J2000, BarycentricMeanEcliptic's).
+_OBLIQUITY = np.radians(84381.406 / 3600)
+ECLIPTIC_POLE = np.array([0.0, -np.sin(_OBLIQUITY), np.cos(_OBLIQUITY)])
+
+
+def sky_basis(coords, pole=ECLIPTIC_POLE):
+    """(n_hat, e_hat): the tangent plane at the target, n_hat towards `pole` (ICRS Cartesian), e_hat = pole x r
+    (east). Ecliptic since session 31 (Dominik: the ecliptic, not the equator, is what Earth's orbit singles
+    out); pole = (0, 0, 1) is the old equatorial basis -- 0.13 deg (O-03-BLG235) / 0.61 deg (O-05-BLG169) away."""
+    r = coords.icrs.cartesian.xyz.value
+    r = r / np.linalg.norm(r)
+    e_hat = np.cross(pole, r)
+    e_hat /= np.linalg.norm(e_hat)
+    return np.cross(r, e_hat), e_hat
+
+
 def _project(vec, coords):
-    """Project a Cartesian position/velocity vector onto the sky's
-    (N, E) tangent-plane basis at the target."""
-    ra = coords.ra.radian
-    dec = coords.dec.radian
-    n_hat = (-np.sin(dec) * np.cos(ra), -np.sin(dec) * np.sin(ra), np.cos(dec))
-    e_hat = (-np.sin(ra), np.cos(ra), 0)
+    """Project a Cartesian position/velocity vector onto sky_basis() at the target: (N, E) = ecliptic."""
+    n_hat, e_hat = sky_basis(coords)
     return (vec.x * n_hat[0] + vec.y * n_hat[1] + vec.z * n_hat[2],
             vec.x * e_hat[0] + vec.y * e_hat[1] + vec.z * e_hat[2])
 

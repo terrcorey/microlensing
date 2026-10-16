@@ -2872,3 +2872,67 @@ Confirmed with the user (2026-10-16), in priority order:
   the originals succeed, Keck mu recheck (memory: keck-mu-check-pending), Claret LD priors, MCMC convergence (every mode
   NOT CONVERGED), MDM original photometry with seeing; user -- `git add .` and commit this session.
 - Stretch: 1L2S (binary source) -- `/grill-me` to scope.
+
+## 2026-10-16 — session 31
+
+### Built
+- **Parallax parameterization** (from Dominik's "Parallax effects... mind the pitfalls" talk; grilled; ponytail full;
+  Claude wrote it): `search.py --param {omega_E,pi_E}`, **default omega_E** -- Dominik (2009): parallax a scalar,
+  proper motion the vector; the MCMC samples (t0, t_w = u0 tE, omega_E_N, omega_E_E, pi_E >= 0, t_star, log s, log q,
+  alpha) with a prior flat in Dominik's set (-log tE Jacobian; `JACOBIAN`, `PARAMS`, `OMEGA_FIELDS`). pi_E = the old
+  Gould (2004) sampler (coordinate order changed: t_star after piE). Only `to_mcmc`/`from_mcmc`/`log_prob` switch;
+  the grid, the refinement and every saved chain stay in Gould's fields (`display()` / `display_labels()` /
+  `psi_of()` convert for the corner, trace, summary.txt and the fit_lc strip, + derived u0, tE, psi). **Parked by the
+  user**: redoing the parallax grid and refinement in Dominik coordinates (same chi2 minima, no change to the result).
+- **Ecliptic frame everywhere**: `lc_models.sky_basis(coords, pole)` (IAU 2006 obliquity; pole (0, 0, 1) = the old
+  equatorial basis), used by `_project()` -- every caller, old PSPL pipeline included; field names unchanged.
+- **Output layout**: results/<short>/ keeps raw_lc, grid.npz, delta_chi2_map, refined*.npz, fspl.npz; the MCMC +
+  diagnose outputs go to results/<short>/{omega_E,pi_E}/. `param_dir()` for scratch readers (inject.py's K at 2L1S,
+  drop_one_with_all.py). t0_par + frame in summary.txt, the fit_lc strips (taller: 15 x 14 in) and the parallax map
+  titles. `search.sbatch` $4 = --param. check_search item 8 (passes: old basis reproduced, astropy's ecliptic north to
+  < 1e-5 rad, both round trips, omega_E density / pi_E's = 1 / (pi_E tE^2) by finite-difference Jacobians, a 3-step
+  omega_E MCMC).
+- **Full recompute of the 7 real runs in the ecliptic frame** (user's call after the incident): each run's outputs
+  archived to results/<short>/pre31/ (the rotated refined.npz / chains included); omega_E search 5030761-67
+  (O-03-BLG235, -fineq, O-05-BLG169, -fineq, -noAuckland, -noFTN, -noMDM; O-05 at --time 10 days: ~50 h T_STAR grids +
+  MCMC), pi_E MCMC chained on the two fineq (5030768, 5030769: afterok, reuse grid + refinement). Queued behind them
+  (afterok): sensitivity 5027941 / 5027942 on the fineq best fits; the 23 O-03-BLG235 comparison jobs on both O-03
+  runs (their refined*.npz backed up as backup_s31_*.npz first, 100 files); the 10 O-05-BLG169 resume jobs
+  (afternotok:<original>,afterok:5030764). First real grids with session 27's T_STAR.
+- **`scratch/rotate_ecliptic.py`**, run once (the user: rotate now, future runs recompute): every results/*/refined*.npz
+  and chain rotated by -0.127 deg (O-03-BLG235) / -0.610 deg (O-05-BLG169), old outputs moved to pi_E/ (summary.txt
+  marked as equatorial text). Direction verified: rotated piE reproduces the equatorial trajectory to 1e-12 (the wrong
+  way: 7e-4).
+
+### Learned & open questions
+- **O-05-BLG169's parallax posterior is prior-dominated**: importance-reweighting the existing chains from flat in the
+  piE vector to flat in Dominik's set (weight 1 / (pi_E tE^2)) moved pi_E from ~1.7 (+1.4/-1.1) to ~0.57 (+1.1/-0.4)
+  in every mode (ESS 13-30%), piE_N's spread +-2.2 -> +-0.9; tE ~1 d lower. O-03-BLG235: 1.11 -> 1.08 (ESS 96%), a real
+  detection; O-03-BLG235-fineq 0.53 -> 0.23. The omega_E chains themselves haven't run yet (below).
+- **Incident (Claude)**: submitted omega_E search jobs 5030212/14 on the two fineq configs assuming the caches would load
+  because `key` was unchanged -- they started recomputing the grid (cancelled after ~7 min) and **deleted both fineq
+  refined.npz (no backup)**; the pi_E diagnose jobs 5030213/15 then failed on the missing file. Two independent causes:
+  (1) both cached grids predate session 27's `T_STAR` in the settings check (8 entries vs 9) -- *any* search run since
+  session 27 would have recomputed them; (2) the ecliptic frame moves O-05-BLG169's weak parallax-only FSPL enough to
+  shift K at FSPL (Auckland 1.428 -> 1.415; equatorial reproduces the cached K), which also fails the check. On an
+  O-03-BLG235 injection (inj08) K moves 5e-10: those grids stay cached. grid.npz itself is intact in both runs.
+- **The session-30 O-05-BLG169 resume jobs couldn't have resumed anyway**: inj00's grid_partial K (4.2246) isn't
+  reproduced by today's code even in the equatorial frame (4.2234) -- a resume would restart the grid from zero.
+- K at FSPL is exactly reproducible run to run with the same code (both O-05-BLG169-fineq and inj00, twice in one
+  process): chained jobs reuse a grid -- **as long as search.py / event.py / lc_models.py / zoom_utils.py aren't edited
+  while the queue below runs** (every job imports them at start). inj00's checkpoint-K mismatch is therefore a code
+  change since 10-15, moot now: the ecliptic frame moves its K too (4.2246 -> 4.2469), so its resume restarts the grid.
+- `zoom_utils.find_zoom_window` padding_fraction 0.2 -> 0.5 is an uncommitted edit not made by Claude this session --
+  it moves every zoom window and the K > K_MAX tE ceiling for every job started from now.
+- graphify not refreshed: one flag on an existing stage, a helper, a scratch script.
+
+### Next session
+Confirmed with the user (2026-10-16), in priority order:
+1. **Read the recompute** as jobs finish (5030761-69): the new T_STAR grids vs pre31/, and omega_E vs pi_E on the
+   two fineq runs -- does O-05-BLG169's omega_E pi_E land near the reweight's ~0.55, and do the chains converge?
+2. **Session 30's list, unchanged**: tally the optimiser comparison (lm / mcmc), read the O-05-BLG169 injection batch,
+   `inject.py degen` (user writes, Claude guides then tidies), the plain sigma-clip patch, the s = 1 standard-family
+   starts.
+- Carry-overs: Claude -- Keck mu recheck (now on omega_E chains; memory keck-mu-check-pending), Claret LD priors, MCMC
+  convergence, MDM seeing, cancel resume jobs whose originals succeed; user -- commit sessions 30 and 31. Don't edit
+  search.py / event.py / lc_models.py / zoom_utils.py while the queue above runs.

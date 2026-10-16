@@ -16,7 +16,7 @@ def save_fig(fig, path, **kwargs):
     fig.savefig(path, **kwargs)
 
 
-def find_zoom_window(time, brightness, error, sigma_threshold=5.0, padding_fraction=0.2):
+def find_zoom_window(time, brightness, error, sigma_threshold=5.0, padding_fraction=0.5):
     """Window around points whose excess over baseline is >= sigma_threshold * error (significance, not raw amplitude -- see CHANGELOG)."""
     baseline = np.median(brightness)
     excess = brightness - baseline

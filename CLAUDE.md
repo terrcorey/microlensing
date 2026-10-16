@@ -104,10 +104,13 @@ python3 search.py --config input/O-05-BLG169.toml --stage=diagnose   # FSPL + pa
                                         #   [--dependency=afterok:<search job>] search.sbatch ../input/<short>.toml diagnose
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
+                                        # --param omega_E (default, Dominik) | pi_E (Gould): MCMC coordinates + prior,
+                                        # outputs in results/<short>/<param>/ (session 31); sbatch's $4
 srun --partition=debug --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
                                         # session-22..26 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
                                         # MCMC coordinate round trip, caustic_crossing(), free LD, tE ceiling, cell timeout + retry,
-                                        # session 30: resid_binary() == chi2_binary(), lm()/burn() never worsen their start
+                                        # session 30: resid_binary() == chi2_binary(), lm()/burn() never worsen their start,
+                                        # session 31: ecliptic sky_basis(), --param round trips + omega_E's prior Jacobian
 srun --partition=debug --mem=4G --time=00:15:00 .venv/bin/python scratch/inject.py make \
     input/O-03-BLG235-fineq.toml --grids input/O-03-BLG235.toml input/O-03-BLG235-fineq.toml
                                         # session 27 injection-recovery -> scratch/injections/<short>/inj<NN>/, then from slurm/:
@@ -216,12 +219,18 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   start `family` (same key; a recompute deletes `mcmc_mode*`); emcee
   (32 walkers, 12000 steps) on the `distinct_modes()` within delta-chi2 10
   (same u0 sign, same crossing class and within 0.02 in log s / 0.1 in log q =
-  duplicate), sampled in `to_mcmc()` coordinates (t0, t_eff = u0 tE, tE, t_star =
-  rho tE, piE_N, piE_E, log s, log q, alpha; `from_mcmc()` back) with a -2 log tE
-  Jacobian term in `log_prob` (priors flat in u0, tE, rho; log-uniform in s, q; alpha bounded
+  duplicate), sampled in `to_mcmc(theta, param)` coordinates -- `--param pi_E` (Gould 2004): (t0, t_eff = u0 tE,
+  tE, piE_N, piE_E, t_star = rho tE, log s, log q, alpha), -2 log tE Jacobian, priors flat in u0, tE, rho, the piE
+  vector; `--param omega_E` (session 31, the default; Dominik 2009 -- parallax a scalar, proper motion the vector):
+  (t0, t_w = u0 tE, omega_E_N, omega_E_E = (cos psi, sin psi) / tE, pi_E >= 0, t_star, ...), -log tE Jacobian, priors
+  flat in those + rho (= Gould's x 1/(pi_E tE^2); flat in the piE vector is a prior ~ pi_E on its size, which carried
+  O-05-BLG169's weak parallax: reweighted posterior pi_E 1.7 -> 0.57) -- `from_mcmc()` back, `JACOBIAN[param]`
+  (log-uniform in s, q; alpha bounded
   to one period around the mode's start -- unbounded it was improper; free LD appended unchanged),
   DEMove 0.8 / DESnookerMove 0.2 instead of the stretch move (session 23); chains are
-  still saved physical with their `labels`, log_prob = -(chi2 + LD prior)/2; all
+  still saved physical (Gould's fields, either --param) with their `labels`, log_prob = -(chi2 + LD prior)/2;
+  `display(theta, param, psi0)` / `display_labels()` turn them into what the corner, trace, summary.txt and the
+  fit_lc strip show (omega_E: OMEGA_FIELDS, LD, then derived u0, tE, psi -- psi wrapped within pi of the best's); all
   modes' samplers concurrently on one shared pool, one thread each (emcee
   maps only nwalkers/2 at a time and waits for the slowest chi2: 4 modes ran
   3.3x faster than serially on O-05-BLG169). `run_mcmc()` checkpoints the
@@ -301,8 +310,12 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   profiled at the parallax-free FSPL, `event.to_magnification()`; also `--stage=raw` alone --, grid.npz,
   delta_chi2_map.png, refined.npz, mcmc_mode*_corner.png/_chain.npz/_trace.png, fit_lc.png,
   fit_lc_noplanet.png, fspl_parallax_map.png, summary.txt; `--stage=refine` stops before the MCMC and
-  writes fspl.npz -- the FSPL + parallax fit, its chi2, K, key -- instead of the plots/summary). `slurm/search.sbatch` takes the config path as `$1` and an
-  optional `--stage` as `$2` and `--refine` as `$3`, 24 CPUs on large-long (30-day limit; small-short's
+  writes fspl.npz -- the FSPL + parallax fit, its chi2, K, key -- instead of the plots/summary). Since session 31
+  the top level holds only what no --param changes (raw_lc, grid.npz, delta_chi2_map, refined*.npz, fspl.npz);
+  the mcmc_mode*, fit_lc*, fspl_parallax_map and summary.txt go to `results/<short>/{omega_E,pi_E}/` (a refined
+  recompute clears both subdirs' chains; `param_dir()` finds a finished run's for scratch readers, falling back to the
+  flat pre-31 layout); summary.txt and the plots carry t0_par and the frame. `slurm/search.sbatch` takes the config path as `$1` and an
+  optional `--stage` as `$2`, `--refine` as `$3` and `--param` as `$4`, 24 CPUs on large-long (30-day limit; small-short's
   `24core` QOS caps a job at 24 -- 32 hit `QOSMaxCpuPerJobLimit` -- and its 48 h killed O-05-BLG169 grids), BLAS pinned
   to one thread per worker; diagnose jobs override to 8 CPUs on the command line.
 - `mcmc_fit.nelder_mead(f, x0, step)` (moved from search.py in session 22): Nelder-Mead from an
@@ -362,7 +375,9 @@ vs an FSPL + parallax refit (`inject.dchi2()`), median over alpha with contours 
 cells below SKIP = 10 (un-refit upper bounds) one floor colour; one panel per tally_<grid>.npz with every injection
 marked by outcome (session 28); `slurm/sensitivity.sbatch` (~12 min on 24 CPUs for O-03-BLG235, est. 1.5-3 h for
 O-05-BLG169); a `.npz` argument re-plots only; x axis log10 s with s-valued ticks, session 30),
-`notch_check.py` (session 30: sensitivity cells at log s 0, +-0.001..0.05 x log q -4.5/-4 on O-05-BLG169 -- the
+`rotate_ecliptic.py` (session 31, run once: rotated every results/*/refined*.npz, fspl.npz and chain equatorial ->
+ecliptic -- exact, piE and ds rotate together -- and moved the old MCMC/diagnose outputs into pi_E/; stamps
+frame="ecliptic"; archived subdirs and scratch/injections stay equatorial), `notch_check.py` (session 30: sensitivity cells at log s 0, +-0.001..0.05 x log q -4.5/-4 on O-05-BLG169 -- the
 map's s = 1 dip is smooth, ~resonant-window wide; log in scratch/sensitivity/notch_s30.log), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots, session 27's 2L1S explorer -- ipywidgets sliders over every
 2L1S + parallax + LD + fs/fb parameter, data overlay from a config, peak zoom, residuals, chi2; `ipywidgets` is
@@ -474,7 +489,9 @@ separate track) -- **done for both O-05-BLG086 and O-03-BLG235**:
 
 1. **Annual parallax** (Gould 2004 geocentric formalism): two new free
    parameters `piE_N`/`piE_E`, perturbing the trajectory via the target's
-   sky position and Earth's orbital motion. `astropy` is a pipeline
+   sky position and Earth's orbital motion; N/E are **ecliptic** north/east since session 31
+   (`lc_models.sky_basis()`, was equatorial -- 0.13 / 0.61 deg apart at O-03-BLG235 / O-05-BLG169,
+   but enough to move O-05-BLG169's weak parallax-only FSPL, and with it K). `astropy` is a pipeline
    dependency for this (`get_body_barycentric_posvel`, analytic
    position+velocity, no finite-differencing). `t0_par` (the reference
    epoch the geocentric frame is anchored to) is fixed at each dataset's
@@ -875,7 +892,7 @@ measuring on already-rescaled errors gives k~1.
 ## Output layout
 
 - `results/<short>/` holds every pipeline output for one event (gitignored):
-  `search.py`'s at the top level, the old PSPL pipeline's (`mcmc_fit.py`,
+  `search.py`'s at the top level (its MCMC/diagnose outputs in `omega_E/` / `pi_E/`, session 31), the old PSPL pipeline's (`mcmc_fit.py`,
   `mcmc_fit_binary.py`) under `results/<short>/pspl/` (`raw_lc`, `fit_lc`,
   `hist`, `corner`, `_ogle_only` suffix for the OGLE-only diagnostic) --
   session 21 merged the old top-level `raw_lc/`, `fit_lc/`, `hist_plots/`,
@@ -887,6 +904,7 @@ measuring on already-rescaled errors gives k~1.
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
   compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, mdm_systematics.py, keck_mu_check.py,
   drop_one_with_all.py, stall_probe.py, vbbl_point_probe.py, vbm_check.py, inject.py, sensitivity.py, notch_check.py,
+  rotate_ecliptic.py,
   scratchpad.ipynb;
   2L1S outputs under `scratch/2l1s/<method>/`, injections under `scratch/injections/`, maps under `scratch/sensitivity/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
