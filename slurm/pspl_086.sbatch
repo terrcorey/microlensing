@@ -4,7 +4,7 @@
 # Submit from slurm/ (see 2l1s_mcmc.sbatch's header).
 
 #SBATCH --job-name=pspl-086
-#SBATCH --partition=small-short
+#SBATCH --partition=large-short
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1

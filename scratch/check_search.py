@@ -1,6 +1,6 @@
 """Self-check for search.py's session-22 robustness fixes (~1 min; srun, not the login node):
 
-    srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
+    srun --partition=debug --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
 
 1. chi2 guards: NaN / out-of-box inputs return inf before reaching VBBL (which hangs on NaN and
    segfaulted at tiny rho); in 2L1S, 0 <= rho < RHO_MIN is the exact point source (session 23).
@@ -13,6 +13,7 @@
 6. session 25: tE above Event.tE_max is inf; run_grid() scores a cell past CELL_TIMEOUT inf and
    carries on (pebble kills the worker) instead of waiting on it forever. Session 26: a larger
    CELL_TIMEOUT retries exactly those cells from the cached grid; the same one reloads it.
+7. session 30: resid_binary() squares to chi2_binary(); --refine's lm() and burn() never worsen their start.
 """
 import os
 import sys
@@ -43,6 +44,13 @@ if __name__ == "__main__":  # spawned pool workers re-import this file
     x = search.to_mcmc(good)
     assert np.isfinite(search.log_prob(x, good.alpha)) and search.log_prob(x, good.alpha - 4.0) == -np.inf  # alpha bound
     print("guards + MCMC coordinates ok")
+    r = search.resid_binary(good, event)  # session 30: --refine optimisers
+    assert np.isclose(np.sum(r ** 2), search.chi2_binary(good, event)) and search.resid_binary(good._replace(q=1e-7), event) is None
+    c0 = search.chi2_binary(good, event)
+    for name, x1 in (("lm", search.lm(np.array(good))), ("mcmc", search.burn(np.array(good), nsteps=10))):
+        c1 = search.chi2_binary(x1, event)
+        assert c1 <= c0, (name, c1, c0)
+        print(f"{name}: chi2 {c0:.1f} -> {c1:.1f}")
     trk = search.track(event, 2848.0)
     through = search.Binary(2848.0, 0.0, 60.0, 1e-3, 0.0, 0.0, 1.0, 0.1, 0.0)
     assert search.caustic_crossing(trk, through)[0]

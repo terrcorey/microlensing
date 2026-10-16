@@ -30,6 +30,7 @@ import time
 from importlib.metadata import version
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from datetime import datetime
+from functools import partial
 from itertools import combinations, product
 from multiprocessing import get_context
 from pathlib import Path
@@ -41,6 +42,7 @@ import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pebble import ProcessPool
 from scipy.ndimage import median_filter, minimum_filter
+from scipy.optimize import least_squares
 
 from event import (Event, chi2, error_scale, flux_residuals, ld_penalty, load_event, profile_flux, rescale,
                    to_magnification, with_ld, with_t0_par)
@@ -170,15 +172,21 @@ def in_range(x, spec):
     return x > 0 and spec[0] - 1e-9 <= np.log10(x) <= spec[1] + 1e-9  # slack: 10**lo round-trips inexactly
 
 
-def chi2_binary(theta, event: Event) -> float:
-    """(s, q) confined to the config's grid box: q -> 0 is FSPL again, and walkers drifting
-    down it (q ~ 1e-6) burned MCMC time at acceptance ~0.1 (session 21). rho below RHO_MIN -> point source."""
+def resid_binary(theta, event: Event):
+    """Standardized residuals, or None outside the bounds: (s, q) confined to the config's grid box: q -> 0 is
+    FSPL again, and walkers drifting down it (q ~ 1e-6) burned MCMC time at acceptance ~0.1 (session 21).
+    rho below RHO_MIN -> point source."""
     p = as_binary(theta)
     if (not np.all(np.isfinite(theta)) or not 0 < p.tE <= event.tE_max or not 0 <= p.rho <= RHO_MAX
             or np.hypot(p.piE_N, p.piE_E) > PIE_MAX or not in_range(p.s, event.grid["log_s"])
             or not in_range(p.q, event.grid["log_q"]) or p.q > 1 or not ld_ok(theta[NB:])):
-        return np.inf
-    return chi2(event, binary_A(event, (*p._replace(rho=p.rho if p.rho >= RHO_MIN else 0.0), *theta[NB:])))
+        return None
+    return flux_residuals(event, binary_A(event, (*p._replace(rho=p.rho if p.rho >= RHO_MIN else 0.0), *theta[NB:])))
+
+
+def chi2_binary(theta, event: Event) -> float:
+    r = resid_binary(theta, event)
+    return np.inf if r is None else float(np.sum(r ** 2))
 
 
 def fspl_steps(p: FSPL):
@@ -405,7 +413,8 @@ def run_grid(event: Event, plain: FSPL, path: Path, key: str, k_fspl):
     times = sorted(anomaly_times(event, plain) + list(plain.t0 + plain.tE * np.linspace(-1, 1, 5)))
     print(f"[grid] {log_s.size} x {log_q.size} cells, Cassan times {np.round(times, 2)}")
     todo = [(k, c) for k, c in enumerate(cells) if not done[k]]
-    path.with_name("refined.npz").unlink(missing_ok=True)  # refined from the old grid's minima: stale
+    for f in path.parent.glob("refined*.npz"):  # refined from the old grid's minima (any --refine): stale
+        f.unlink()
     t_run, stats = time.perf_counter(), []  # (cell wall s, 99th-percentile call s, longest call s)
     # pebble, not pool(): only it can kill one worker past CELL_TIMEOUT (and respawn it); a dead
     # worker still fails loud (ProcessExpired), as pool()'s BrokenProcessPool does
@@ -534,10 +543,57 @@ def theta_steps(x):
     return [*binary_steps(as_binary(x)), *ld_steps(x, NB)]
 
 
-def refine(x0):
-    """One restarted Nelder-Mead per Pool task, so both starts of a minimum run on separate cores.
+def lm(x0):
+    """Bounded Levenberg-Marquardt-style trust region (scipy's trf: MINPACK's lm takes no bounds) on the residual
+    vector + the LD prior's sqrt terms, bounds = chi2_binary's box. Finite-difference Jacobian at 1% of
+    theta_steps: the default ~1e-8 relative step sits inside VBM's RelTol 1e-3 noise."""
+    g, n_ld, n = EVENT.grid, len(x0) - NB, sum(i.time.size for i in EVENT.instruments)
+    lo = [-np.inf, -np.inf, 1e-3, 0, -PIE_MAX, -PIE_MAX, 10 ** g["log_s"][0], 10 ** g["log_q"][0], -np.inf, *[0] * n_ld]
+    hi = [np.inf, np.inf, EVENT.tE_max, RHO_MAX, PIE_MAX, PIE_MAX, 10 ** g["log_s"][1], min(1, 10 ** g["log_q"][1]),
+          np.inf, *[1] * n_ld]
+    x0 = np.clip(x0, lo, hi)
+    steps = np.array(theta_steps(x0))
+
+    def res(x):
+        r = resid_binary(x, EVENT)
+        # ponytail: a flat 1e3 wall outside |piE| <= 5 / at fs < 0 (the box can't express them); a Jacobian taken
+        # across it is garbage, but trf rejects the step -- a penalty gradient if fits pin there
+        if r is None or not np.all(np.isfinite(r)):
+            return np.full(n + n_ld, 1e3)
+        return np.concatenate([r, [(a - m) / sd for (_, m, sd), a in zip(EVENT.ld_prior, x[NB:])]])
+    return least_squares(res, x0, bounds=(lo, hi), method="trf", x_scale=steps,
+                         diff_step=0.01 * steps / np.maximum(1, np.abs(x0))).x  # scipy's h = diff_step * max(1, |x|)
+
+
+def burn(x0, nwalkers=32, nsteps=500, seed=0):
+    """Short emcee burn (run_mcmc's log_prob and moves) from x0 + walkers at 10% of theta_steps; the sample with
+    the lowest chi2 + LD prior (log_prob minus its -2 log tE Jacobian), or x0 if none beats it."""
+    rng = np.random.default_rng(seed)
+    p0 = x0 + 0.1 * np.array(theta_steps(x0)) * rng.standard_normal((nwalkers, len(x0)))
+    p0[0] = x0
+    s = emcee.EnsembleSampler(nwalkers, len(x0), log_prob, args=(as_binary(x0).alpha,),
+                              moves=[(emcee.moves.DEMove(), 0.8), (emcee.moves.DESnookerMove(), 0.2)])
+    s.run_mcmc(to_mcmc(p0), nsteps)
+    c, lp = s.get_chain(flat=True), s.get_log_prob(flat=True)
+    assert c is not None and lp is not None
+    c = from_mcmc(c)
+    score = lp + 2 * np.log(np.abs(c[:, Binary._fields.index("tE")]))  # = -(chi2 + LD prior) / 2; abs: -inf walkers
+    k = np.argmax(score)
+    return c[k] if -2 * score[k] < chi2_binary(x0, EVENT) + ld_penalty(EVENT, x0[NB:]) else x0
+
+
+REFINERS = {"nm": lambda x: x, "lm": lm, "mcmc": burn}  # --refine: what runs before the shared polish()
+
+
+def refined_name(method: str) -> str:
+    return "refined.npz" if method == "nm" else f"refined_{method}.npz"
+
+
+def refine(x0, method="nm"):
+    """One Pool task per start, so both starts of a minimum run on separate cores: REFINERS[method], then
+    restarted Nelder-Mead -- every method ends at a Nelder-Mead minimum, so they differ only in the basin.
     Minimises chi2 + the LD prior (log_prob's target too), so refined chi2s carry the prior term."""
-    return polish(lambda x: chi2_binary(x, EVENT) + ld_penalty(EVENT, x[NB:]), x0, theta_steps)
+    return polish(lambda x: chi2_binary(x, EVENT) + ld_penalty(EVENT, x[NB:]), REFINERS[method](x0), theta_steps)
 
 
 def to_mcmc(theta):
@@ -840,7 +896,7 @@ def plot_trace(chain, names, path: Path):
     print(f"saved {path}")
 
 
-def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: str, config: str):
+def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: str, config: str, method="nm"):
     """(vi) Session 20's done-checks: per MCMC mode nsteps/tau > 50, acceptance 0.2-0.5, its best
     sample within ~1 of the Nelder-Mead chi2 it started from, trace plot; the overall best 2L1S
     (refined[0] or any chain's best sample: the MCMC regularly beats Nelder-Mead, session 21), its +/-
@@ -849,9 +905,9 @@ def diagnose(base: Event, k_fspl, fspl, pgrid, t0_par: float, out: Path, key: st
     for FTN's offset scale, suspicious elsewhere). Writes fit_lc.png and summary.txt (session 22)."""
     event = rescale(base, k_fspl)  # the search's footing
     ok = lambda c: "ok" if c else "FAIL"
-    refined = cached(out / "refined.npz", key)
+    refined = cached(out / refined_name(method), key)
     if refined is None or "family" not in refined:
-        raise SystemExit(f"{out / 'refined.npz'} missing, from another config/FSPL or pre-session-23: rerun the search")
+        raise SystemExit(f"{out / refined_name(method)} missing, from another config/FSPL or pre-session-23: rerun the search")
     trk = track(base, t0_par)
     modes = []  # (tag, best chi2, best sample, chain, done-check line, converged, caustic_crossing(), crossing
     #              fraction, point-source fraction)
@@ -1060,6 +1116,9 @@ if __name__ == "__main__":
                         help="raw: FSPL fit + calibrated light curve only (~minutes; srun, not the login node). "
                              "refine: stop after (iv), no MCMC, + fspl.npz (injection-recovery, scratch/inject.py). "
                              "diagnose: FSPL fit + (vi) on a finished search's saved outputs")
+    parser.add_argument("--refine", choices=REFINERS, default="nm",
+                        help="(iv)'s optimiser before the restarted Nelder-Mead: nm (none), lm (bounded LM), mcmc "
+                             "(short emcee burn); non-nm results go to refined_<method>.npz")
     args = parser.parse_args()
     base = load_event(args.config)
     out = out_dir(base)
@@ -1087,7 +1146,7 @@ if __name__ == "__main__":
     # + the magnification backend's version: a VBM upgrade (or the session-26 VBBL -> VBM swap) recomputes
     key = hashlib.sha256(Path(args.config).read_bytes() + version("VBMicrolensing").encode()).hexdigest()
     if args.stage == "diagnose":
-        diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config)
+        diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config, args.refine)
         raise SystemExit
 
     grid = run_grid(event, plain, out / "grid.npz", key, k_fspl)
@@ -1096,22 +1155,23 @@ if __name__ == "__main__":
     plot_map(grid, minima, out / "delta_chi2_map.png")
 
     with pool(event) as ex:
-        r = cached(out / "refined.npz", key)  # delete refined.npz to re-refine
+        rpath = out / refined_name(args.refine)
+        r = cached(rpath, key)  # delete it to re-refine
         if r is not None and ("plain" not in r or not np.allclose(r["plain"], plain)  # grid was rebuilt under it
                               or "family" not in r):  # pre-session-23: one family per minimum
             r = None
         if r is not None:
             refined = list(zip(r["theta"], r["chi2"], r["cell"], r["family"]))
-            print(f"[refine] loaded cached {out / 'refined.npz'}")
+            print(f"[refine] loaded cached {rpath}")
         else:  # both families' best start at every minimum, each with its mirror (session 23)
             starts = [((grid["log_s"][i], grid["log_q"][j]), f, x0) for i, j in minima for f in range(len(FAMILIES))
                       if np.isfinite(grid["fam_chi2"][i, j, f])
                       for x0 in refine_starts(grid["fam_theta"][i, j, f], ld_start(event))]
-            refined = sorted(((x, c2, cell, f) for (cell, f, _), (x, c2) in zip(starts, ex.map(refine, [s[2] for s in starts]))),
+            refined = sorted(((x, c2, cell, f) for (cell, f, _), (x, c2) in zip(starts, ex.map(partial(refine, method=args.refine), [s[2] for s in starts]))),
                              key=lambda r: r[1])
             for f in out.glob("mcmc_mode*"):  # new modes: old chains (resume points, plots) are stale
                 f.unlink()
-            np.savez(out / "refined.npz", theta=[r[0] for r in refined], chi2=[r[1] for r in refined],
+            np.savez(rpath, theta=[r[0] for r in refined], chi2=[r[1] for r in refined],
                      cell=[r[2] for r in refined], family=[r[3] for r in refined], key=key, plain=plain)
         trk = track(base, plain.t0)
         crosses = [(cc := caustic_crossing(trk, as_binary(x))) is not None and cc[0] for x, *_ in refined]
@@ -1135,4 +1195,4 @@ if __name__ == "__main__":
     for k in range(len(modes)):
         save_mcmc(out / f"mcmc_mode{k}_chain.npz", out, f"mode{k}")
 
-    diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config)
+    diagnose(base, k_fspl, fspl, pgrid, plain.t0, out, key, args.config, args.refine)

@@ -1,0 +1,48 @@
+--- a/search.py
++++ b/search.py
+@@ -199,18 +199,39 @@
+ 
+ # ---- (i) FSPL ------------------------------------------------------------------------------
+ 
+-def fit_fspl(event: Event):
+-    """Blind FSPL fit: t0 candidates at each instrument's (median-smoothed) brightest point,
+-    a coarse u0 x tE grid, Nelder-Mead from the best 3 without parallax (-> `plain`, whose t0
+-    becomes t0_par), then with parallax from both u0 signs. Returns (plain, fspl, event with
+-    parallax offsets)."""
++CLIP = 4.0  # robust-sigma (MAD) residual clip for plain's refit when its max k > K_MAX (session 30)
++
++
++def fit_plain(event: Event):
++    """Parallax-free FSPL: t0 candidates at each instrument's (median-smoothed) brightest point,
++    a coarse u0 x tE grid, Nelder-Mead from the best 3. Returns (plain, chi2)."""
+     t0s = {float(i.time[np.argmax(median_filter(i.flux, size=5))]) for i in event.instruments}
+     grid = [FSPL(t0, u0, tE, 1e-4, 0, 0) for t0, u0, tE in product(t0s, [0.01, 0.03, 0.1, 0.3, 1.0], [3, 10, 30, 100])]
+     starts = sorted(grid, key=lambda p: chi2_fspl(p, event))[:3]
+     fits = [nelder_mead(lambda x: chi2_fspl((*x, 0, 0), event), p[:4], fspl_steps(p)[:4]) for p in starts]
+     x, c2 = min(fits, key=lambda r: r[1])
+     assert np.isfinite(c2), "every FSPL start scored inf: check each instrument's data/kind (fs <= 0?)"
+-    plain = FSPL._make([*x, 0.0, 0.0])
++    return FSPL._make([*x, 0.0, 0.0]), c2
++
++
++def fit_fspl(event: Event):
++    """Blind FSPL fit: fit_plain() (-> `plain`, whose t0 becomes t0_par) -- sigma-clipped and refit when its
++    max k > K_MAX: a dominant anomaly dragged inj05's plain off the event (u0 21, tE 0.92 d vs 0.14, 58 d), and
++    every grid start inherits plain -- then with parallax, on all data, from both u0 signs. Returns (plain,
++    fspl, event with parallax offsets)."""
++    plain, c2 = fit_plain(event)
++    if max(error_scale(event, fspl_A(event, plain))) > K_MAX:
++        sizes, mask = np.cumsum([i.time.size for i in event.instruments])[:-1], None
++        for _ in range(5):  # clip from all points each pass: a point clipped by a bad fit can come back
++            r = np.abs(flux_residuals(event, fspl_A(event, plain)))
++            new = r <= CLIP * 1.4826 * np.median(r)
++            if mask is not None and np.array_equal(new, mask):
++                break
++            mask = new
++            plain, c2 = fit_plain(event._replace(instruments=[
++                i._replace(time=i.time[m], flux=i.flux[m], flux_err=i.flux_err[m])
++                for i, m in zip(event.instruments, np.split(mask, sizes))]))
++        print(f"[fspl] max k at plain > {K_MAX}: refit with {np.sum(~mask)} points clipped (> {CLIP} robust sigma)")
+     print(f"[fspl] no parallax: chi2={c2:.2f} {plain}")
+ 
+     event = with_t0_par(event, plain.t0)

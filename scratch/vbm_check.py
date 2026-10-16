@@ -3,7 +3,7 @@
     subprocess with a timeout; (2) point-source frame: BinaryMag0 vs lc_models.binary_magnification (pure numpy);
 (3) chi2 of the 3 best refined solutions of every finished search under VBM and VBBL (+ refined.npz's VBBL-era
     value, which includes the LD prior), with time per chi2. Pass: |VBM - VBBL| well under 1.
-usage: srun --partition=small-short --cpus-per-task=1 --mem=4G --time=00:30:00 .venv/bin/python scratch/vbm_check.py"""
+usage: srun --partition=debug --cpus-per-task=1 --mem=4G --time=00:30:00 .venv/bin/python scratch/vbm_check.py"""
 import subprocess, sys, time
 sys.path.insert(0, "/sharedscratch/gyc1/microlensing")
 import numpy as np

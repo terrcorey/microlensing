@@ -2794,3 +2794,81 @@ Confirmed with the user (2026-10-15), in priority order:
 - Carry-overs: user -- `git add .` and commit; Claude -- Keck mu recheck (memory: keck-mu-check-pending), Claret LD
   priors, MCMC convergence (every mode NOT CONVERGED), MDM original photometry with seeing.
 - Stretch: 1L2S (binary source) -- `/grill-me` to scope.
+
+## 2026-10-16 — session 30
+
+### Built
+- **Re-tallied O-03-BLG235** (srun 5026152, `tally_s30.log`; coarse inj05 rerun 5015641 in): fine grid unchanged (7 found,
+  2 wrong fit, 7 not claimed, 4 null ok); coarse 5 found, **4 wrong fit**, 0 missed -- inj05 missed -> wrong fit, 98.2
+  above the truth (s 1.088 / q 0.0166 vs 0.872 / 0.0219).
+- **O-05-BLG169 injections** (5015489-98) run far past the 10-15 h estimate (median cell 950-1575 s, 3-5x the map's
+  timing): `afternotok` resume jobs 5026156-65 queued (resume from grid_partial.npz if killed at 48 h; inj00 forecast ~52 h).
+- **`search.py --refine {nm,lm,mcmc}`** (user asked; ponytail full; Claude): `lm()` = bounded trust-region LM (scipy
+  `least_squares` trf -- MINPACK lm takes no bounds) on `resid_binary()` (chi2_binary's guards split out as a residual
+  vector) + the LD prior terms, Jacobian step 1% of `theta_steps` (the default step sits inside VBM's RelTol 1e-3 noise);
+  `burn()` = 32 x 500 emcee from the start (run_mcmc's log_prob and DE moves), lowest-chi2 sample or the start. Both feed
+  the same `polish()`; non-nm results in `refined_<method>.npz`; a grid recompute deletes every `refined*.npz`;
+  `diagnose(method)`; `search.sbatch` $3; `inject.py tally --refine` -> `tally_<grid>_<method>.npz`; check_search item 7.
+  Comparison batch: all 20 O-03-BLG235 injections x both grids x {lm 5026373-412, mcmc 5026413-452}, refine stage, grids
+  cached (verified: no recompute); NM results backed up as `backup_s30_refined.npz` per run.
+- **Goal 3, the log s = 0 notch**: `scratch/notch_check.py` (O-05-BLG169-fineq footing, log s 0, +-0.001..0.05 x log q
+  -4.5 / -4, `scratch/sensitivity/notch_s30.log`) + the s = 1.00 grid row read per family from grid.npz.
+- **Plain FSPL sigma-clip** (option 2 of 4 offered; user chose; Claude): when max k at plain > K_MAX, clip > `CLIP` = 4
+  robust (MAD) sigma and refit plain, <= 5 passes from all points; the parallax FSPL (null hypothesis) stays on all data.
+  **Parked, not applied**: queued comparison jobs import search.py at start, and a changed plain would rebuild their grids
+  and delete their refined*.npz. Saved as `scratch/clip_fit_fspl.patch` (`git apply` it). The trigger check (which
+  existing runs it fires on) never ran: its srun was orphaned by a session restart, cancelled.
+- **Partitions** (user's idea): sbatch scripts -> large-short (no 24-CPU cap), `search.sbatch` -> large-long, 4 days
+  (O-05-BLG169 grids pass 48 h); CLAUDE.md sruns and scratch docstrings -> debug (2 h); CLAUDE.md partition guide;
+  26 pending jobs moved to large-short with `scontrol update` (still priority-queued there at save).
+- **Sensitivity maps resubmitted** (user): 5027941 (O-03-BLG235-fineq), 5027942 (O-05-BLG169-fineq), old npz kept as
+  `backup_s30_<short>.npz`; nothing they depend on changed. `sensitivity.py`: x axis stays log10 s, ticks labelled in s
+  (user's request; the user's own `10 **` edit was reverted -- it left every marker at log s).
+
+### Learned & open questions
+- **inj05's root cause is the broken blind FSPL, not grid resolution**: plain u0 21 / tE 0.92 d (a broad, weak bump,
+  u0 tE ~ 19 d) seeds both families. Standard family = 1817 in *every* cell; Cassan times confined to +-2 tE(plain) =
+  +-1.8 d of 2851.4 (truth t0 2847.9, tE 57.8). The cell 0.04 dex from the truth scored 2033 (truth ~628).
+- **Optimiser comparison (57/80 done at save; tallies not run)**. lm, 40 runs: within 1 of NM in 34, better by > 1 in
+  5, worse in 1; median -0.02 -- a better local polish, never a basin change (inj05 coarse -14.6 but *further* from the
+  truth). **mcmc burn, 17 runs: better by > 1 in 9, worse in 0, median -1.8 -- it changes basins**: coarse inj03 1269.5
+  -> 1254.1 = the fine grid's right planet (mirror); inj05 coarse 726.1 -> 638.5 (s 0.855, q 1.29e-2 -- q 0.23 dex low),
+  fine 663.4 -> 638.3 (s 0.849, q 1.62e-2, mirror, alpha 7.6 deg off) -- both still ~10 above the truth. Claude
+  predicted mid-session that the burn would not rescue inj05 (wrong) and that the optimiser isn't the bottleneck
+  (true for local LM only).
+- **The notch is physics, not an s = 1 artefact**: median Delta chi2 (log q -4.5) 329 / 28 / 32 / 34 / 192 at log s -0.01
+  / -0.001 / 0 / +0.001 / +0.01 -- smooth across +-0.001, ~0.01-0.02 dex wide, wider at log q -4 (~ the resonant window,
+  scaling as q^(1/3)); inside it the alpha spread widens (16th pct 2-6, 84th ~3300) and the refit FSPL absorbs most
+  alphas. The 0.05 map samples it at one point.
+- **The s = 1.00 grid row is a standard-family problem**: per family its best is +60-70 above the +-0.05 rows (fineq
+  492 vs ~430; noFTN 479 vs ~407), Cassan not worse. Likely: standard starts at plain's small |u0| all begin inside the
+  big resonant caustic. Unverified; a fix is a knob, judged by injection recovery.
+- **Degeneracy direction** (grilled in a parallel session 02e0e886 today; memory degeneracy-catalogue-direction): 3 of
+  4 wrong fits have the right planet in refined.npz within Delta chi2 < 3; `inject.py degen` agreed (user writes it):
+  alternatives within MODE_DCHI2 of the truth *refit*, labelled close/wide / mirror / other and intrinsic vs noise-induced.
+- Mistakes (Claude): the first CLAUDE.md partition edit altered rule 7's text (restored from HEAD, redone with an assert
+  that everything before Setup is unchanged); the notch srun first failed on a driver in node-local /tmp; the self-check
+  was first piped through `tail` (lost its output and exit code).
+- graphify not refreshed: one option on an existing stage, scratch scripts.
+- Running at save: 5015489-98 (O-05-BLG169 injections, 2-28 h of grid left), resume jobs 5026156-65 (dependency), 23
+  mcmc comparison jobs + 5027941/42 (large-short, priority).
+
+### Next session
+Confirmed with the user (2026-10-16), in priority order:
+1. **Finish the optimiser comparison**: once the 23 queued mcmc jobs (5026430-452) are done, `inject.py tally
+   scratch/injections/O-03-BLG235-fineq --refine lm` and `--refine mcmc`. **Burn becomes the default** if, on O-03-BLG235,
+   found >= NM's on both grids, no new false positives, no found -> wrong-fit regressions (cost noted, not blocking:
+   ~1.5-3 h per O-05-BLG169 run vs a 25-50 h grid). Burn length stays 500 unless inj05 ends wrong fit / clearly above
+   the truth -- then one 2000-step batch on the wrong fits (inj03, inj05, inj11, inj12).
+2. **Read the O-05-BLG169 injection batch** (5015489-98; resume jobs 5026156-65 if any hit 48 h): tally --plot, montage,
+   map replot; low-q recovery vs the map.
+3. **`inject.py degen`** (user writes, Claude guides then tidies; design in memory degeneracy-catalogue-direction).
+4. **Plain sigma-clip**, kept regardless of the burn (fixes the seeds, not just the outcome): `git apply
+   scratch/clip_fit_fspl.patch` once no comparison job is queued, run the trigger check (max k at each run's stored plain
+   > K_MAX: which runs it fires on -- must not touch O-05-BLG169's grids), self-check, rerun inj05 / inj14; judged by recovery.
+5. **s = 1 standard-family starts** (the +60-70 grid row): verify the inside-the-caustic explanation, then a knob judged
+   by recovery.
+- Carry-overs: Claude -- the clip trigger check (lost to the restart), cancel leftover `afternotok` resume jobs once
+  the originals succeed, Keck mu recheck (memory: keck-mu-check-pending), Claret LD priors, MCMC convergence (every mode
+  NOT CONVERGED), MDM original photometry with seeing; user -- `git add .` and commit this session.
+- Stretch: 1L2S (binary source) -- `/grill-me` to scope.

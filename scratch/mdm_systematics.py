@@ -5,7 +5,7 @@ vs the reported per-point error (a seeing/sky proxy), wave stats before/after re
 a Lomb-Scargle periodogram of the residuals. Writes scratch/ld_test/O-05-BLG169_mdm_systematics.png. Never on the
 login node (runs the blind FSPL fit for the parallax offsets, ~1 min):
 
-    srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:15:00 .venv/bin/python scratch/mdm_systematics.py
+    srun --partition=debug --cpus-per-task=2 --mem=4G --time=00:15:00 .venv/bin/python scratch/mdm_systematics.py
 """
 import sys
 from pathlib import Path

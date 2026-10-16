@@ -3,7 +3,7 @@
 #   sbatch sensitivity.sbatch ../input/<short>.toml   (submit from slurm/)
 
 #SBATCH --job-name=sensitivity
-#SBATCH --partition=small-short
+#SBATCH --partition=large-short
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24

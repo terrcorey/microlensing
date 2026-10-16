@@ -5,7 +5,7 @@ on 16 random cells + the cell nearest the resonant crossing the point-source gri
 q 4.4e-6) + the control (the full run's best); prints per cell wall time, VBBL call-time tail and
 finite- vs point-source score (the saved grid.npz). Never on the login node:
 
-    sbatch --partition=small-short --cpus-per-task=8 --mem=8G --time=03:00:00 --job-name=probe-fs \\
+    sbatch --partition=debug --cpus-per-task=8 --mem=8G --time=03:00:00 --job-name=probe-fs \\
         --output=slurm/output/slurm-probe-fs-%j.out --export=ALL,PYTHONUNBUFFERED=1,OMP_NUM_THREADS=1 \\
         --wrap ".venv/bin/python scratch/probe_fs_grid.py"
 """

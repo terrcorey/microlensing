@@ -86,7 +86,9 @@ def plot(path: Path):
             inj = [t["theta"] for t in inj if str(t["kind"]) == "planet"]
             if inj:
                 ax.plot(np.log10([t[6] for t in inj]), np.log10([t[7] for t in inj]), "wx", ms=7, label="injections")
-        ax.set(xlabel=r"log$_{10}$ s", ylabel=r"log$_{10}$ q", xlim=extent[0], ylim=extent[1], title=title)
+        ax.set(xlabel="s (log scale)", ylabel=r"log$_{10}$ q", xlim=extent[0], ylim=extent[1], title=title)
+        ticks = [x for x in (0.2, 0.3, 0.5, 0.7, 1, 1.5, 2, 3, 5) if extent[0][0] <= np.log10(x) <= extent[0][1]]
+        ax.set_xticks(np.log10(ticks), labels=[f"{x:g}" for x in ticks])  # axis stays log10 s: markers unchanged
         ax.legend(loc="lower left", fontsize=8)
     fig.colorbar(pc, ax=axes[0], label=r"log$_{10}$ median over $\alpha$ of $\Delta\chi^2$ (FSPL + parallax refit $-$ 2L1S)")
     fig.suptitle(f"{path.stem}: planet sensitivity (noise-free, {d['dchi2'].shape[2]} alphas per cell)"

@@ -9,7 +9,8 @@
 # work; a shared GPU across 48 processes without MPS would serialize rather
 # than parallelize.
 #
-# small-short caps at 24 cores, below run_mcmc()'s nwalkers=48 -- no 1:1
+# 24 cores: small-short's cap when written (large-short has none since session 30 -- 48 would map 1:1,
+# untried). Below run_mcmc()'s nwalkers=48 -- no 1:1
 # walker-to-core mapping possible, but that's fine: Pool(processes=24) (set via
 # SLURM_CPUS_PER_TASK, see mcmc_fit_2l1s.py's run_mcmc()) just chunks the 48
 # walkers into 2 batches of 24 per step instead of 1, still using every core
@@ -20,7 +21,7 @@
 # submit from slurm/ (submit_all.sh does this, and creates both dirs).
 
 #SBATCH --job-name=2l1s-mcmc
-#SBATCH --partition=small-short
+#SBATCH --partition=large-short
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24

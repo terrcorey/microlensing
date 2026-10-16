@@ -5,7 +5,7 @@ residuals? FSPL and 2L1S polished from the session-22 fine-q bests (summary.txt)
 first night (the anomaly), runs-test z, lag-1 autocorrelation and chi2/pt. Writes
 scratch/ld_test/O-05-BLG169_mdm_residuals.png. Never on the login node:
 
-    sbatch --partition=small-short --cpus-per-task=4 --mem=4G --time=06:00:00 --job-name=ld-test \\
+    sbatch --partition=debug --cpus-per-task=4 --mem=4G --time=06:00:00 --job-name=ld-test \\
         --output=slurm/output/slurm-ld-test-%j.out --export=ALL,PYTHONUNBUFFERED=1,OMP_NUM_THREADS=1 \\
         --wrap ".venv/bin/python scratch/ld_test.py"
 
@@ -14,7 +14,7 @@ scratch/ld_test/O-05-BLG169_mdm_residuals.png. Never on the login node:
 --scan instead: the 2L1S geometry fixed at the session-22 best, one coefficient shared by every instrument,
 scanned over [0, 1] (seconds, plus the blind FSPL fit; scratch/ld_test/O-05-BLG169_ld_scan.png):
 
-    srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:15:00 .venv/bin/python scratch/ld_test.py --scan
+    srun --partition=debug --cpus-per-task=2 --mem=4G --time=00:15:00 .venv/bin/python scratch/ld_test.py --scan
 """
 import sys
 from concurrent.futures import ProcessPoolExecutor

@@ -104,16 +104,18 @@ python3 search.py --config input/O-05-BLG169.toml --stage=diagnose   # FSPL + pa
                                         #   [--dependency=afterok:<search job>] search.sbatch ../input/<short>.toml diagnose
 python3 search.py --config input/O-03-BLG235.toml   # new config-driven pipeline (session 19), heavy:
                                         # run as `sbatch slurm/search.sbatch ../input/<short>.toml` from slurm/
-srun --partition=small-short --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
+srun --partition=debug --cpus-per-task=2 --mem=4G --time=00:10:00 .venv/bin/python scratch/check_search.py
                                         # session-22..26 self-check: chi2 guards, fail-loud pool, MCMC checkpoint/resume,
-                                        # MCMC coordinate round trip, caustic_crossing(), free LD, tE ceiling, cell timeout + retry
-srun --partition=small-short --mem=4G --time=00:15:00 .venv/bin/python scratch/inject.py make \
+                                        # MCMC coordinate round trip, caustic_crossing(), free LD, tE ceiling, cell timeout + retry,
+                                        # session 30: resid_binary() == chi2_binary(), lm()/burn() never worsen their start
+srun --partition=debug --mem=4G --time=00:15:00 .venv/bin/python scratch/inject.py make \
     input/O-03-BLG235-fineq.toml --grids input/O-03-BLG235.toml input/O-03-BLG235-fineq.toml
                                         # session 27 injection-recovery -> scratch/injections/<short>/inj<NN>/, then from slurm/:
                                         #   for f in ../scratch/injections/<short>/inj*/*.toml; do sbatch search.sbatch $f refine; done
-srun --partition=small-short --mem=8G --time=00:45:00 .venv/bin/python scratch/inject.py tally scratch/injections/<short> [--plot]
-                                        # outcome per run + tally_<grid>.npz; --plot: fit_lc.png / fit_lc_truth.png per run
-srun --partition=small-short --mem=8G --time=00:15:00 .venv/bin/python scratch/inject.py montage scratch/injections/<short>
+srun --partition=debug --mem=8G --time=00:45:00 .venv/bin/python scratch/inject.py tally scratch/injections/<short> [--plot] [--refine lm|mcmc]
+                                        # outcome per run + tally_<grid>.npz; --plot: fit_lc.png / fit_lc_truth.png per run;
+                                        # --refine: score refined_<method>.npz -> tally_<grid>_<method>.npz, fit_lc_<method>.png
+srun --partition=debug --mem=8G --time=00:15:00 .venv/bin/python scratch/inject.py montage scratch/injections/<short>
                                         # session 28: one outcome-framed image per grid -> <short>/montage_<grid>.png
 (cd slurm && sbatch sensitivity.sbatch ../input/<short>.toml)   # Delta chi2 sensitivity map -> scratch/sensitivity/
 .venv/bin/python scratch/sensitivity.py scratch/sensitivity/<short>.npz   # re-plot only (+ tally outcomes), login-safe
@@ -205,7 +207,12 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   both families' best start at each minimum, each with its mirror (-u0, -alpha)
   (each start its own pool task), piE from 0, by `mcmc_fit.polish()` (Nelder-Mead
   restarted with a fresh simplex until a pass gains < 0.1: one run stopped 4-66 short
-  of the MCMC best, session 23), cached as refined.npz with each result's `cell` and
+  of the MCMC best, session 23) -- optionally preceded by `--refine lm` (`lm()`: bounded trust-region
+  LM, scipy `least_squares` trf on `resid_binary()` -- chi2_binary's guards as a residual vector --
+  Jacobian step 1% of `theta_steps`) or `--refine mcmc` (`burn()`: 32 walkers x 500 steps of
+  run_mcmc's log_prob/moves, best sample or the start) (session 30; default `nm` = polish only;
+  non-nm results in `refined_<method>.npz`, `refined_name()`; a grid recompute deletes every
+  `refined*.npz`), cached as refined.npz with each result's `cell` and
   start `family` (same key; a recompute deletes `mcmc_mode*`); emcee
   (32 walkers, 12000 steps) on the `distinct_modes()` within delta-chi2 10
   (same u0 sign, same crossing class and within 0.02 in log s / 0.1 in log q =
@@ -295,7 +302,8 @@ old PSPL pipeline (which stays as is until O-05-BLG086 also runs as a config):
   delta_chi2_map.png, refined.npz, mcmc_mode*_corner.png/_chain.npz/_trace.png, fit_lc.png,
   fit_lc_noplanet.png, fspl_parallax_map.png, summary.txt; `--stage=refine` stops before the MCMC and
   writes fspl.npz -- the FSPL + parallax fit, its chi2, K, key -- instead of the plots/summary). `slurm/search.sbatch` takes the config path as `$1` and an
-  optional `--stage` as `$2`, 24 CPUs (32 hits `QOSMaxCpuPerJobLimit` on small-short), BLAS pinned
+  optional `--stage` as `$2` and `--refine` as `$3`, 24 CPUs on large-long (30-day limit; small-short's
+  `24core` QOS caps a job at 24 -- 32 hit `QOSMaxCpuPerJobLimit` -- and its 48 h killed O-05-BLG169 grids), BLAS pinned
   to one thread per worker; diagnose jobs override to 8 CPUs on the command line.
 - `mcmc_fit.nelder_mead(f, x0, step)` (moved from search.py in session 22): Nelder-Mead from an
   explicit initial simplex, shared by search.py and the old pipeline's `fit_joint_pspl()` /
@@ -353,7 +361,9 @@ nulls, both grids) and O-05-BLG169-fineq (session 29: 8 + 2 nulls, `--log-s -0.3
 vs an FSPL + parallax refit (`inject.dchi2()`), median over alpha with contours -> scratch/sensitivity/<short>.{npz,png},
 cells below SKIP = 10 (un-refit upper bounds) one floor colour; one panel per tally_<grid>.npz with every injection
 marked by outcome (session 28); `slurm/sensitivity.sbatch` (~12 min on 24 CPUs for O-03-BLG235, est. 1.5-3 h for
-O-05-BLG169); a `.npz` argument re-plots only), `scratchpad.ipynb` (interactive exploration:
+O-05-BLG169); a `.npz` argument re-plots only; x axis log10 s with s-valued ticks, session 30),
+`notch_check.py` (session 30: sensitivity cells at log s 0, +-0.001..0.05 x log q -4.5/-4 on O-05-BLG169 -- the
+map's s = 1 dip is smooth, ~resonant-window wide; log in scratch/sensitivity/notch_s30.log), `scratchpad.ipynb` (interactive exploration:
 caustic explorer, finite-source sample-point plots, session 27's 2L1S explorer -- ipywidgets sliders over every
 2L1S + parallax + LD + fs/fb parameter, data overlay from a config, peak zoom, residuals, chi2; `ipywidgets` is
 in .venv but not requirements.txt -- not a pipeline step).
@@ -411,8 +421,11 @@ heavy:
 
 How to run it:
 - **Short (under ~15 min), watched live:**
-  `srun --partition=small-short --cpus-per-task=1 --mem=4G --time=00:15:00 .venv/bin/python scratch/<name>.py`.
-  `--partition` is required; plain `srun` fails with "No partition specified".
+  `srun --partition=debug --cpus-per-task=1 --mem=4G --time=00:15:00 .venv/bin/python scratch/<name>.py`.
+  `--partition` is required; plain `srun` fails with "No partition specified". Partitions (session 30):
+  debug (2 h, 24 CPUs/job) for sruns; large-short (2 days, no CPU cap, 1-CPU jobs common) for batch
+  jobs; large-long (30 days) for anything that can pass 48 h. small-short / small-long / debug carry the
+  `24core` QOS (24 CPUs per job). Pending jobs move with `scontrol update JobId=<ids> Partition=<p>`.
 - **Anything longer, or parallel:** an `.sbatch` in `slurm/`, copied from
   `cassan.sbatch` (parallel) or `compare.sbatch` (serial). Parallel jobs
   must export `PYTHON_CPU_COUNT=$SLURM_CPUS_PER_TASK`. Submit from `slurm/`,
@@ -873,7 +886,8 @@ measuring on already-rescaled errors gives k~1.
   cross_check_mulensmodel_fit.py, cross_check_mulensmodel_parallax.py,
   cross_check_mulensmodel_fs.py, derive_binary_quintic.py, fit_2l1s_moa19008.py, cassan_caustic.py,
   compare_pspl_2l1s.py, check_search.py, ld_test.py, probe_fs_grid.py, mdm_systematics.py, keck_mu_check.py,
-  drop_one_with_all.py, stall_probe.py, vbbl_point_probe.py, vbm_check.py, inject.py, sensitivity.py, scratchpad.ipynb;
+  drop_one_with_all.py, stall_probe.py, vbbl_point_probe.py, vbm_check.py, inject.py, sensitivity.py, notch_check.py,
+  scratchpad.ipynb;
   2L1S outputs under `scratch/2l1s/<method>/`, injections under `scratch/injections/`, maps under `scratch/sensitivity/`). If a script
   isn't part of the documented pipeline, both it and its plots go in
   scratch/, never in results/ -- when a script graduates into

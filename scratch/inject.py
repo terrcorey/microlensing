@@ -1,7 +1,7 @@
 """Injection-recovery for search.py (session 27): synthetic events on a real event's timestamps and error
 bars, run through the pipeline untouched (--stage=refine: no MCMC), scored against the truth.
   make (compute node: one light curve per draw):
-    srun --partition=small-short --mem=4G --time=00:15:00 .venv/bin/python scratch/inject.py make \
+    srun --partition=debug --mem=4G --time=00:15:00 .venv/bin/python scratch/inject.py make \
         input/O-03-BLG235-fineq.toml --grids input/O-03-BLG235.toml input/O-03-BLG235-fineq.toml
     -> scratch/injections/<short>/inj<NN>/: one data file per instrument, one TOML per --grids config
        (its [grid], everything else the base's), truth.npz. Submit every TOML from slurm/:
@@ -35,7 +35,7 @@ from event import ld_penalty, load_event, profile_flux, rescale, with_t0_par
 from lc_models import ZERO_POINT_MAG
 from mcmc_fit import polish
 from search import (FSPL, NB, NF, Binary, bic, binary_A, chi2_binary, chi2_fspl, fmt_params, fspl_A, fspl_steps,
-                    labels, plot_fit)
+                    labels, plot_fit, REFINERS, refined_name)
 
 MIN_DCHI2 = 50.0
 # default draw box (make --log-s / --log-q), inside every config's grid box (log s +-0.7, log q -6..0)
@@ -174,16 +174,16 @@ def make(args):
 def tally(args):
     print(f"{'inj':5s} {'grid':22s} {'kind':6s} {'dchi2':>7s} {'s':>6s} {'q':>9s} {'s found':>7s} {'q found':>9s} "
           f"{'found-true':>10s} {'dBIC':>7s} {'truth dBIC':>10s} outcome")
-    rows = {}
+    rows, sfx = {}, "" if args.refine == "nm" else f"_{args.refine}"  # non-nm: own tally / fit_lc files
     for dr in sorted(Path(args.root).glob("inj*")):
         t = np.load(dr / "truth.npz")
         th, planet = t["theta"], str(t["kind"]) == "planet"
         for toml in sorted(dr.glob("*.toml")):
             out = dr / f"out_{toml.stem}"
-            if not (out / "fspl.npz").exists():
+            if not (out / refined_name(args.refine)).exists():
                 print(f"{dr.name:5s} {toml.stem:22s} pending")
                 continue
-            f, r = np.load(out / "fspl.npz"), np.load(out / "refined.npz")
+            f, r = np.load(out / "fspl.npz"), np.load(out / refined_name(args.refine))
             ev = rescale(load_event(str(toml)), f["k"])
             evt = with_t0_par(ev, float(t["t0_par"]))
             c2t = chi2_binary(th, evt) if planet else chi2_fspl(th, evt)  # data only: BIC's footing
@@ -209,14 +209,14 @@ def tally(args):
                          f"FSPL {float(f['chi2']):.1f}", f"found - truth = {gap:.1f}, Delta BIC = {dbic:.1f}",
                          f"noise-free Delta chi2 {float(t['dchi2']):.0f}, K at FSPL {np.round(f['k'], 2)}",
                          f"FSPL chi2 at the truth's t0_par {chi2_fspl(f['theta'], evt):.1f} (fit_lc_truth.png)"])
-                plot_fit(evp, f["theta"], x, float(r["plain"][0]), out / "fit_lc.png", text)
+                plot_fit(evp, f["theta"], x, float(r["plain"][0]), out / f"fit_lc{sfx}.png", text)
                 if planet:
                     plot_fit(evt, f["theta"], th, float(t["t0_par"]), out / "fit_lc_truth.png", text, planet_removed=True)
     for g in rows:
         outs = [r[-1] for r in rows[g]]
         print(f"[{g}] outcomes: " + ", ".join(f"{outs.count(c)} {c}" for c in OUTCOMES if c in outs))
         name, planet, *num, o = zip(*rows[g])
-        np.savez(Path(args.root) / f"tally_{g}.npz", name=name, planet=planet, s_true=num[0], q_true=num[1],
+        np.savez(Path(args.root) / f"tally_{g}{sfx}.npz", name=name, planet=planet, s_true=num[0], q_true=num[1],
                  alpha_true=num[2], u0_true=num[3], s_found=num[4], q_found=num[5], alpha_found=num[6],
                  u0_found=num[7], dbic=num[8], dbic_true=num[9], outcome=o)
 
@@ -285,6 +285,7 @@ if __name__ == "__main__":
     t = sub.add_parser("tally")
     t.add_argument("root")
     t.add_argument("--plot", action="store_true", help="+ fit_lc.png / fit_lc_truth.png per run (srun)")
+    t.add_argument("--refine", choices=REFINERS, default="nm", help="score search.py --refine=<method>'s results")
     sub.add_parser("montage").add_argument("root")
     a = p.parse_args()
     {"make": make, "tally": tally, "montage": montage}[a.cmd](a)
